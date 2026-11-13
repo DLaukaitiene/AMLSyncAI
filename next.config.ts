@@ -13,7 +13,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["@node-rs/argon2"],
+  serverExternalPackages: ["@node-rs/argon2", "pdf-lib", "@pdf-lib/fontkit"],
+  outputFileTracingIncludes: { "/**": ["./node_modules/dejavu-fonts-ttf/ttf/DejaVuSans*.ttf"] },
   experimental: { serverActions: { bodySizeLimit: "10mb" } }, // screening-list uploads
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

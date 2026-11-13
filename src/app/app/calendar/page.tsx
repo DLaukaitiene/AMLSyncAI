@@ -7,7 +7,7 @@ import { toIsoDate } from "@/lib/rules/dates";
 const KIND: Record<string, string> = {
   refresh: "CDD refresh", "sdd-verification": "SDD verification (60 days)", "cdd-required": "CDD required", "threshold-report": "Threshold report",
   "discrepancy-report": "BO register discrepancy (14 days)", "transaction-hold": "Transaction hold (3 working days)", "fiu-request": "FIU request",
-  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "portal-stalled": "Client hasn't completed the portal (7+ days)",
+  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "portal-stalled": "Client hasn't completed the portal (7+ days)",
 };
 const TITLES: Record<CalendarBucket, string> = { overdue: "Overdue", "due-30-days": "Due in the next 30 days", later: "Later", done: "Done" };
 
@@ -23,7 +23,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     const b = bucket({ due: toIsoDate(t.dueOn), done: t.status === "DONE" }, today);
     groups.set(b, [...(groups.get(b) ?? []), t]);
   }
-  const href = (t: (typeof tasks)[number]) => (t.objectType === "CddFile" ? `/app/clients/${t.objectId}` : t.objectType === "Matter" ? `/app/matters/${t.objectId}` : "#");
+  const href = (t: (typeof tasks)[number]) =>
+    t.objectType === "CddFile" ? `/app/clients/${t.objectId}` : t.objectType === "Matter" ? `/app/matters/${t.objectId}` : t.objectType === "Case" ? `/app/cases/${t.objectId}`
+    : t.objectType === "FirmRiskAssessment" || t.objectType === "Firm" ? "/app/firm/risk-assessment" : t.objectType === "PolicyDocument" ? "/app/firm/policies" : "#";
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
