@@ -84,6 +84,13 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         {can(r, "approve.compliance") && <a className="text-sm text-accent underline" href={`/api/supervisor-file/client/${fileId}`}>Download supervisor file (PDF + documents, ZIP)</a>}
       </div>
 
+      {cf.file.source === "back-book" && cf.file.status === "OPEN" && (
+        <p role="note" className="rounded border border-border px-3 py-2 text-sm">
+          Existing client being brought up to the new CDD standard. Gaps found at import:{" "}
+          {((cf.file.remediation as { gaps?: { label: string }[] } | null)?.gaps ?? []).map((g) => g.label).join("; ") || "none"}. Accept the client again when nothing is open.
+        </p>
+      )}
+
       {hasCase && (
         <p role="note" className="rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
           Don&apos;t tell the client about any internal compliance review of this file (tipping-off is prohibited, AMLR Art. 73).

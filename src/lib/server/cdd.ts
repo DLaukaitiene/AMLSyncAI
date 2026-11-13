@@ -96,8 +96,11 @@ export function beneficialOwnership(rootId: string, tree: Tree): BoResult {
 // Screening (spec §4.4): every party in the tree, every active list
 // ---------------------------------------------------------------------------
 
-export async function runScreening(tx: Tx, firmId: string, partyIds: string[]) {
-  const lists = await tx.screeningList.findMany({ where: { active: true }, include: { entries: true } });
+export type LoadedLists = Awaited<ReturnType<typeof loadLists>>;
+export const loadLists = (tx: Tx) => tx.screeningList.findMany({ where: { active: true }, include: { entries: true } });
+
+export async function runScreening(tx: Tx, firmId: string, partyIds: string[], preloaded?: LoadedLists) {
+  const lists = preloaded ?? (await loadLists(tx));
   const now = new Date();
   let newHits = 0;
   for (const pid of partyIds) {

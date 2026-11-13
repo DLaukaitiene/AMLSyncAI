@@ -10,6 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/app", label: "Dashboard", show: true },
     { href: "/app/clients", label: "Clients", show: can(r, "client.view") },
     { href: "/app/matters", label: "Matters", show: can(r, "client.view") },
+    { href: "/app/remediation", label: "Back-book", show: can(r, "client.view") },
     { href: "/app/calendar", label: "Calendar", show: true },
     { href: "/app/cases", label: "Cases", show: can(r, "case.view") },
     { href: "/app/reports", label: "Reports", show: can(r, "case.view") },

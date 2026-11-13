@@ -450,6 +450,8 @@ model CddFile {
   decidedAt     DateTime? // accepted / refused / terminated
   decidedById   String?   @db.Uuid
   decisionReason String?
+  source        String    @default("new") // new | back-book
+  remediation   Json? // back-book: { gaps, priority, importedAt, lastCddDate }
   createdAt     DateTime  @default(now())
 
   riskAssessments ClientRiskAssessment[]
