@@ -1,6 +1,6 @@
-# AMLSyncAI — Product Specification (v0.9, draft)
+# AMLSyncAI — Product Specification (v0.10, draft)
 
-*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection*
+*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection; v0.10 replaces firm KYB with **automatic company-email verification** (no manual review)*
 
 > **Legal note:** Article references are to Regulation (EU) 2024/1624 (AMLR) unless stated. AMLA's technical standards are still final drafts awaiting Commission adoption. Items marked **[verify]** depend on national law or pending standards. Get legal sign-off before any customer-facing compliance claim.
 
@@ -209,7 +209,7 @@ Each parameter has: a guidance note (what it is, where to find it), a field type
 | **Monitoring** | 1y/5y refresh with client "nothing changed" link, per-matter checks, Compliance Calendar, linked-transaction aggregation, cash log | Perpetual KYC (background registry + screening re-runs, exceptions only), POS/invoice cash feeds | Portfolio analytics, self-inspection |
 | **Back-book** | CSV import + gap analysis + prioritised task list | **Bulk outreach campaigns** to existing clients for missing items only | Practice-software sync of the whole client base |
 | **Reporting** | STR with transaction hold and FIU request inbox, Art. 74 threshold reports, national cash reports, discrepancy reports, sanctions-authority notices, FIU export in each state's format, supervisor file, audit log & retention | Direct FIU submission where an API exists | — |
-| **Security** | Everything in §8C: firm verification (KYB) before live data, verified users, passkeys / TOTP, step-up re-authentication, bot and abuse protection, rate limits, per-tenant encryption, just-in-time staff access, security monitoring | SSO (SAML / OIDC), IP allow-listing per firm, SIEM export to customer | Customer-managed encryption keys for Business plan |
+| **Security** | Everything in §8C: automatic company-email verification at sign-up (no manual review), passkeys / TOTP, step-up re-authentication, bot and abuse protection, rate limits, per-tenant encryption, just-in-time staff access, security monitoring | SSO (SAML / OIDC), IP allow-listing per firm, SIEM export to customer | Customer-managed encryption keys for Business plan |
 | **Feedback** | In-app **feature requests** with voting and status tracking (§4.10) | Public in-app roadmap linked to release notes | — |
 | **Integrations** | Email-in, e-signature, CSV | First practice-software and real-estate CRM integrations, Zapier/Make | Public API, partner integrations (accounting software, CRMs, professional bodies) |
 | **AI** | Assisted drafting (policies, risk assessment, STR narrative) — always approved by a person | Triage, document reading, adverse media, memo drafting | "Ask the AML assistant" with article citations |
@@ -301,11 +301,11 @@ Firms can tell AMLSyncAI what they need, and see what happens to it.
 - **"Suggest a feature" button** on every screen and in the main menu. The form asks for: title, what problem it solves, how often it happens, how important it is to the firm (nice to have / important / blocking), and the module (pre-filled from the screen the user was on).
 - **Regulatory requests:** a "this is required by law in my country" option with a field for the legal reference. These are tagged *regulatory* and reviewed first, because they may affect the EU Core or the Country Profile fields.
 - **Duplicate check:** while typing the title, similar existing requests are shown; the user can vote on one instead of creating a new one.
-- **Voting and comments:** any verified user can vote once per request and comment. Firm names are hidden from other firms.
+- **Voting and comments:** any user with a verified company email can vote once per request and comment. Firm names are hidden from other firms.
 - **Status tracking:** *Received → Under review → Planned → In progress → Released*, or *Not planned* with a reason. The requester and voters are notified on every status change; *Released* links to the release note.
 - **My requests:** each user sees their own requests and votes; the Owner sees all requests from the firm.
 - **No client data:** the form warns not to include client personal data; text is scanned for personal-data patterns (ID numbers, IBANs, emails, phone numbers, dates of birth) and the user must remove them or confirm before submitting. Screenshots are off by default; when allowed, they are malware-scanned and the user is asked to confirm no client data is visible.
-- **Abuse protection:** only verified users of verified firms can submit or vote; rate limit of 10 requests per user per day; profanity / spam filter; AMLSyncAI can hide abusive content.
+- **Abuse protection:** only users with a verified company email can submit or vote; rate limit of 10 requests per user per day; profanity / spam filter; AMLSyncAI can hide abusive content.
 - **Internal triage (AMLSyncAI team):** queue with filters (module, sector, country, votes, regulatory tag), merge duplicates, set status, link to roadmap items and releases. The AMLSyncAI team sees the request text only — never the firm's client data.
 
 
@@ -460,7 +460,7 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 | **Task / Deadline** | Any clock in the Compliance Calendar | Linked to any object; calculated from Country Profile working days |
 | **Approval** | Named decision by an authorised user | Linked to any decision object; immutable |
 | **Audit Event** | Every create / update / view of sensitive data / export | Linked to any object; append-only |
-| **Firm Verification** | KYB result for the firm itself (§8C.2) | Belongs to Firm; stores sources, checks, reviewer, expiry |
+| **Email Domain Verification** | Result of the company-email check at sign-up (§8C.2) | Belongs to Firm; stores firm name, email domain, match result, confirmation time |
 | **Security Event** | Login, failed login, MFA change, new device, rate-limit or bot block, export, staff access | Linked to User / Firm; retained ≥ 1 year; feeds alerts |
 | **Feature Request** | Suggestion from a firm user (§4.10) | Has votes, comments, status history, tags; linked to releases |
 | **Rule Set / Country Profile** | Versioned configuration (§3A) | Version referenced by every decision |
@@ -495,26 +495,29 @@ AMLSyncAI holds the most sensitive data a small firm has: identity documents, ow
 - **Everything logged:** every security-relevant action is recorded and can be shown to the firm and its supervisor.
 - **Standards:** controls aligned with **ISO/IEC 27001** and **SOC 2** from launch, with certification as the target; application security to **OWASP ASVS Level 2** (Level 3 for authentication, case/STR handling and exports).
 
-### 8C.2 Verifying firms before they get access (KYB of our own customers)
-A criminal must not be able to sign up as an "accountant" and use AMLSyncAI to check whether they are on a sanctions list, or to harvest data.
-- **Sandbox until verified:** a new firm can explore the product with **sample data only**. Real client data, screening of real people, registry look-ups and the client portal are locked until the firm is verified.
-- **Firm checks:** company registration confirmed via BRIS / KYB provider; firm is active; its activity matches an obliged-entity sector; registered address and legal representatives retrieved.
-- **Owner check:** the person signing up (Owner) verifies their identity with eID or ID document + NFC + liveness, and must appear as a director/legal representative of the firm, or provide a signed authorisation.
-- **Screening of the firm:** the firm, its directors and beneficial owners are screened against sanctions and PEP lists; a true sanctions match blocks the account.
-- **Signals:** business email domain matching the firm (free and disposable email domains flagged; disposable domains blocked); payment method in the firm's name; country of sign-up vs firm country.
-- **Manual review** of any sign-up with a failed or inconsistent check; decision recorded.
-- **Re-verification:** yearly, and when the firm's registry data (directors, owners, status) changes; a dissolved or struck-off firm is suspended automatically.
+### 8C.2 Verifying firms at sign-up — company email only (fully automatic)
+AMLSyncAI does **not** manually check the firms that sign up. A firm is verified automatically by proving it controls an email address on its **own company domain**.
+- **Sign-up asks for:** company name, the person's name, and a **company email address**.
+- **Email must belong to the company:**
+  - Free email providers (Gmail, Outlook.com, Yahoo, GMX, etc.) and disposable/temporary email domains are **refused**.
+  - The email domain must **match the company name**: the domain (without the ending, e.g. `.lt`, `.com`) must contain the company name or a recognisable part of it, ignoring legal-form words (UAB, GmbH, SARL, Ltd, BV, etc.), spaces, punctuation and accents. Example: "UAB Baltic Accounting" → `balticaccounting.lt`, `baltic-accounting.eu` and `bacc-balticaccounting.com` pass; `randommail.com` fails.
+  - If the domain does not match, sign-up is refused with a clear message asking the user to use their company email or correct the company name. No manual review queue.
+  - The domain must have valid mail (MX) records and must not be newly registered (domain age under 30 days is refused) **[validate threshold]**.
+- **Email confirmation:** a one-time link/code is sent to that address and must be used within 24 hours. Only then is the account active.
+- **One firm per domain:** a domain already used by a firm cannot create a second firm; the person is told to ask that firm's Owner for an invitation.
+- **Full access after confirmation:** once the email is confirmed, the firm can use real data immediately — there is no sandbox and no waiting time.
+- **Ongoing safeguards** instead of manual checks: screening only for parties in a matter, daily caps, rate limits and alerts (§8C.4) limit what a fake firm could do.
 
 ### 8C.3 Verifying and authenticating users
-- **Invite only:** after the Owner, users join only by invitation from an Owner or Compliance Officer of a verified firm. No open self-registration into a firm.
+- **Invite only:** after the Owner, users join only by invitation from an Owner or Compliance Officer. No open self-registration into a firm.
+- **Same company domain:** invited users must have an email on the firm's verified domain. The Owner can allow a specific external email (e.g. an AMLSync Expert reviewer); such users are labelled *external* everywhere.
 - **Email verification** for every user before first login; invitation links expire after 72 hours and work once.
-- **Identity verification of users:** mandatory for Owner, Compliance Manager and Compliance Officer (eID or ID + NFC + liveness); recommended and switchable on by the firm for all Staff (default **on**).
 - **Multi-factor authentication — mandatory for every user:** passkeys (FIDO2/WebAuthn) preferred; authenticator app (TOTP) allowed; **SMS and email codes not allowed** as a second factor.
 - **Step-up re-authentication** (fresh MFA within the last 5 minutes) for: approvals, filing or exporting an STR, supervisor-file and bulk exports, Country Profile changes, user and role changes, MFA changes, deletion and legal-hold changes, API key creation.
 - **Passwords:** minimum 12 characters; checked against known breached passwords; no forced periodic changes; stored with a modern memory-hard hash (e.g. Argon2id).
 - **Sessions:** idle timeout 15 minutes, absolute timeout 12 hours; secure, HttpOnly, SameSite cookies; session list with "sign out everywhere"; sessions revoked immediately when a user is removed or their role is reduced.
 - **New device / new location alerts** to the user, and to the Owner for Owner and Compliance Officer accounts.
-- **Account recovery** requires identity re-verification plus approval by another admin of the firm (or AMLSyncAI support with identity check for single-user firms); recovery is never possible by email alone.
+- **Account recovery** uses one-time recovery codes issued when MFA is set up, or approval by another Owner / Compliance Officer of the firm. Recovery is never possible by email alone. A single-user firm that has lost both its MFA device and recovery codes must re-confirm the company email and wait 72 hours, during which the Owner's email is notified and can cancel.
 - **Leavers:** removing a user revokes all sessions, API keys and portal-review rights at once; their records and approvals stay attributed to them.
 - **SSO (V2):** SAML / OIDC for larger firms, with MFA still enforced.
 
@@ -525,7 +528,7 @@ A criminal must not be able to sign up as an "accountant" and use AMLSyncAI to c
 - **Credential-stuffing and brute-force protection:** progressive delays and temporary lockout after repeated failures; breached-password check; **no user enumeration** (identical responses and timing for existing and non-existing accounts).
 - **Screening abuse:** a firm cannot use AMLSyncAI as a free lookup service — screening is only possible for a party linked to a matter; unusual volumes (e.g. more screenings than clients by a large margin) trigger an alert and review; hard daily caps per plan.
 - **Scraping and exfiltration:** limits and alerts on mass viewing, mass download and bulk export; exports are watermarked with user, firm and timestamp.
-- **Sign-up abuse:** disposable email domains blocked; repeated sign-ups from the same device or payment method flagged; free-trial sandbox has no access to real data (see §8C.2).
+- **Sign-up abuse:** free and disposable email domains refused; domain must match the company name and be older than 30 days; one firm per domain; repeated sign-up attempts from the same device or IP are challenged and rate-limited (see §8C.2).
 - **VPN and anonymising networks** are challenged, not blocked by default (clients may legitimately use them); firms can choose to block them for their staff.
 - **API:** keys scoped to a firm and to specific permissions, shown once, rotatable, expiring; optional IP allow-list (V2); signed webhooks.
 
@@ -724,20 +727,21 @@ A V1 module is **done** only when every criterion below passes in an automated o
 - [ ] A user can vote only once per request; a firm's name is never shown to other firms.
 - [ ] Text containing an ID number, IBAN, email, phone number or date of birth triggers a warning and cannot be submitted until removed or confirmed.
 - [ ] The 11th request by the same user in one day is refused with a clear message.
-- [ ] A user in an unverified (sandbox) firm cannot submit or vote.
+- [ ] A user whose company email is not yet confirmed cannot submit or vote.
 - [ ] A status change notifies the requester and all voters; *Not planned* requires a reason; *Released* requires a release-note link.
 - [ ] A request marked "required by law in my country" is tagged *regulatory* and appears at the top of the internal triage queue.
 - [ ] AMLSyncAI triage users can merge duplicates (votes are combined) and cannot open any client data from the request.
 
 ### 11.14 Security
 **Firm and user verification**
-- [ ] A new firm is in sandbox mode: real-data actions (create real party, screening, registry look-up, client portal) are blocked in UI and API until verification passes.
-- [ ] Sign-up with a disposable email domain is refused; a free email domain is flagged for manual review.
-- [ ] A firm whose Owner is not a director/legal representative and has no signed authorisation is not verified.
-- [ ] A firm or BO with a confirmed sanctions match is blocked.
-- [ ] A firm whose registry status changes to dissolved is suspended within 24 hours.
+- [ ] Sign-up with a free email provider (e.g. gmail.com, outlook.com) or a disposable email domain is refused with a message asking for a company email.
+- [ ] Domain matching: "UAB Baltic Accounting" with `anna@balticaccounting.lt` passes; with `anna@randommail.com` is refused; legal-form words, spaces, hyphens, punctuation and accents are ignored in the comparison (test table of ≥ 20 name/domain pairs passes).
+- [ ] A domain without MX records, or registered less than 30 days ago, is refused.
+- [ ] The account cannot be used until the one-time link/code sent to the company email is confirmed; the link expires after 24 hours and works once.
+- [ ] A second sign-up with a domain that already has a firm is refused and told to ask the existing Owner for an invitation.
+- [ ] No sign-up ever enters a manual review queue: every attempt ends in *active* or *refused* automatically.
 - [ ] A user cannot join a firm without an invitation; invitation links expire after 72 hours and work once.
-- [ ] Owner, Compliance Manager and Compliance Officer cannot perform any real-data action until identity verification is complete.
+- [ ] An invitation to an email outside the firm's domain is refused unless the Owner explicitly allows it as *external*; external users are labelled in every list and log.
 
 **Authentication and sessions**
 - [ ] Every user must set up MFA (passkey or TOTP) before first use; SMS/email codes are not offered as a second factor.
