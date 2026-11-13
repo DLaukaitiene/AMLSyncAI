@@ -997,3 +997,21 @@ model AiCall {
 
   @@index([firmId, createdAt])
 }
+
+/// Just-in-time support access for AMLSyncAI staff (spec §8C.7): requested with a reason,
+/// approved by the firm's Owner / Compliance Officer, limited in time and scope, logged.
+model SupportGrant {
+  id             String    @id @default(uuid()) @db.Uuid
+  firmId         String    @db.Uuid
+  requesterEmail String
+  reason         String
+  hours          Int
+  scope          String    @default("read-only-summary")
+  status         String    @default("requested") // requested | approved | denied | revoked
+  decidedById    String?   @db.Uuid
+  decidedAt      DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([firmId])
+}

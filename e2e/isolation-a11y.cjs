@@ -87,6 +87,6 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   }
   for (const [k, ps] of Object.entries(summary)) console.log("  a11y:", k, "on", [...new Set(ps)].length, "page(s), e.g.", ps[0]);
   log(`accessibility scan of ${pages.length} pages: ${critical} critical violation(s)`);
-  if (critical) process.exitCode = 1;
+  if (critical) { console.error(`✘ ${critical} critical accessibility violation(s)`); process.exitCode = 1; }
   await b.close();
 })().catch((e) => { console.error("✘", e.message); process.exit(1); });
