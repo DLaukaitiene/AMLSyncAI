@@ -1,0 +1,4 @@
+type,name,aliases,birth_dates,countries,reference
+person,Ivan Petrovich Sidorov,Ivan Sidorov|Iwan Sidorow,1965-04-12,RU,TEST-1
+person,Viktor Malenko,,1971,BY,TEST-2
+entity,Northstar Commodities Ltd,Northstar Commodities,,RU,TEST-3

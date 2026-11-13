@@ -51,3 +51,27 @@ CREATE TRIGGER audit_event_immutable BEFORE UPDATE OR DELETE ON "AuditEvent"
 DROP TRIGGER IF EXISTS approval_immutable ON "Approval";
 CREATE TRIGGER approval_immutable BEFORE UPDATE OR DELETE ON "Approval"
   FOR EACH ROW EXECUTE FUNCTION forbid_mutation();
+
+-- Screening lists: official lists (firmId NULL) are shared read-only; firm-uploaded
+-- lists are visible only to that firm. Official lists are loaded by the owner connection.
+ALTER TABLE "ScreeningList" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ScreeningList" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON "ScreeningList";
+DROP POLICY IF EXISTS tenant_write ON "ScreeningList";
+CREATE POLICY tenant_read ON "ScreeningList" FOR SELECT
+  USING ("firmId" IS NULL OR "firmId" = current_setting('app.firm_id', true)::uuid);
+CREATE POLICY tenant_write ON "ScreeningList" FOR ALL
+  USING ("firmId" = current_setting('app.firm_id', true)::uuid)
+  WITH CHECK ("firmId" = current_setting('app.firm_id', true)::uuid);
+
+ALTER TABLE "ScreeningEntry" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ScreeningEntry" FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON "ScreeningEntry";
+DROP POLICY IF EXISTS tenant_write ON "ScreeningEntry";
+CREATE POLICY tenant_read ON "ScreeningEntry" FOR SELECT USING (EXISTS (
+  SELECT 1 FROM "ScreeningList" l WHERE l.id = "listId"
+    AND (l."firmId" IS NULL OR l."firmId" = current_setting('app.firm_id', true)::uuid)));
+CREATE POLICY tenant_write ON "ScreeningEntry" FOR ALL USING (EXISTS (
+  SELECT 1 FROM "ScreeningList" l WHERE l.id = "listId" AND l."firmId" = current_setting('app.firm_id', true)::uuid))
+  WITH CHECK (EXISTS (
+  SELECT 1 FROM "ScreeningList" l WHERE l.id = "listId" AND l."firmId" = current_setting('app.firm_id', true)::uuid));

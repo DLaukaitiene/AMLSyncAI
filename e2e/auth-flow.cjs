@@ -21,7 +21,7 @@ const log=(...a)=>console.log('✔',...a);
   await p.goto(BASE+'/signup');
   const fill = async (data) => { for (const [l,v] of Object.entries(data)) await p.getByLabel(l, {exact:true}).fill(v); };
   await fill({'Sign-up code *':process.env.CODE,'Company name *':'Jonaitis ir partneriai','Your name *':'Anna Jonaitė','Company email *':'anna@gmail.com','Password *':'correct horse battery staple'});
-  await p.locator('select[name=memberState]').selectOption('LT');
+  await p.locator('select[name=memberState]').selectOption('LT'); await p.locator('select[name=sector]').selectOption('ACCOUNTANT');
   await p.getByRole('button',{name:'Create account'}).click();
   await p.getByText('Free email providers are not accepted').first().waitFor();
   log('free email refused');

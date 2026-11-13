@@ -11,12 +11,28 @@ import { checkNewPassword, dummyHash, hashPassword, verifyPassword } from "./pas
 import { generateTotpSecret, verifyTotp } from "@/lib/auth/totp";
 import { defaultCountryProfile } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
-import type { Role } from "@prisma/client";
+import type { Role, Sector } from "@prisma/client";
 
 export const EU_MEMBER_STATES = [
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL",
   "PL", "PT", "RO", "SK", "SI", "ES", "SE",
 ] as const;
+
+export const SECTORS: [string, string][] = [
+  ["ACCOUNTANT", "Accountant, auditor or tax advisor"],
+  ["ESTATE_AGENT", "Real estate agent"],
+  ["HVG_TRADER", "Trader in high-value goods"],
+  ["PRECIOUS_METALS", "Precious metals and stones trader"],
+  ["TCSP", "Trust or company service provider"],
+  ["LEGAL", "Lawyer, notary or legal professional"],
+  ["ART_TRADER", "Art and cultural goods trader"],
+  ["CREDIT_INTERMEDIARY", "Credit intermediary"],
+  ["CROWDFUNDING", "Crowdfunding service provider"],
+  ["GAMBLING", "Gambling provider"],
+  ["INVESTMENT_MIGRATION", "Investment migration operator"],
+  ["OTHER", "Other obliged entity"],
+];
+const SECTOR_VALUES = SECTORS.map(([v]) => v) as [string, ...string[]];
 
 export type SignupMode = "invite" | "open";
 export const signupMode = (): SignupMode => (process.env.SIGNUP_MODE === "open" ? "open" : "invite");
@@ -34,6 +50,7 @@ export const signupSchema = z.object({
   name: z.string().trim().min(2, "Enter your name").max(200),
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
   memberState: z.enum(EU_MEMBER_STATES, { errorMap: () => ({ message: "Choose the member state" }) }),
+  sector: z.enum(SECTOR_VALUES, { errorMap: () => ({ message: "Choose your sector" }) }),
   password: z.string(),
   signupCode: z.string().trim().optional(),
 });
@@ -71,6 +88,7 @@ export async function startSignup(input: z.infer<typeof signupSchema>, ip: strin
         companyName: input.companyName,
         name: input.name,
         memberState: input.memberState,
+        sector: input.sector,
         passwordHash: await hashPassword(input.password),
         codeId,
         checks: domainCheck.checks,
@@ -94,7 +112,7 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
     return { ok: false, error: "This link is invalid or has expired. Sign up again to get a new one." };
   }
   const d = t.data as {
-    companyName: string; name: string; memberState: string; passwordHash: string; codeId: string | null;
+    companyName: string; name: string; memberState: string; sector: string; passwordHash: string; codeId: string | null;
     checks: { freeOrDisposable: boolean; hasMx?: boolean; domainAgeDays?: number | null };
   };
   const domain = emailDomain(t.email)!;
@@ -108,7 +126,7 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
         if (c.count !== 1) throw new Error("code");
       }
       const firm = await tx.firm.create({
-        data: { name: d.companyName, emailDomain: domain, homeState: d.memberState },
+        data: { name: d.companyName, emailDomain: domain, homeState: d.memberState, sectors: [d.sector as Sector] },
       });
       await tx.office.create({ data: { firmId: firm.id, name: "Head office", memberState: d.memberState, isHome: true } });
       await tx.emailDomainVerification.create({

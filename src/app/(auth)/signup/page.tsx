@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ActionForm, Field, Honeypot, Submit } from "@/components/form";
-import { EU_MEMBER_STATES, signupMode } from "@/lib/server/auth/flows";
+import { EU_MEMBER_STATES, SECTORS, signupMode } from "@/lib/server/auth/flows";
 import { signupAction } from "../actions";
 
 export const metadata: Metadata = { title: "Sign up · AMLSyncAI" };
@@ -25,6 +25,14 @@ export default function SignupPage() {
             <option value="" disabled>Choose…</option>
             {[...EU_MEMBER_STATES].sort((a, b) => NAMES.of(a)!.localeCompare(NAMES.of(b)!)).map((c) => (
               <option key={c} value={c}>{NAMES.of(c)}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Sector" name="sector" required>
+          <select name="sector" defaultValue="" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Sector">
+            <option value="" disabled>Choose…</option>
+            {SECTORS.map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
             ))}
           </select>
         </Field>

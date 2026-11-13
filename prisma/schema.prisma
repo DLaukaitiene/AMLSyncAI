@@ -121,6 +121,7 @@ enum ScreeningListKind {
 }
 
 enum MatchDecision {
+  NO_MATCH // screened, nothing found — kept as evidence with list version and time
   PENDING
   TRUE_MATCH
   FALSE_POSITIVE
@@ -444,9 +445,16 @@ model CddFile {
   retentionUntil DateTime? @db.Date
   legalHoldUntil DateTime? @db.Date
   gateOverride  Json? // { byUserId, reason, at }
+  eddChecklist  Json? // ids of completed Art. 34(4) items
+  smoFallback   Json? // { officials: [...], stepsTaken } when no BO is found
+  decidedAt     DateTime? // accepted / refused / terminated
+  decidedById   String?   @db.Uuid
+  decisionReason String?
   createdAt     DateTime  @default(now())
 
   riskAssessments ClientRiskAssessment[]
+
+  @@unique([partyId, role])
 
   @@index([firmId])
 }
@@ -769,4 +777,38 @@ model DevEmail {
   subject   String
   text      String
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Screening lists (spec §4.4, §7): EU / UN official lists and firm-uploaded
+// national lists. PEP / RCA data comes from a provider (not yet connected).
+// ---------------------------------------------------------------------------
+
+model ScreeningList {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String?  @db.Uuid // null = shared official list (EU, UN)
+  kind        ScreeningListKind
+  name        String
+  version     String
+  loadedAt    DateTime @default(now())
+  active      Boolean  @default(true)
+  entries     ScreeningEntry[]
+
+  @@index([firmId])
+}
+
+model ScreeningEntry {
+  id          String        @id @default(uuid()) @db.Uuid
+  listId      String        @db.Uuid
+  list        ScreeningList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  entityType  String // person | entity
+  names       String[] // primary name and aliases
+  normalized  String[] // normalised forms for matching
+  birthDates  String[]
+  countries   String[]
+  reference   String? // list reference / programme
+  details     Json?
+
+  @@index([listId])
+  @@index([normalized], type: Gin)
 }

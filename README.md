@@ -6,12 +6,16 @@ The product specification is in [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md). 
 
 ## Status
 
-Work in progress. Built so far:
+Work in progress — a web-based SaaS (runs in the browser; client portal will be mobile-friendly web). Built so far:
 
-- **EU Core rules engine** (`src/lib/rules`). Pure, tested TypeScript covering the Country Profile and its EU Core floor, beneficial ownership calculation, sanctions > 50% ownership aggregation, CDD triggers and linked transactions, the cash cap, Art. 74 threshold reports, client risk scoring (SDD/EDD), hard gates for clients and matters, and every Compliance Calendar clock (with working days and holidays).
-- **Security rules** (`src/lib/security`). Company-email verification at sign-up and the personal-data scan for feature requests.
-- **Data model** (`prisma/schema.prisma`). The core data model from spec §8A. `prisma/rls.sql` adds row-level tenant isolation and makes audit events and approvals append-only.
-- **Web app shell** (Next.js 15, Tailwind). Strict nonce-based CSP and security headers, plus an interactive beneficial-ownership calculator at `/tools/beneficial-ownership`.
+- **Sign-up and login** (§8C): company-email sign-up with confirmation link, sign-up codes (`SIGNUP_MODE=invite`), mandatory two-factor (authenticator app + recovery codes), step-up re-authentication, invitation-only users, password reset, lockout, rate limits, new-device alerts.
+- **Country Profile** editor: versioned, Compliance Officer only, rejects anything that relaxes the EU rules; setup checklist on the dashboard.
+- **Clients (CDD)**: people and companies, identity verification and register-extract records, ownership tree with automatic beneficial-owner calculation, senior-managing-official fallback, screening of the whole structure with match review, automatic risk scoring (EDD/SDD), EDD checklist, senior-management and PEP approvals, hard gates, accept / refuse / terminate.
+- **Matters**: multiple parties with roles (buyer + seller, customer + supplier), transactions with CDD triggers, linked transactions, cash cap, Art. 74 threshold report drafts, completion and funds-transfer gates.
+- **Compliance Calendar**, **Screening lists** (firm CSV upload; official lists via `scripts/load-list.mts`; daily re-screen at `POST /api/cron/rescreen`), **Team**, **Security log**, **Records** (5-year deletion, legal hold; the audit log keeps no identifiable data).
+- **Rules engine** (`src/lib/rules`) and **security rules** (`src/lib/security`) with unit tests mapped to §11.
+
+Not yet built: client self-service portal and eID/NFC vendors, BRIS/KYB registry lookups, PEP data provider, suspicion-report case management and FIU export, firm risk assessment, Policy Builder, training/integrity/whistleblowing, supervisor-file export, feature requests, AI drafting.
 
 ## Development
 
@@ -19,20 +23,21 @@ Requires Node 22 and PostgreSQL 16.
 
 ```bash
 npm install
-cp .env.example .env          # set DATABASE_URL
-npx prisma migrate dev        # create tables
-psql "$DATABASE_URL" -f prisma/rls.sql   # tenant isolation + append-only audit
+cp .env.example .env                      # fill in DATABASE_URL, DATABASE_APP_URL, MASTER_KEY
+npx prisma migrate deploy
+psql "$DATABASE_URL" -f prisma/rls.sql    # tenant isolation + append-only audit
+npx tsx scripts/create-signup-code.mts    # prints a sign-up code
 npm run dev
 ```
 
+The app's tenant connection (`DATABASE_APP_URL`) must be a non-superuser role with table privileges, so that row-level security applies.
+
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (Vitest). These include the §11 done-criteria tests for the rules engine |
-| `npm run typecheck` | TypeScript check |
-| `npm run lint` | ESLint |
-| `npm run build` | Production build |
-
-Superusers bypass row-level security. Run the app as a normal role and set the tenant per transaction with `SET LOCAL app.firm_id = '<firm uuid>'`.
+| `npm test` | Unit tests (Vitest) |
+| `npm run typecheck` / `npm run lint` / `npm run build` | Checks and production build |
+| `CODE=… node e2e/auth-flow.cjs` | Browser test: sign-up, MFA, Country Profile, invitations, login |
+| `CODE1=… CODE2=… DATABASE_URL=… node e2e/cdd-flow.cjs` | Browser test: CDD, ownership, screening, EDD/PEP, refusal, retention deletion, matters (load `e2e/fixtures/test-sanctions.csv` first) |
 
 ## Layout
 
@@ -42,6 +47,10 @@ prisma/schema.prisma        core data model (§8A)
 prisma/rls.sql              tenant isolation and immutability (§8C.7, §11.0)
 src/lib/rules/              EU Core rules engine (§3, §3A, §4)
 src/lib/security/           sign-up verification, PII scan (§8C, §4.10)
+src/lib/screening/          name matching and list import (§4.4)
+src/lib/server/             database, auth, sessions, CDD service, retention
+scripts/                    sign-up codes, official list loading
+e2e/                        browser end-to-end tests
 src/middleware.ts           Content-Security-Policy (§8C.8)
 src/app/                    Next.js app
 ```
