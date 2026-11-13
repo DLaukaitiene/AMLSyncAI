@@ -1,6 +1,6 @@
-# AMLSyncAI — Product Specification (v0.8, draft)
+# AMLSyncAI — Product Specification (v0.9, draft)
 
-*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11)*
+*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection*
 
 > **Legal note:** Article references are to Regulation (EU) 2024/1624 (AMLR) unless stated. AMLA's technical standards are still final drafts awaiting Commission adoption. Items marked **[verify]** depend on national law or pending standards. Get legal sign-off before any customer-facing compliance claim.
 
@@ -209,6 +209,8 @@ Each parameter has: a guidance note (what it is, where to find it), a field type
 | **Monitoring** | 1y/5y refresh with client "nothing changed" link, per-matter checks, Compliance Calendar, linked-transaction aggregation, cash log | Perpetual KYC (background registry + screening re-runs, exceptions only), POS/invoice cash feeds | Portfolio analytics, self-inspection |
 | **Back-book** | CSV import + gap analysis + prioritised task list | **Bulk outreach campaigns** to existing clients for missing items only | Practice-software sync of the whole client base |
 | **Reporting** | STR with transaction hold and FIU request inbox, Art. 74 threshold reports, national cash reports, discrepancy reports, sanctions-authority notices, FIU export in each state's format, supervisor file, audit log & retention | Direct FIU submission where an API exists | — |
+| **Security** | Everything in §8C: firm verification (KYB) before live data, verified users, passkeys / TOTP, step-up re-authentication, bot and abuse protection, rate limits, per-tenant encryption, just-in-time staff access, security monitoring | SSO (SAML / OIDC), IP allow-listing per firm, SIEM export to customer | Customer-managed encryption keys for Business plan |
+| **Feedback** | In-app **feature requests** with voting and status tracking (§4.10) | Public in-app roadmap linked to release notes | — |
 | **Integrations** | Email-in, e-signature, CSV | First practice-software and real-estate CRM integrations, Zapier/Make | Public API, partner integrations (accounting software, CRMs, professional bodies) |
 | **AI** | Assisted drafting (policies, risk assessment, STR narrative) — always approved by a person | Triage, document reading, adverse media, memo drafting | "Ask the AML assistant" with article citations |
 | **AMLSync services** | AMLSync Expert reviews + Independent Review (Art. 9) | Managed "done for you" queue | Partner consultancies per country |
@@ -293,6 +295,18 @@ Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** in
 ### 4.9 Added in V2 and V3
 - **V2:** AI triage / document reading / adverse media, perpetual KYC, bulk back-book outreach, guided trusts, richer templates for TCSPs, lawyers & notaries and art traders, multi-office and cross-border (Art. 8, 16), first integrations, Independent Review module, managed service, direct FIU APIs.
 - **V3:** EUDI Wallet, reliance (Art. 48–50), public API and embeddable form, partner integrations, AML assistant, football clubs & agents (from 10 July 2029).
+
+### 4.10 Feature requests *(V1)*
+Firms can tell AMLSyncAI what they need, and see what happens to it.
+- **"Suggest a feature" button** on every screen and in the main menu. The form asks for: title, what problem it solves, how often it happens, how important it is to the firm (nice to have / important / blocking), and the module (pre-filled from the screen the user was on).
+- **Regulatory requests:** a "this is required by law in my country" option with a field for the legal reference. These are tagged *regulatory* and reviewed first, because they may affect the EU Core or the Country Profile fields.
+- **Duplicate check:** while typing the title, similar existing requests are shown; the user can vote on one instead of creating a new one.
+- **Voting and comments:** any verified user can vote once per request and comment. Firm names are hidden from other firms.
+- **Status tracking:** *Received → Under review → Planned → In progress → Released*, or *Not planned* with a reason. The requester and voters are notified on every status change; *Released* links to the release note.
+- **My requests:** each user sees their own requests and votes; the Owner sees all requests from the firm.
+- **No client data:** the form warns not to include client personal data; text is scanned for personal-data patterns (ID numbers, IBANs, emails, phone numbers, dates of birth) and the user must remove them or confirm before submitting. Screenshots are off by default; when allowed, they are malware-scanned and the user is asked to confirm no client data is visible.
+- **Abuse protection:** only verified users of verified firms can submit or vote; rate limit of 10 requests per user per day; profanity / spam filter; AMLSyncAI can hide abusive content.
+- **Internal triage (AMLSyncAI team):** queue with filters (module, sector, country, votes, regulatory tag), merge duplicates, set status, link to roadmap items and releases. The AMLSyncAI team sees the request text only — never the firm's client data.
 
 
 ---
@@ -415,7 +429,7 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 - **Web app:** Next.js + TypeScript, Tailwind for UI.
 - **Database:** PostgreSQL (EU region), Prisma ORM. Separate data per firm (multi-tenant with row-level security).
 - **Files:** EU-hosted object storage, encrypted.
-- **Auth:** email + password with 2FA; roles: Owner / Compliance Manager, Compliance Officer, Staff, External Reviewer (AMLSync — recommend only), Read-only (supervisor/auditor view).
+- **Auth:** verified email + password, with mandatory 2FA (passkeys preferred, authenticator app allowed, no SMS), step-up re-authentication for sensitive actions — see §8C; roles: Owner / Compliance Manager, Compliance Officer, Staff, External Reviewer (AMLSync — recommend only), Read-only (supervisor/auditor view).
 - **Rules as data:** two layers — the **EU Core** rule set (maintained by AMLSyncAI) and the firm's own **Country Profile(s)** (§3A) — both versioned configuration; Country Profiles may only add, tighten or fill in parameters; every decision records both versions applied.
 - **Hosting:** EU only (GDPR, client trust).
 - **AI:** called through a server-side service with logging; no client data used for model training.
@@ -446,6 +460,9 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 | **Task / Deadline** | Any clock in the Compliance Calendar | Linked to any object; calculated from Country Profile working days |
 | **Approval** | Named decision by an authorised user | Linked to any decision object; immutable |
 | **Audit Event** | Every create / update / view of sensitive data / export | Linked to any object; append-only |
+| **Firm Verification** | KYB result for the firm itself (§8C.2) | Belongs to Firm; stores sources, checks, reviewer, expiry |
+| **Security Event** | Login, failed login, MFA change, new device, rate-limit or bot block, export, staff access | Linked to User / Firm; retained ≥ 1 year; feeds alerts |
+| **Feature Request** | Suggestion from a firm user (§4.10) | Has votes, comments, status history, tags; linked to releases |
 | **Rule Set / Country Profile** | Versioned configuration (§3A) | Version referenced by every decision |
 
 ---
@@ -454,7 +471,7 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 
 | Area | Requirement |
 |---|---|
-| **Security** | Encryption in transit (TLS 1.2+) and at rest; mandatory 2FA for firm users; role-based access; row-level tenant isolation; restricted visibility for Cases (tipping-off); yearly penetration test; ISO 27001-aligned controls |
+| **Security** | Highest priority — see **§8C**. Security requirements override convenience requirements wherever they conflict |
 | **Data protection** | EU-only hosting and AI processing; AMLSyncAI as processor with DPA and sub-processor list; data minimisation; deletion after retention period unless on legal hold |
 | **Auditability** | Append-only audit log; every decision stores user, timestamp, inputs, rule-set and Country Profile versions, list versions, AI output and human edits |
 | **Availability** | 99.9% monthly target; daily encrypted backups with restore tests; screening lists refreshed at least daily |
@@ -463,6 +480,89 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 | **Devices** | Web app for desktop and tablet; client portal mobile-first |
 | **Localisation** | English only; dates in ISO / DD-MM-YYYY, amounts in EUR (other currencies converted at entry with the rate recorded); national working days and holidays from the firm's Country Profile; client names, addresses and documents accepted in any script (UTF-8) |
 | **Export** | Supervisor file and all records exportable as PDF + ZIP; full data export when a firm leaves |
+
+---
+
+## 8C. Security
+
+AMLSyncAI holds the most sensitive data a small firm has: identity documents, ownership structures, PEP and sanctions results, and suspicion reports that must never reach the client. **Security is the top non-functional priority.** Where a convenience or performance requirement conflicts with this section, this section wins.
+
+### 8C.1 Principles
+- **Secure by default:** the safest setting is the default; firms can only make settings stricter, never weaker than the baseline below.
+- **Least privilege and need to know:** every user, service and staff member sees only what their role requires.
+- **Zero trust:** every request is authenticated and authorised; nothing is trusted because it comes from "inside".
+- **Defence in depth:** edge protection, application controls, database isolation, encryption and monitoring each stop attacks independently.
+- **Everything logged:** every security-relevant action is recorded and can be shown to the firm and its supervisor.
+- **Standards:** controls aligned with **ISO/IEC 27001** and **SOC 2** from launch, with certification as the target; application security to **OWASP ASVS Level 2** (Level 3 for authentication, case/STR handling and exports).
+
+### 8C.2 Verifying firms before they get access (KYB of our own customers)
+A criminal must not be able to sign up as an "accountant" and use AMLSyncAI to check whether they are on a sanctions list, or to harvest data.
+- **Sandbox until verified:** a new firm can explore the product with **sample data only**. Real client data, screening of real people, registry look-ups and the client portal are locked until the firm is verified.
+- **Firm checks:** company registration confirmed via BRIS / KYB provider; firm is active; its activity matches an obliged-entity sector; registered address and legal representatives retrieved.
+- **Owner check:** the person signing up (Owner) verifies their identity with eID or ID document + NFC + liveness, and must appear as a director/legal representative of the firm, or provide a signed authorisation.
+- **Screening of the firm:** the firm, its directors and beneficial owners are screened against sanctions and PEP lists; a true sanctions match blocks the account.
+- **Signals:** business email domain matching the firm (free and disposable email domains flagged; disposable domains blocked); payment method in the firm's name; country of sign-up vs firm country.
+- **Manual review** of any sign-up with a failed or inconsistent check; decision recorded.
+- **Re-verification:** yearly, and when the firm's registry data (directors, owners, status) changes; a dissolved or struck-off firm is suspended automatically.
+
+### 8C.3 Verifying and authenticating users
+- **Invite only:** after the Owner, users join only by invitation from an Owner or Compliance Officer of a verified firm. No open self-registration into a firm.
+- **Email verification** for every user before first login; invitation links expire after 72 hours and work once.
+- **Identity verification of users:** mandatory for Owner, Compliance Manager and Compliance Officer (eID or ID + NFC + liveness); recommended and switchable on by the firm for all Staff (default **on**).
+- **Multi-factor authentication — mandatory for every user:** passkeys (FIDO2/WebAuthn) preferred; authenticator app (TOTP) allowed; **SMS and email codes not allowed** as a second factor.
+- **Step-up re-authentication** (fresh MFA within the last 5 minutes) for: approvals, filing or exporting an STR, supervisor-file and bulk exports, Country Profile changes, user and role changes, MFA changes, deletion and legal-hold changes, API key creation.
+- **Passwords:** minimum 12 characters; checked against known breached passwords; no forced periodic changes; stored with a modern memory-hard hash (e.g. Argon2id).
+- **Sessions:** idle timeout 15 minutes, absolute timeout 12 hours; secure, HttpOnly, SameSite cookies; session list with "sign out everywhere"; sessions revoked immediately when a user is removed or their role is reduced.
+- **New device / new location alerts** to the user, and to the Owner for Owner and Compliance Officer accounts.
+- **Account recovery** requires identity re-verification plus approval by another admin of the firm (or AMLSyncAI support with identity check for single-user firms); recovery is never possible by email alone.
+- **Leavers:** removing a user revokes all sessions, API keys and portal-review rights at once; their records and approvals stay attributed to them.
+- **SSO (V2):** SAML / OIDC for larger firms, with MFA still enforced.
+
+### 8C.4 Bot traffic and abuse protection
+- **Edge protection:** web application firewall (OWASP top-10 rules) and DDoS protection in front of every public endpoint (app, client portal, API, marketing site forms).
+- **Bot management:** behavioural and device signals classify traffic as human / good bot / bad bot. Suspected bots on sign-up, login, password reset, invitation acceptance, portal-link opening and feature-request submission get an **invisible challenge**, then a visible challenge (CAPTCHA or proof-of-work) if still suspicious, then a block.
+- **Rate limits** per IP, per account, per firm and per API key on every endpoint, with stricter limits on: login and MFA attempts, password reset, screening searches, registry look-ups, portal link opening, exports and AI drafting.
+- **Credential-stuffing and brute-force protection:** progressive delays and temporary lockout after repeated failures; breached-password check; **no user enumeration** (identical responses and timing for existing and non-existing accounts).
+- **Screening abuse:** a firm cannot use AMLSyncAI as a free lookup service — screening is only possible for a party linked to a matter; unusual volumes (e.g. more screenings than clients by a large margin) trigger an alert and review; hard daily caps per plan.
+- **Scraping and exfiltration:** limits and alerts on mass viewing, mass download and bulk export; exports are watermarked with user, firm and timestamp.
+- **Sign-up abuse:** disposable email domains blocked; repeated sign-ups from the same device or payment method flagged; free-trial sandbox has no access to real data (see §8C.2).
+- **VPN and anonymising networks** are challenged, not blocked by default (clients may legitimately use them); firms can choose to block them for their staff.
+- **API:** keys scoped to a firm and to specific permissions, shown once, rotatable, expiring; optional IP allow-list (V2); signed webhooks.
+
+### 8C.5 Client portal security
+- Links are random, unguessable, bound to one party and one matter, **expire after 14 days** (firm can set shorter) and can be revoked by staff.
+- Opening a link requires a **one-time code** sent to the email or phone the link was sent to, or eID login. Links and URLs never contain personal data.
+- A party sees only its own data and uploads; other parties in the same matter are never visible.
+- ID verification vendors must have certified **presentation-attack detection** (ISO/IEC 30107-3) and **injection-attack detection** (virtual cameras, emulators); NFC chip signature checked; document tamper checks.
+- **File uploads:** type allow-list (PDF, JPG, PNG, HEIC, DOCX), size limit, malware scanning before anyone can open the file, files stored outside the web root and served only via short-lived signed URLs.
+
+### 8C.6 Data protection and encryption
+- **In transit:** TLS 1.3 (TLS 1.2 minimum) everywhere, HSTS, no mixed content.
+- **At rest:** AES-256 for databases, files and backups; **separate encryption keys per firm** held in an EU-region key management service backed by HSM; keys rotated yearly.
+- **Field-level encryption** for the most sensitive data: ID document numbers and images, tax IDs, liveness media, STR / case content.
+- **Secrets** (API keys, credentials) stored only in a secrets vault, never in code or logs; logs mask personal data.
+- **Backups:** encrypted, immutable, stored in a separate EU account; restore tested at least quarterly; RPO ≤ 1 hour, RTO ≤ 8 hours.
+- **Hosting:** EU regions only, across at least two availability zones.
+
+### 8C.7 Access control and insider risk
+- **Tenant isolation** enforced in the database (row-level security) and in the API, with automated tests on every endpoint.
+- **Need-to-know for cases:** STR, sanctions-hit and FIU-request cases are visible only to the Compliance Officer (and Owner if the firm configures it) — enforced on the server, not just hidden in the UI.
+- **No standing access for AMLSyncAI staff** to customer data. Support access is **just-in-time**: requested with a reason, approved by the firm's Owner or Compliance Officer, limited in time and scope, fully logged, and visible to the firm in its security log.
+- **AMLSync Expert reviewers** (outsourcing, §4A.10) get access only to the files assigned to them, read/recommend only.
+- **Production access** for engineers only via a hardened access gateway with MFA and session recording; four-eyes approval for any data-changing production action.
+- **Quarterly access reviews** of all staff and service accounts.
+
+### 8C.8 Application and AI security
+- Secure development lifecycle: threat modelling for new features, mandatory peer review, automated static analysis, dependency and container scanning, secret scanning, dynamic testing on staging; software bill of materials (SBOM); signed builds and deployments.
+- Strict Content Security Policy; no third-party trackers or analytics scripts inside the app or client portal.
+- **AI safety:** uploaded documents and client text are treated as data, never as instructions (prompt-injection defence); AI services cannot change records or call external systems on their own; AI outputs are validated and always reviewed by a user (§5); AI calls are logged; no customer data used for training.
+
+### 8C.9 Monitoring, incident response and testing
+- **Security monitoring:** central logging of all Security Events, retained at least 1 year; real-time alerts for suspicious patterns (impossible travel, MFA fatigue, mass export, privilege changes, staff access); on-call response for critical alerts 24/7.
+- **Firm security log:** each firm sees its own logins, failed logins, new devices, exports, role changes and AMLSyncAI staff access.
+- **Incident response plan** with defined roles, tested at least yearly. Affected firms are notified **without undue delay and within 24 hours** of confirming an incident that affects their data, with the information they need for their own 72-hour GDPR notification.
+- **Testing:** independent penetration test before V1 launch, yearly, and after major changes — including bot, abuse and tenant-isolation scenarios; **responsible disclosure** policy with `security.txt`; bug bounty after launch.
+- **Status page** for availability and incidents.
 
 ---
 
@@ -618,9 +718,66 @@ A V1 module is **done** only when every criterion below passes in an automated o
 - [ ] No AI-generated document becomes final without an approval by a named user; the approval screen marks AI-written sections.
 - [ ] Prompts and outputs are logged; no customer data is sent to a model outside the EU or used for training (contract and configuration check).
 
-### 11.13 Release-level done (V1)
-- [ ] All criteria in §11.0–11.12 pass.
+### 11.13 Feature requests
+- [ ] The "Suggest a feature" button is available on every screen; the module field is pre-filled from the current screen.
+- [ ] While typing a title, at least the 5 most similar existing requests are shown; the user can vote on one instead of submitting.
+- [ ] A user can vote only once per request; a firm's name is never shown to other firms.
+- [ ] Text containing an ID number, IBAN, email, phone number or date of birth triggers a warning and cannot be submitted until removed or confirmed.
+- [ ] The 11th request by the same user in one day is refused with a clear message.
+- [ ] A user in an unverified (sandbox) firm cannot submit or vote.
+- [ ] A status change notifies the requester and all voters; *Not planned* requires a reason; *Released* requires a release-note link.
+- [ ] A request marked "required by law in my country" is tagged *regulatory* and appears at the top of the internal triage queue.
+- [ ] AMLSyncAI triage users can merge duplicates (votes are combined) and cannot open any client data from the request.
+
+### 11.14 Security
+**Firm and user verification**
+- [ ] A new firm is in sandbox mode: real-data actions (create real party, screening, registry look-up, client portal) are blocked in UI and API until verification passes.
+- [ ] Sign-up with a disposable email domain is refused; a free email domain is flagged for manual review.
+- [ ] A firm whose Owner is not a director/legal representative and has no signed authorisation is not verified.
+- [ ] A firm or BO with a confirmed sanctions match is blocked.
+- [ ] A firm whose registry status changes to dissolved is suspended within 24 hours.
+- [ ] A user cannot join a firm without an invitation; invitation links expire after 72 hours and work once.
+- [ ] Owner, Compliance Manager and Compliance Officer cannot perform any real-data action until identity verification is complete.
+
+**Authentication and sessions**
+- [ ] Every user must set up MFA (passkey or TOTP) before first use; SMS/email codes are not offered as a second factor.
+- [ ] Approvals, STR filing/export, bulk and supervisor-file exports, Country Profile changes, role/user changes, MFA changes, deletion/legal-hold and API key creation require re-authentication if the last MFA was > 5 minutes ago.
+- [ ] A password found in a breached-password list is rejected.
+- [ ] Sessions end after 15 minutes idle and 12 hours absolute; removing a user ends all their sessions within 60 seconds.
+- [ ] Login from a new device sends an alert to the user (and to the Owner for Owner/Compliance Officer accounts).
+- [ ] Account recovery cannot be completed by email alone.
+
+**Bot and abuse protection**
+- [ ] Login, sign-up, password reset and portal-link endpoints return identical responses and similar timing for existing and non-existing accounts (no enumeration).
+- [ ] Automated scripted sign-up and login attempts (headless browser test) are challenged or blocked.
+- [ ] 10 failed logins on one account trigger progressive delay and temporary lockout; the account owner is notified.
+- [ ] Rate limits are enforced on login, MFA, password reset, screening, registry look-up, portal-link opening, exports and AI drafting (load test shows `429` responses above the limit and no service degradation for other firms).
+- [ ] Screening a person not linked to a matter is impossible; exceeding the daily screening cap is blocked and alerts AMLSyncAI.
+- [ ] A bulk export above the alert threshold creates a Security Event and notifies the Owner; exported PDFs carry a watermark.
+
+**Client portal**
+- [ ] A portal link cannot be opened without the one-time code or eID; an expired or revoked link shows no data.
+- [ ] A party can never see another party's data in the same matter (automated test).
+- [ ] An uploaded file with a test malware signature is quarantined and never served.
+- [ ] A disallowed file type is refused.
+
+**Data protection and access**
+- [ ] Automated tests on every API endpoint confirm a user of firm A gets no data from firm B.
+- [ ] STR / case data is not returned by the API to Staff users, even when requested directly.
+- [ ] AMLSyncAI staff cannot read customer data without an approved, time-limited access grant; the grant and every action under it appear in the firm's security log.
+- [ ] ID numbers, ID images, liveness media and case content are encrypted at field level (verified by inspecting raw database storage).
+- [ ] No secrets in the code repository (secret-scanning passes); logs contain no unmasked personal data (log sampling test).
+- [ ] A backup restore test completes within 8 hours with data loss ≤ 1 hour.
+
+**Testing and monitoring**
+- [ ] Independent penetration test (including bot, abuse and tenant-isolation scenarios) has no open critical or high findings.
+- [ ] Dependency and static-analysis scans show no unresolved critical vulnerabilities.
+- [ ] Security alerts for mass export, MFA reset, privilege change and staff access reach the on-call team in a test.
+- [ ] `security.txt` and the responsible disclosure page are published.
+- [ ] The incident response plan has been rehearsed once (tabletop exercise) before launch.
+
+### 11.15 Release-level done (V1)
+- [ ] All criteria in §11.0–11.14 pass.
 - [ ] End-to-end test scripts pass for three firms: an accountant (company client with 3-level ownership), an estate agent (sale with buyer and seller, one EDD), and a jewellery trader (cash sale with supplier CDD and linked transactions).
 - [ ] Each end-to-end script also passes with a filled-in non-default Country Profile (lower cash cap, extra EDD case, national sanctions list, holidays).
-- [ ] Penetration test with no open critical or high findings.
 - [ ] Legal review of the EU Core rules and all **[verify]** items completed and recorded.
