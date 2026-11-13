@@ -12,7 +12,7 @@ import { PartyFields } from "@/components/party-fields";
 import {
   acceptAction, addOwnerAction, decideMatchAction, eddChecklistAction, endAction, recordExtractAction, recordVerificationAction,
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
-  revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction,
+  revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
 } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
@@ -502,6 +502,16 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
               <StepUpLink />
             </ActionForm>
           </div>
+        </Card>
+      )}
+
+      {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
+        <Card title="Periodic refresh (Art. 26)">
+          <p className="text-sm text-muted">
+            Due {cf.file.nextRefreshOn?.toISOString().slice(0, 10) ?? "—"}. 30 days before, the client automatically gets a link to confirm nothing changed; screening re-runs in the
+            background. You can also refresh now after updating the file.
+          </p>
+          <ActionButton action={markRefreshedAction.bind(null, fileId)}>Mark CDD refreshed</ActionButton>
         </Card>
       )}
 

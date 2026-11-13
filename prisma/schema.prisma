@@ -841,6 +841,7 @@ model PortalLink {
   tokenHash   String       @unique
   tokenEnc    Bytes // encrypted with the firm key, so reminders can re-send the same link
   sentTo      String // email the link and the one-time codes go to
+  purpose     String       @default("onboarding") // onboarding | refresh
   status      PortalStatus @default(SENT)
   expiresAt   DateTime // 14 days, firm may set shorter
   codeHash    String?

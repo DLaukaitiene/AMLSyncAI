@@ -252,3 +252,15 @@ describe("hard gates (§11.4, §11.8)", () => {
     expect(canCompleteMatter({ ...m, transactionHold: false }).allowed).toBe(true);
   });
 });
+
+describe("sectoral bans in gates (§11.8)", () => {
+  it("are absolute: even a Compliance Officer override can't accept", () => {
+    const f: CddFileState = {
+      partyId: "p", role: "client", identityVerified: true, purposeRecorded: true, riskAssessed: true, eddRequired: false, openScreeningMatches: 0,
+      trueSanctionsMatch: false, sectoralBans: [{ regulation: "Reg. (EU) 833/2014 Art. 5n", explanation: "Services to Russian-established entities are prohibited." }],
+    };
+    const r = canAcceptClient(f, { byRole: "compliance-officer", reason: "Long-standing client" });
+    expect(r.allowed).toBe(false);
+    expect(r.error).toMatch(/prohibited/);
+  });
+});

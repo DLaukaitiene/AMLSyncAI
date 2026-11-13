@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
 import { requestMeta } from "@/lib/server/session";
-import { portalContext, portalLegalSchema, portalNaturalSchema, saveDraft, sendPortalCode, submitPortal, verifyPortalCode } from "@/lib/server/portal";
+import { confirmNoChange, portalContext, portalLegalSchema, portalNaturalSchema, saveDraft, sendPortalCode, submitPortal, verifyPortalCode } from "@/lib/server/portal";
 import { withTenant } from "@/lib/server/db";
 import { storeDocument } from "@/lib/server/storage";
 import { formToObject, zodErrors } from "@/lib/server/form";
@@ -68,4 +68,14 @@ export async function uploadAction(token: string, _: ActionState, fd: FormData):
   if (!r.ok) return { error: r.error };
   revalidatePath(`/p/${token}`);
   return { message: "Uploaded." };
+}
+
+export async function noChangeAction(token: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const signature = String(fd.get("signature") ?? "").trim();
+  if (fd.get("confirm") !== "on" || signature.length < 3) return { error: "Tick the box and type your full name to confirm.", fieldErrors: { signature: ["Type your full name."] } };
+  const { ip } = await requestMeta();
+  const r = await confirmNoChange(token, signature, ip);
+  if (!r.ok) return { error: r.error };
+  revalidatePath(`/p/${token}`);
+  return { message: "Confirmed." };
 }

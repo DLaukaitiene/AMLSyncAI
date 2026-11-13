@@ -78,12 +78,13 @@ export async function addPartyAction(matterId: string, _: ActionState, fd: FormD
     }
     const exists = await tx.matterParty.findFirst({ where: { matterId, partyId, role } });
     if (exists) return { error: "This party already has that role in the matter." };
+    const review = o.existingPartyId ? await compareWithProfile(tx, s.firm.id, matterId, partyId) : null;
     await tx.matterParty.create({ data: { firmId: s.firm.id, matterId, partyId, role } });
     const fileId = await ensureFile(tx, s.firm.id, partyId, role);
     await persistRiskIfChanged(tx, s.firm.id, await loadClientFile(tx, s.firm.id, fileId));
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Matter", objectId: matterId, fields: ["parties"] });
     revalidatePath(`/app/matters/${matterId}`);
-    return { message: "Party added. Each party has its own CDD file." };
+    return { message: `Party added. Each party has its own CDD file.${review ? ` Review needed: ${review}` : ""}` };
   });
 }
 
@@ -193,4 +194,26 @@ export async function completeMatterAction(matterId: string, step: "transfer" | 
     revalidatePath(`/app/matters/${matterId}`);
     return { message: step === "transfer" ? "Funds / property transfer can go ahead." : "Matter completed." };
   });
+}
+
+/**
+ * Per-matter monitoring (spec §4.5, §11.9): a new matter for an existing client
+ * is compared with what we know (earlier matter values, countries). A mismatch
+ * creates a review task.
+ */
+async function compareWithProfile(tx: Tx, firmId: string, matterId: string, partyId: string): Promise<string | null> {
+  const accepted = await tx.cddFile.findFirst({ where: { partyId, status: { in: ["COMPLETE", "SDD", "EDD"] } } });
+  if (!accepted) return null;
+  const value = (m: { details: unknown }) => Number((m.details as { price?: string; value?: string }).price ?? (m.details as { value?: string }).value ?? 0);
+  const matter = await tx.matter.findUniqueOrThrow({ where: { id: matterId } });
+  const earlier = await tx.matter.findMany({ where: { id: { not: matterId }, parties: { some: { partyId } } } });
+  const reasons: string[] = [];
+  const max = Math.max(0, ...earlier.map(value));
+  if (value(matter) > 0 && max > 0 && value(matter) > 2 * max) reasons.push(`value €${value(matter).toLocaleString("en")} is more than twice the largest earlier matter (€${max.toLocaleString("en")})`);
+  const party = await tx.party.findUniqueOrThrow({ where: { id: partyId } });
+  const declared = (party.details as { sourceOfFunds?: string }).sourceOfFunds;
+  if (value(matter) >= 100_000 && !declared) reasons.push("large matter and no source of funds on file");
+  if (!reasons.length) return null;
+  await upsertTask(tx, { firmId, kind: "matter-review", objectType: "Matter", objectId: matterId, dueOn: toIsoDate(new Date()), article: "Art. 26" });
+  return reasons.join("; ") + ".";
 }

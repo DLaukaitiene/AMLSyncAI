@@ -15,6 +15,7 @@ import { toIsoDate } from "@/lib/rules/dates";
 import { screenSubject } from "@/lib/screening/match";
 import { partyCountries, SECTOR_PRODUCT_RISK } from "@/lib/cdd/party";
 import { startRetentionClock } from "./retention";
+import { checkSectoralSanctions } from "@/lib/rules/sectoral-sanctions";
 import type { CountryProfile } from "@/lib/rules/country-profile";
 
 type Details = Record<string, unknown>;
@@ -245,6 +246,10 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     openScreeningMatches: screening.filter((s) => s.decision === "PENDING").length,
     trueSanctionsMatch: sanctions.affected,
     sddDelayedVerification: !!opts.sdd && risk.sddEligible,
+    sectoralBans: checkSectoralSanctions({
+      firmSectors: firm.sectors,
+      client: { kind: party.kind, countryOfCreation: d.countryOfCreation as string | undefined, residenceCountry: d.residenceCountry as string | undefined },
+    }),
   };
 
   return { file: f as CddFile, party, tree, bo, sanctions, risk, profile, profileVersion, isPep, state, screening, verifications, extracts, approvals, smoFallbackOk };

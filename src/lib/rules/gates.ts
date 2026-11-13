@@ -47,6 +47,8 @@ export interface CddFileState {
   openDiscrepancy?: boolean;
   /** SDD: verification may be delayed (Art. 33). */
   sddDelayedVerification?: boolean;
+  /** EU sectoral sanctions that prohibit the service or sale (e.g. Reg. 833/2014 Art. 5n). */
+  sectoralBans?: { regulation: string; explanation: string }[];
 }
 
 export interface GateItem {
@@ -61,6 +63,7 @@ export function openCddItems(f: CddFileState): GateItem[] {
   const items: GateItem[] = [];
   if (f.anonymous) items.push({ id: "anonymous", message: "Anonymous customers cannot be accepted.", article: "Art. 79", absolute: true });
   if (f.hasBearerShares) items.push({ id: "bearer-shares", message: "Entities with bearer shares cannot be accepted.", article: "Art. 79", absolute: true });
+  for (const b of f.sectoralBans ?? []) items.push({ id: `sectoral:${b.regulation}`, message: b.explanation, article: b.regulation, absolute: true });
   if (f.trueSanctionsMatch) items.push({ id: "sanctions", message: "True sanctions match: freeze and notify the sanctions authority.", article: "Art. 20(1)(d); Reg. 269/2014", absolute: true });
   if (!f.identityVerified && !f.sddDelayedVerification) items.push({ id: "identity", message: "Verify the identity of this party.", article: "Art. 22–23" });
   if (f.boResolved === false) items.push({ id: "beneficial-owners", message: "Identify the beneficial owners or record the senior managing officials.", article: "Art. 20(1)(b), 22(2)" });

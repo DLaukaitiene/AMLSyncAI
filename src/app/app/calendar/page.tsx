@@ -8,7 +8,7 @@ import { can } from "@/lib/auth/permissions";
 const KIND: Record<string, string> = {
   refresh: "CDD refresh", "sdd-verification": "SDD verification (60 days)", "cdd-required": "CDD required", "threshold-report": "Threshold report",
   "discrepancy-report": "BO register discrepancy (14 days)", "transaction-hold": "Transaction hold (3 working days)", "fiu-request": "FIU request",
-  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "annual-report": "Annual compliance report", "integrity-declaration": "Integrity declaration", "whistleblowing-ack": "Acknowledge whistleblowing report (7 days)", "portal-stalled": "Client hasn't completed the portal (7+ days)",
+  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "annual-report": "Annual compliance report", "refresh-review": "Refresh needs review", "matter-review": "New matter doesn't match the client profile", "integrity-declaration": "Integrity declaration", "whistleblowing-ack": "Acknowledge whistleblowing report (7 days)", "portal-stalled": "Client hasn't completed the portal (7+ days)",
 };
 const TITLES: Record<CalendarBucket, string> = { overdue: "Overdue", "due-30-days": "Due in the next 30 days", later: "Later", done: "Done" };
 

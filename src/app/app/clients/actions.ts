@@ -15,7 +15,7 @@ import { EDD_CHECKLIST } from "@/lib/rules/risk-scoring";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { validateSmoFallback } from "@/lib/rules/beneficial-ownership";
 import type { Prisma } from "@prisma/client";
-import { createPortalLink, revokePortalLink } from "@/lib/server/portal";
+import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/portal";
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
@@ -383,4 +383,16 @@ export async function openDiscrepancyAction(fileId: string, _: ActionState, fd: 
   });
   revalidatePath(`/app/clients/${fileId}`);
   return { message: "Discrepancy opened. Ask the client to correct the register; otherwise report it within 14 days (Art. 24). The Compliance Officer has the case." };
+}
+
+/** Staff completes a periodic refresh (Art. 26): renews the date if nothing is open. */
+export async function markRefreshedAction(fileId: string): Promise<ActionState> {
+  const s = await requireUser("client.accept");
+  const r = await withTenant(s.firm.id, async (tx) => {
+    const res = await renewIfClean(tx, s.firm.id, fileId, "refreshed by staff");
+    if (res.renewed) await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "approve", objectType: "CddFile", objectId: fileId, fields: ["nextRefreshOn"] });
+    return res;
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return r.renewed ? { message: "CDD refreshed. Next refresh date updated." } : { error: `Not yet: ${r.reasons.join(" ")} If the risk level changed, review it and accept the client again.` };
 }

@@ -11,6 +11,8 @@ import { hit } from "./rate-limit";
 import { loadClientFile, persistRiskIfChanged, runScreening, upsertTask } from "./cdd";
 import { displayName } from "@/lib/cdd/party";
 import { toIsoDate } from "@/lib/rules/dates";
+import { openCddItems } from "@/lib/rules/gates";
+import { refreshDue } from "@/lib/rules/deadlines";
 
 /**
  * Client self-service portal (spec §4A.1, §8C.5, §11.5).
@@ -26,7 +28,7 @@ const MAX_CODE_ATTEMPTS = 5;
 const SESSION_MINUTES = 30;
 const COOKIE = "aml_portal";
 
-export async function createPortalLink(tx: Tx, ctx: { firmId: string; userId: string }, cddFileId: string, email: string, days = LINK_DAYS) {
+export async function createPortalLink(tx: Tx, ctx: { firmId: string; userId: string }, cddFileId: string, email: string, days = LINK_DAYS, purpose: "onboarding" | "refresh" = "onboarding") {
   const file = await tx.cddFile.findUniqueOrThrow({ where: { id: cddFileId }, include: { party: true } });
   const firm = await tx.firm.findUniqueOrThrow({ where: { id: ctx.firmId } });
   // One active link per file: earlier links stop working.
@@ -34,11 +36,16 @@ export async function createPortalLink(tx: Tx, ctx: { firmId: string; userId: st
   const token = randomToken();
   const link = await tx.portalLink.create({
     data: {
-      firmId: ctx.firmId, partyId: file.partyId, cddFileId, tokenHash: sha256(token), tokenEnc: encryptField(ctx.firmId, token), sentTo: email.toLowerCase(),
+      firmId: ctx.firmId, partyId: file.partyId, cddFileId, tokenHash: sha256(token), tokenEnc: encryptField(ctx.firmId, token), sentTo: email.toLowerCase(), purpose,
       expiresAt: new Date(Date.now() + Math.min(days, LINK_DAYS) * 86_400_000), createdById: ctx.userId,
     },
   });
   await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "PortalLink", objectId: link.id });
+  if (purpose === "refresh") {
+    await sendEmail(email, `${firm.name}: please confirm your information is up to date`,
+      `Hello,\n\nEU anti-money-laundering rules require ${firm.name} to keep your client information up to date. It takes a minute: confirm that nothing has changed, or update what has.\n\n${appUrl(`/p/${token}`)}\n\nYou'll get a one-time code by email to open the page.`);
+    return link.id;
+  }
   await sendEmail(
     email,
     `${firm.name}: please complete your client information`,
@@ -286,4 +293,67 @@ export async function sendPortalReminders(now = new Date()) {
     }
   }
   return { checked: links.length, sent };
+}
+
+// ---------------------------------------------------------------------------
+// Periodic refresh (spec §4A.5, §11.9): "nothing changed" renews the file when
+// screening is clean; otherwise staff review the exception.
+// ---------------------------------------------------------------------------
+
+export async function confirmNoChange(token: string, signature: string, ip: string | null) {
+  const ctx = await portalContext(token);
+  if (!ctx || ctx.link.purpose !== "refresh" || ctx.link.status === "SUBMITTED") return { ok: false as const, error: "This page can no longer be submitted." };
+  const { link, party } = ctx;
+  await withTenant(link.firmId, async (tx) => {
+    const signed = { signedName: signature, signedAt: new Date().toISOString(), ip, statement: "Nothing has changed since my last information." };
+    const d = (party.details ?? {}) as Record<string, unknown>;
+    await tx.party.update({ where: { id: party.id }, data: { details: { ...d, refreshConfirmations: [...((d.refreshConfirmations as unknown[]) ?? []), signed] } as Prisma.InputJsonValue } });
+    await tx.portalLink.update({ where: { id: link.id }, data: { status: "SUBMITTED", submittedAt: new Date(), submission: { noChange: true, declaration: signed } as Prisma.InputJsonValue, sessionHash: null } });
+    await tx.auditEvent.create({ data: { firmId: link.firmId, userId: null, action: "update", objectType: "CddFile", objectId: link.cddFileId, fields: ["refresh-confirmation"] } });
+    await renewIfClean(tx, link.firmId, link.cddFileId, "client confirmed nothing changed");
+  });
+  (await cookies()).delete(COOKIE);
+  return { ok: true as const };
+}
+
+/** Renews the refresh date when screening is clean and nothing needs attention; otherwise a staff task. */
+export async function renewIfClean(tx: Tx, firmId: string, cddFileId: string, why: string) {
+  const cf = await loadClientFile(tx, firmId, cddFileId);
+  await runScreening(tx, firmId, [...cf.tree.parties.keys()]);
+  const fresh = await loadClientFile(tx, firmId, cddFileId);
+  await persistRiskIfChanged(tx, firmId, fresh);
+  const open = openCddItems(fresh.state);
+  const levelChanged = fresh.risk.eddRequired !== (cf.file.status === "EDD");
+  if (open.length === 0 && !levelChanged) {
+    const due = refreshDue(toIsoDate(new Date()), fresh.risk.eddRequired).due;
+    await tx.cddFile.update({ where: { id: cddFileId }, data: { nextRefreshOn: new Date(due) } });
+    await tx.task.updateMany({ where: { objectId: cddFileId, kind: { in: ["refresh", "refresh-review"] }, status: "OPEN" }, data: { status: "DONE" } });
+    await upsertTask(tx, { firmId, kind: "refresh", objectType: "CddFile", objectId: cddFileId, dueOn: due, article: "Art. 26(2)" });
+    await tx.auditEvent.create({ data: { firmId, userId: null, action: "update", objectType: "CddFile", objectId: cddFileId, fields: ["nextRefreshOn"] } });
+    return { renewed: true as const, why };
+  }
+  await upsertTask(tx, { firmId, kind: "refresh-review", objectType: "CddFile", objectId: cddFileId, dueOn: toIsoDate(new Date()), article: "Art. 26" });
+  return { renewed: false as const, reasons: open.map((i) => i.message) };
+}
+
+/** Daily: 30 days before the refresh date, re-screen and send the client a refresh link. */
+export async function startDueRefreshes(firmId: string, now = new Date()) {
+  const horizon = new Date(now.getTime() + 30 * 86_400_000);
+  return withTenant(firmId, async (tx) => {
+    const files = await tx.cddFile.findMany({ where: { status: { in: ["COMPLETE", "SDD", "EDD"] }, nextRefreshOn: { lte: horizon } }, include: { party: true } });
+    const officer = await tx.user.findFirst({ where: { roles: { has: "COMPLIANCE_OFFICER" }, deactivatedAt: null }, orderBy: { createdAt: "asc" } });
+    let sent = 0;
+    for (const f of files) {
+      if (await tx.portalLink.count({ where: { cddFileId: f.id, purpose: "refresh", OR: [{ status: { in: ["SENT", "OPENED"] } }, { submittedAt: { gte: new Date(now.getTime() - 60 * 86_400_000) } }] } })) continue;
+      const cf = await loadClientFile(tx, firmId, f.id);
+      await runScreening(tx, firmId, [...cf.tree.parties.keys()]);
+      const lastLink = await tx.portalLink.findFirst({ where: { cddFileId: f.id }, orderBy: { createdAt: "desc" } });
+      const email = ((f.party.details as { email?: string }).email ?? lastLink?.sentTo) || null;
+      if (email && officer) {
+        await createPortalLink(tx, { firmId, userId: officer.id }, f.id, email, LINK_DAYS, "refresh");
+        sent++;
+      }
+    }
+    return { due: files.length, sent };
+  });
 }

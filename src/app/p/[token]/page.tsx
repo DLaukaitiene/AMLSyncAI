@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { linkLanding, portalContext } from "@/lib/server/portal";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
-import { requestCodeAction, saveAction, uploadAction, verifyCodeAction } from "./actions";
+import { noChangeAction, requestCodeAction, saveAction, uploadAction, verifyCodeAction } from "./actions";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const area = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
@@ -80,6 +80,18 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           Fields marked * are required. You can save and come back later. Only you can see this page; it shows only your own information.
         </p>
       </div>
+
+      {ctx.link.purpose === "refresh" && (
+        <section className="space-y-3 rounded-md border border-accent p-4">
+          <h2 className="font-semibold">Has anything changed?</h2>
+          <p className="text-sm">If your details (name, address, nationality, ownership, the purpose of our work or where your money comes from) are the same as before, confirm it here. Otherwise update the form below.</p>
+          <ActionForm action={noChangeAction.bind(null, token)} className="space-y-3">
+            <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="confirm" className="mt-1" /> Nothing has changed since I last gave my information to {ctx.firmName}.</label>
+            <Field label="Type your full name to confirm" name="signature" autoComplete="name" />
+            <Submit>Confirm nothing has changed</Submit>
+          </ActionForm>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="font-semibold">Documents</h2>
