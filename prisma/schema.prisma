@@ -191,6 +191,7 @@ model Firm {
   clientTypes   String[]
   usesCash      Boolean  @default(false)
   crossBorderPct Int?
+  plan          String   @default("starter") // starter | professional | business (§6) — sets daily screening caps
   createdAt     DateTime @default(now())
 
   offices               Office[]

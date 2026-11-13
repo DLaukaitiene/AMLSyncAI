@@ -35,6 +35,6 @@ export async function rescreenFirm(firmId: string) {
       frontier = ls.map((l) => l.ownerId).filter((id) => !ids.has(id));
       frontier.forEach((id) => ids.add(id));
     }
-    return runScreening(tx, firmId, [...ids]);
+    return runScreening(tx, firmId, [...ids], undefined, { system: true });
   });
 }

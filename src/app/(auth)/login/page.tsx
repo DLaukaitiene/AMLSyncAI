@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PowChallenge } from "@/components/pow-challenge";
 import { ActionForm, Field, Honeypot, Submit } from "@/components/form";
 import { loginAction } from "../actions";
 
@@ -14,6 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {recovery && <p role="status" className="text-sm">Confirmed. Sign in after {recovery.slice(0, 16).replace("T", " ")} UTC to set up two-factor again.</p>}
       <ActionForm action={loginAction}>
         <Honeypot />
+        <PowChallenge purpose="login" />
         <Field label="Email" name="email" type="email" required autoComplete="username" />
         <Field label="Password" name="password" type="password" required autoComplete="current-password" />
         <Submit>Continue</Submit>

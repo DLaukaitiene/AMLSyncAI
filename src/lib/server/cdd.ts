@@ -16,6 +16,19 @@ import { screenSubject } from "@/lib/screening/match";
 import { partyCountries, SECTOR_PRODUCT_RISK } from "@/lib/cdd/party";
 import { startRetentionClock } from "./retention";
 import { checkSectoralSanctions } from "@/lib/rules/sectoral-sanctions";
+import { allowedNow, unusualVolume } from "@/lib/security/screening-caps";
+import { securityEvent } from "./audit";
+import { hit } from "./rate-limit";
+import { sendEmail } from "./email";
+
+/** Security event for the firm + one email a day to the AMLSyncAI team (§8C.4). */
+async function screeningAlert(firmId: string, kind: "daily-cap" | "unusual-volume", count: number) {
+  await securityEvent({ firmId, kind: `screening-${kind}`, details: { screenedToday: count } });
+  if (!(await hit(`screening-alert:${firmId}:${kind}:${toIsoDate(new Date())}`, { limit: 1, windowSec: 86_400 }))) return;
+  for (const to of (process.env.PLATFORM_ADMIN_EMAILS ?? "").split(",").map((x) => x.trim()).filter(Boolean)) {
+    await sendEmail(to, `AMLSyncAI alert: screening ${kind === "daily-cap" ? "daily cap reached" : "unusual volume"}`, `Firm ${firmId}: ${count} parties screened today. Review the firm's screening use.`);
+  }
+}
 import type { CountryProfile } from "@/lib/rules/country-profile";
 
 type Details = Record<string, unknown>;
@@ -100,11 +113,29 @@ export function beneficialOwnership(rootId: string, tree: Tree): BoResult {
 export type LoadedLists = Awaited<ReturnType<typeof loadLists>>;
 export const loadLists = (tx: Tx) => tx.screeningList.findMany({ where: { active: true }, include: { entries: true } });
 
-export async function runScreening(tx: Tx, firmId: string, partyIds: string[], preloaded?: LoadedLists) {
+/**
+ * Screens parties against every active list. User-triggered screening counts
+ * towards the firm's daily cap; system re-screening (list updates, refreshes)
+ * doesn't. Parties over the cap stay unscreened and block acceptance.
+ */
+export async function runScreening(tx: Tx, firmId: string, partyIds: string[], preloaded?: LoadedLists, opts: { system?: boolean } = {}) {
   const lists = preloaded ?? (await loadLists(tx));
   const now = new Date();
   let newHits = 0;
-  for (const pid of partyIds) {
+  let toScreen = partyIds;
+  let capped = 0;
+  if (!opts.system) {
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { plan: true } });
+    const today = new Date(toIsoDate(now));
+    const screenedToday = (await tx.screeningResult.groupBy({ by: ["partyId"], where: { screenedAt: { gte: today } } })).length;
+    const allowed = allowedNow(firm.plan, screenedToday, partyIds.length);
+    toScreen = partyIds.slice(0, allowed);
+    capped = partyIds.length - allowed;
+    if (capped > 0 || unusualVolume(screenedToday + allowed, await tx.cddFile.count({ where: { status: { notIn: ["REFUSED", "TERMINATED"] } } }))) {
+      await screeningAlert(firmId, capped > 0 ? "daily-cap" : "unusual-volume", screenedToday + allowed);
+    }
+  }
+  for (const pid of toScreen) {
     const p = await tx.party.findUniqueOrThrow({ where: { id: pid } });
     const d = det(p);
     const subject = {
@@ -141,7 +172,7 @@ export async function runScreening(tx: Tx, firmId: string, partyIds: string[], p
       }
     }
   }
-  return { listsChecked: lists.length, newHits };
+  return { listsChecked: lists.length, newHits, capped };
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +275,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     isPep: isPep || formerPep || !!d.isPepFamilyOrAssociate,
     pepApprovalRecorded: approvals.pep,
     openScreeningMatches: screening.filter((s) => s.decision === "PENDING").length,
+    unscreenedParties: treeIds.filter((id) => !screening.some((s) => s.partyId === id)).length,
     trueSanctionsMatch: sanctions.affected,
     sddDelayedVerification: !!opts.sdd && risk.sddEligible,
     sectoralBans: checkSectoralSanctions({

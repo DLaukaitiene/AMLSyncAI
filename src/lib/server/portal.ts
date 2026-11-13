@@ -320,7 +320,7 @@ export async function confirmNoChange(token: string, signature: string, ip: stri
 /** Renews the refresh date when screening is clean and nothing needs attention; otherwise a staff task. */
 export async function renewIfClean(tx: Tx, firmId: string, cddFileId: string, why: string) {
   const cf = await loadClientFile(tx, firmId, cddFileId);
-  await runScreening(tx, firmId, [...cf.tree.parties.keys()]);
+  await runScreening(tx, firmId, [...cf.tree.parties.keys()], undefined, { system: true });
   const fresh = await loadClientFile(tx, firmId, cddFileId);
   await persistRiskIfChanged(tx, firmId, fresh);
   const open = openCddItems(fresh.state);
@@ -347,7 +347,7 @@ export async function startDueRefreshes(firmId: string, now = new Date()) {
     for (const f of files) {
       if (await tx.portalLink.count({ where: { cddFileId: f.id, purpose: "refresh", OR: [{ status: { in: ["SENT", "OPENED"] } }, { submittedAt: { gte: new Date(now.getTime() - 60 * 86_400_000) } }] } })) continue;
       const cf = await loadClientFile(tx, firmId, f.id);
-      await runScreening(tx, firmId, [...cf.tree.parties.keys()]);
+      await runScreening(tx, firmId, [...cf.tree.parties.keys()], undefined, { system: true });
       const lastLink = await tx.portalLink.findFirst({ where: { cddFileId: f.id }, orderBy: { createdAt: "desc" } });
       const email = ((f.party.details as { email?: string }).email ?? lastLink?.sentTo) || null;
       if (email && officer) {

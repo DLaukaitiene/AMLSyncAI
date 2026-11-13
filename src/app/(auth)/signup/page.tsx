@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PowChallenge } from "@/components/pow-challenge";
 import { ActionForm, Field, Honeypot, Submit } from "@/components/form";
 import { EU_MEMBER_STATES, SECTORS, signupMode } from "@/lib/server/auth/flows";
 import { signupAction } from "../actions";
@@ -18,6 +19,7 @@ export default function SignupPage() {
       </div>
       <ActionForm action={signupAction}>
         <Honeypot />
+        <PowChallenge purpose="signup" />
         {invite && <Field label="Sign-up code" name="signupCode" required hint="AMLSyncAI is currently invitation only. Your code is in your invitation email." autoComplete="off" />}
         <Field label="Company name" name="companyName" required autoComplete="organization" />
         <Field label="Member state" name="memberState" required>

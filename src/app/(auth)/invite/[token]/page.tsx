@@ -1,3 +1,4 @@
+import { PowChallenge } from "@/components/pow-challenge";
 import { ActionForm, Field, Honeypot, Submit } from "@/components/form";
 import { findInvitation } from "@/lib/server/auth/flows";
 import { acceptInviteAction } from "../../actions";
@@ -21,6 +22,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       </p>
       <ActionForm action={acceptInviteAction.bind(null, token)}>
         <Honeypot />
+        <PowChallenge purpose="invite" />
         <Field label="Choose a password" name="password" type="password" required autoComplete="new-password" hint="At least 12 characters." />
         <Submit>Accept invitation</Submit>
       </ActionForm>

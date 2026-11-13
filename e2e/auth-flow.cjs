@@ -100,6 +100,17 @@ const log=(...a)=>console.log('✔',...a);
   const r = await q.goto(BASE+'/app/records'); log('staff /app/records status', r.status());
   await q.goto(BASE+'/app/settings/country-profile'); await q.getByText('Only a Compliance Officer can change').first().waitFor(); log('staff cannot edit Country Profile');
 
+  // Bot challenge: a login without the solved proof-of-work is refused
+  {
+    const x = await (await b.newContext()).newPage();
+    await x.goto(BASE + "/login");
+    await x.getByLabel("Email *").fill("anna@jip.lt"); await x.getByLabel("Password *").fill("correct horse battery staple");
+    await x.evaluate(() => document.querySelectorAll("input[name=pow_token],input[name=pow_solution]").forEach((e) => e.remove()));
+    await x.getByRole("button", { name: "Continue" }).click();
+    await x.getByText("Security check failed").first().waitFor();
+    log("login without the bot challenge is refused");
+  }
+
   // 9. Logout + login with recovery code, enumeration check
   await p.getByRole('button',{name:'Sign out',exact:true}).click(); await p.waitForURL(/login/);
   await p.getByLabel('Email *').fill('nobody@jip.lt'); await p.getByLabel('Password *').fill('whatever whatever');

@@ -18,6 +18,7 @@ import {
 import { createSession, destroySession, getSession, markMfa, requestMeta } from "@/lib/server/session";
 import { formToObject, isBot, safeNext, zodErrors } from "@/lib/server/form";
 import { securityEvent } from "@/lib/server/audit";
+import { checkPow, POW_FAILED } from "@/lib/server/pow";
 
 export async function signupAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip, userAgent } = await requestMeta();
@@ -25,6 +26,7 @@ export async function signupAction(_: ActionState, fd: FormData): Promise<Action
     await securityEvent({ kind: "bot-block", ip, userAgent, details: { endpoint: "signup" } });
     redirect("/signup/sent");
   }
+  if (!(await checkPow(fd, "signup", ip, userAgent))) return { error: POW_FAILED };
   const parsed = signupSchema.safeParse(formToObject(fd));
   if (!parsed.success) return zodErrors(parsed.error);
   const r = await startSignup(parsed.data, ip);
@@ -42,6 +44,7 @@ export async function confirmAction(token: string): Promise<ActionState> {
 export async function loginAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip, userAgent } = await requestMeta();
   if (isBot(fd)) return { error: "Email or password is incorrect." };
+  if (!(await checkPow(fd, "login", ip, userAgent))) return { error: POW_FAILED };
   const r = await passwordLogin(String(fd.get("email") ?? ""), String(fd.get("password") ?? ""), ip, userAgent);
   if (!r.ok) return { error: r.error };
   await createSession(r.user, r.user.mfaEnrolled ? "MFA_PENDING" : "MFA_SETUP");
@@ -82,6 +85,8 @@ export async function reauthAction(_: ActionState, fd: FormData): Promise<Action
 
 export async function acceptInviteAction(token: string, _: ActionState, fd: FormData): Promise<ActionState> {
   if (isBot(fd)) return { error: "This invitation is invalid or has expired." };
+  const { ip: invIp } = await requestMeta();
+  if (!(await checkPow(fd, "invite", invIp))) return { error: POW_FAILED };
   const r = await acceptInvitation(token, String(fd.get("password") ?? ""));
   if (!r.ok) return { error: r.error, fieldErrors: r.fieldErrors };
   await createSession(r.user, "MFA_SETUP");
@@ -90,6 +95,7 @@ export async function acceptInviteAction(token: string, _: ActionState, fd: Form
 
 export async function forgotAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip } = await requestMeta();
+  if (!(await checkPow(fd, "reset", ip))) return { error: POW_FAILED };
   if (!isBot(fd)) await requestPasswordReset(String(fd.get("email") ?? ""), ip);
   return { message: "If an account exists for this email, we've sent a link to reset the password." };
 }
@@ -109,6 +115,7 @@ export async function logoutAction() {
 
 export async function recoverAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip } = await requestMeta();
+  if (!(await checkPow(fd, "recover", ip))) return { error: POW_FAILED };
   if (!isBot(fd)) await requestSelfRecovery(String(fd.get("email") ?? ""), String(fd.get("password") ?? ""), ip);
   return { message: "If the details are correct, we've emailed the next steps. For your security, two-factor can be set up again only after 72 hours, and the firm's Owner is notified." };
 }

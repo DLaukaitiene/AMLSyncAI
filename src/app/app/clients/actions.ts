@@ -222,6 +222,7 @@ export async function rescreenAction(fileId: string): Promise<ActionState> {
     return res;
   });
   revalidatePath(`/app/clients/${fileId}`);
+  if (r.capped) return { error: `Today's screening limit for your plan was reached; ${r.capped} party(ies) were not screened. Try again tomorrow or contact AMLSyncAI.` };
   return { message: `Screened against ${r.listsChecked} list(s). ${r.newHits} new possible match(es).` };
 }
 

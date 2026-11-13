@@ -1,3 +1,4 @@
+import { PowChallenge } from "@/components/pow-challenge";
 import { ActionForm, Field, Honeypot, Submit } from "@/components/form";
 import { recoverAction } from "../actions";
 
@@ -12,6 +13,7 @@ export default function RecoverPage() {
       </p>
       <ActionForm action={recoverAction}>
         <Honeypot />
+        <PowChallenge purpose="recover" />
         <Field label="Email" name="email" type="email" required autoComplete="username" />
         <Field label="Password" name="password" type="password" required autoComplete="current-password" />
         <Submit>Start recovery</Submit>

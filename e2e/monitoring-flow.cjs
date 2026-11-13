@@ -88,6 +88,19 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   if (!/Review needed: value €250,000 is more than twice/.test(msg)) throw new Error("no review: " + msg);
   log("new matter far above the client's profile → review:", msg);
 
+  // Daily screening cap (starter plan: 1,000 parties a day)
+  const firmId = sql(`SELECT id FROM "Firm" WHERE name = 'Stebėsena UAB'`);
+  sql(`INSERT INTO "Party" (id, "firmId", kind, "displayName", details) SELECT gen_random_uuid(), '${firmId}', 'NATURAL', 'Filler ' || g, '{}' FROM generate_series(1, 1000) g`);
+  sql(`INSERT INTO "ScreeningResult" (id, "firmId", "partyId", "listKind", "listName", "listVersion", "matchData", decision, "screenedAt") SELECT gen_random_uuid(), '${firmId}', id, 'SANCTIONS', 'TEST', 'x', '{}', 'NO_MATCH', now() FROM "Party" WHERE "displayName" LIKE 'Filler %' AND "firmId" = '${firmId}'`);
+  await p.goto(BASE + "/app/clients/new");
+  await p.getByLabel("First names (all) *").fill("Over"); await p.getByLabel("Surname *").fill("Limit");
+  await p.getByRole("button", { name: "Create client" }).click();
+  await p.getByRole("heading", { name: "Over Limit" }).waitFor();
+  await p.getByText(/haven't been screened yet/).first().waitFor();
+  await submit(p, "Screen again now", "Today's screening limit for your plan was reached");
+  if (!sql(`SELECT count(*) FROM "SecurityEvent" WHERE "firmId" = '${firmId}' AND kind = 'screening-daily-cap'`).match(/^[1-9]/)) throw new Error("no security event");
+  log("daily screening cap: party left unscreened, acceptance blocked, security event + AMLSyncAI alert");
+
   console.log("page errors:", errors);
   await b.close();
 })().catch((e) => { console.error("✘", e.message); process.exit(1); });
