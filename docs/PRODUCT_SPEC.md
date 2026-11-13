@@ -1,211 +1,350 @@
-# AMLSyncAI — Product Specification (v0.1, draft)
+# AMLSyncAI — Product Specification
 
-*Status: draft for discussion · Last updated: 13 November 2026*
+*Version 0.2 (draft) · 13 November 2026*
 
-> **Legal note:** Article references below are to Regulation (EU) 2024/1624 (AMLR) and should be checked against the final Official Journal text and AMLA's regulatory technical standards before this spec is used for anything customer-facing. Items marked **[verify]** are ones I'm less sure of.
-
----
-
-## 1. Summary
-
-**AMLSyncAI** is AML compliance software for small and mid-sized **non-financial obliged entities** in the EU: accountants, real estate agents, traders in high-value goods, and similar firms. These firms must meet the same AMLR rules as banks from **10 July 2027**, but usually have no compliance team, no MLRO experience and no budget for enterprise tools.
-
-The product helps them do the work AMLR requires and **prove it to a supervisor**: onboard and check clients, identify beneficial owners, score risk, screen against sanctions and PEP lists, monitor and refresh files, report suspicions, and keep records.
-
-**How it relates to AMLSync:** AMLSync is a people-based compliance outsourcing service for fintechs (payment/e-money institutions, CASPs, banks, brokers, gaming). AMLSyncAI takes the same practitioner know-how and turns it into **software for a different, much larger customer group**. The two support each other:
-
-| | AMLSync (today) | AMLSyncAI (new) |
-|---|---|---|
-| What | Analysts and senior support, hired by the month | Self-service SaaS |
-| Who | Fintechs with compliance teams | Small non-financial firms with no compliance team |
-| Revenue | Project / FTE fees | Monthly subscription per firm |
-| Link | Can offer "AMLSync expert review" as a paid add-on inside the software | Feeds AMLSync with health-check and remediation leads |
-
-**Why now:** AMLR replaces national AML laws with one directly applicable regulation, so **one product can serve all 27 member states** with mostly the same rules. The deadline (10 July 2027) creates urgency. AMLA is publishing technical standards (CDD standard finalised 1 October 2026) that will tell everyone exactly what data to collect — software can build that in once.
+> **Legal references:** Article and annex references are to Regulation (EU) 2024/1624 (AMLR) and must be checked against the Official Journal text and the final AMLA regulatory technical standards. Items marked **[verify]** are thresholds or references to confirm before the product rules are finalised.
 
 ---
 
-## 2. Target customers
+## 1. Product overview
 
-### 2.1 Primary segments (MVP)
+AMLSyncAI is EU-wide AML/CFT compliance software for **non-financial obliged entities**. These are businesses that are not banks, payment, e-money or other financial institutions but must comply with AMLR from **10 July 2027**.
 
-| Segment | Why they're obliged | Typical size | What hurts most |
-|---|---|---|---|
-| **External accountants, auditors, tax advisors** | AMLR Art. 3 | 1–50 staff | Many small clients, recurring relationships, beneficial ownership of client companies, refresh cycles |
-| **Real estate agents** (incl. letting agents for high monthly rents — **[verify]** threshold €10,000/month) | AMLR Art. 3 | 1–30 staff | CDD on buyer *and* seller **[verify]**, source of funds, cash, foreign buyers |
-| **Traders in high-value goods** (cars, jewellery, watches, art, boats, precious metals and stones) | AMLR Art. 3; cash rules | 1–20 staff | One-off cash sales, identifying the buyer at the till, €10,000 EU cash limit |
+The product lets a business:
+- assess its own money laundering and terrorist financing risk;
+- set up policies, procedures and responsibilities;
+- carry out customer due diligence (CDD), including beneficial owners;
+- screen against sanctions and PEP lists;
+- rate customer risk and apply simplified or enhanced due diligence;
+- monitor customers and refresh their files on time;
+- record and report suspicions to the national FIU;
+- keep complete, audit-ready records and export them for a supervisor.
 
-### 2.2 Later segments
-Trust and company service providers, notaries and lawyers (only for certain transactions), art and antiquities dealers, luxury goods traders, crowdfunding platforms. **Professional football clubs and agents** join in **2029**.
-
-### 2.3 Buyer and user
-- **Buyer:** the business owner or managing partner. Under AMLR a member of the management body is responsible for AML compliance (Art. 11 **[verify]**), so they are personally exposed.
-- **Daily users:** office staff, sales staff, junior accountants. They are **not compliance experts**. The product must tell them what to do next in plain language.
-
-### 2.4 Go-to-market order
-1. **Lithuania first.** Home market, you know the supervisors. Many non-financial sectors are supervised by the FNTT (Financial Crime Investigation Service) **[verify per sector]**.
-2. **Baltics** (Latvia, Estonia): similar markets, small firms.
-3. **Wider EU.** Languages and local registry integrations are the main work; the rules are largely the same under AMLR.
+**Out of scope:** credit institutions and financial institutions under AMLR, including payment and e-money institutions, investment firms, insurers and crypto-asset service providers.
 
 ---
 
-## 3. What AMLR requires these firms to do → product features
+## 2. Coverage: EU-wide from launch
 
-This is the core of the spec: every module exists because of a legal obligation.
-
-| # | AMLR obligation | Article (approx.) | Product module |
-|---|---|---|---|
-| 1 | Business-wide risk assessment of the firm itself | Art. 10 | **Firm Risk Assessment** wizard |
-| 2 | Written internal policies, procedures and controls | Art. 9 | **Policy Builder** |
-| 3 | Named compliance manager (management body) and compliance officer | Art. 11 | **Governance** settings + sign-offs |
-| 4 | Staff awareness and training | Art. 12 **[verify]** | **Training** tracker (later) |
-| 5 | Customer due diligence: identify and verify the client, understand purpose and nature of the relationship | Art. 19–22 | **Client Onboarding (CDD)** |
-| 6 | Identify and verify **beneficial owners** (≥25% ownership, or control by other means) | Art. 51–52 **[verify]** | **Beneficial Owner** capture + ownership tree |
-| 7 | Risk-based approach: simplified or enhanced due diligence | Art. 33–34 | **Client Risk Scoring** |
-| 8 | **PEP** checks, incl. family members and close associates | Art. 42–46 **[verify]**; AMLA CDD standard | **Screening** |
-| 9 | Targeted financial sanctions checks | Art. 20, AMLA CDD standard | **Screening** |
-| 10 | High-risk third countries → EDD | Art. 29–30 **[verify]** | Country risk table in **Risk Scoring** |
-| 11 | Ongoing monitoring; refresh CDD at least **every 1 year (high risk)** and **every 5 years (others)** | Art. 26 | **Monitoring & Refresh** scheduler |
-| 12 | Report suspicions to the national FIU | Art. 69 | **Suspicion Reporting** |
-| 13 | Keep records for 5 years | Art. 77 | **Audit Log & Records** |
-| 14 | €10,000 cash payment limit for traders; identify buyers in cash deals below it **[verify thresholds]** | Art. 80 | **Cash Transaction** log (HVG traders) |
-| 15 | No anonymous relationships | Art. 79 **[verify]** | Validation: no client without verified identity |
+The product launches in **all 27 EU member states at once**. AMLR is directly applicable, so the core rules are the same everywhere. National differences are handled by a **Country Pack** for each member state (§6), not by separate products.
 
 ---
 
-## 4. MVP scope (version 1)
+## 3. Supported obliged entity groups
 
-Goal: a small firm can sign up, run its firm risk assessment, onboard clients properly and show a supervisor a complete file. **Target: usable well before 10 July 2027.**
+Each group gets a **Sector Profile**. A Sector Profile sets:
+- when CDD is triggered;
+- the onboarding form fields;
+- the default risk factors;
+- red-flag indicators;
+- report and record templates.
 
-### 4.1 Firm setup & Firm Risk Assessment
-- Sign-up, firm profile (sector, country, size, services, client types, cash use, cross-border share).
-- Guided questionnaire → **firm risk assessment report** (PDF) with inherent risk, controls and residual risk.
-- Re-assessment reminder (yearly, and when the business changes).
+A business can hold more than one Sector Profile, for example an accounting firm that also provides company services.
 
-### 4.2 Client Onboarding (CDD)
-- **Natural persons:** name, date and place of birth, nationality, address, ID document data, occupation, purpose of relationship.
-- **Legal entities:** name, registration number, legal form, registered address, directors, ownership structure.
-- **Beneficial owners:** add people with ownership %, control type; flag anyone ≥25%; visual ownership tree for layered structures.
-- **Document upload:** ID, company extract, proof of address, source-of-funds evidence.
-- **Sector templates:** different questions for accountants (engagement type), estate agents (property, buyer/seller role, price, financing), HVG traders (item, value, payment method).
-- **Checklist with traffic lights:** what's missing before the client may be accepted.
+### 3.1 Auditors, external accountants and tax advisors
+*AMLR Art. 3(3)(a)* — this includes anyone whose main business is giving material help or advice on tax matters.
 
-### 4.3 Client Risk Scoring
-- Transparent, rule-based score (no black box): client type, country (incl. EU high-risk third-country list), sector, product/service, delivery channel (face-to-face vs remote), PEP status, cash use, complex structure.
-- Result: **Low / Medium / High**, with the reasons listed.
-- High → EDD checklist (source of wealth, source of funds, senior management approval).
-- Manual override allowed only with a written reason (logged).
-
-### 4.4 Screening
-- **Sanctions:** EU consolidated financial sanctions list (free, official) — required; UN list; optionally UK and US lists.
-- **PEPs incl. family and close associates:** needs a data provider (see §7).
-- Match review screen: *true match / false positive* with a required comment. This documented decision is exactly what supervisors look for.
-- Automatic re-screening when lists change (daily).
-
-### 4.5 Monitoring & Refresh
-- Due dates per client: **1 year** (high risk) / **5 years** (others), plus trigger events (ownership change, new country, sanctions hit, unusual payment).
-- Dashboard: overdue, due in 30 days, recently refreshed.
-
-### 4.6 Suspicion Reporting
-- Internal "something feels off" report by any staff member → compliance officer reviews → decision documented (report / don't report, with reasons).
-- Draft of the FIU report with the facts collected. Submission stays with the firm through the national FIU channel (in Lithuania: FNTT).
-- "Tipping-off" warning: the client must not be told.
-
-### 4.7 Audit Log & Records
-- Every change logged: who, what, when, old value, new value. Cannot be edited.
-- One-click **"Supervisor file"** export per client and for the whole firm (PDF + ZIP of documents).
-- Retention: 5 years after the relationship ends, then deletion workflow (GDPR).
-
-### 4.8 Policy Builder (simple version)
-- Generates an AML/CTF policy and procedures document from the firm profile and risk assessment, in plain language, for the firm to review and approve.
-- Version history and management sign-off.
-
----
-
-## 5. Where "AI" helps (and where it must not)
-
-The name says AI, so be specific and conservative. **AI drafts and suggests; a named person decides and signs.** Supervisors will expect that.
-
-| Use | Value | Safeguard |
-|---|---|---|
-| Read uploaded ID / company registry extracts and pre-fill forms | Saves time, fewer typos | User confirms every field |
-| Explain screening hits ("why this is probably a different person") | Faster false-positive clearing | Decision and comment by the user |
-| Adverse media summary for a client | EDD support | Sources linked; user reviews |
-| Draft the risk rationale and EDD memo | Better written files | Editable; user signs |
-| Draft suspicion report narrative | Small firms struggle to write these | Compliance officer approves; never auto-submitted |
-| Draft policy and firm risk assessment text | Big time saving | Management approval |
-| "Ask the AML assistant" (plain-language Q&A on AMLR) | Users aren't experts | Cites articles; says when to ask an expert (upsell to AMLSync) |
-
-**Not in v1:** automatic accept/reject decisions, automatic risk ratings without rules, automatic FIU submissions.
-
-**Check before launch:** EU AI Act classification of the AI features **[verify]**; GDPR data processing (client personal data must not leave the EU without safeguards — choose EU-hosted infrastructure and AI processing).
-
----
-
-## 6. Pricing idea (to validate)
-
-| Plan | For | Includes | Indicative price |
-|---|---|---|---|
-| **Starter** | Sole traders, very small firms | 1 user, up to 50 active clients, sanctions screening, CDD, risk scoring, audit log | €49–79 / month |
-| **Professional** | Small firms | 5 users, 500 clients, PEP screening, monitoring, policy builder, AI drafting | €149–249 / month |
-| **Business** | Larger firms, networks | Unlimited users, API, multi-office, custom risk model | From €500 / month |
-| **Add-on: AMLSync Expert** | Any plan | Human review by an AMLSync analyst: file review, AMLR health-check, remediation | Per review / per project |
-
-Market reference: many AML tools charge per check, and the cheapest monthly screening plans start at roughly €90 / $95 per month. A flat, simple price is a selling point for small firms.
-
----
-
-## 7. Data sources & integrations
-
-| Need | Options |
+| | Product behaviour |
 |---|---|
-| Sanctions lists | EU consolidated list (free), UN (free), OFAC, UK OFSI |
-| PEPs, family members, close associates, adverse media | Commercial data provider (e.g. OpenSanctions commercial licence, or a screening API vendor) — **cost decision** |
-| ID verification (remote clients) | Lithuanian/EU vendors such as Ondato or iDenfy; eIDAS-based identity later |
-| Company and beneficial ownership registers | Lithuania: Registrų centras / JADIS; other EU registries via BRIS later |
-| High-risk third countries | EU Commission list (and AMLA updates), FATF lists |
+| **CDD trigger** | Every new engagement (business relationship); occasional services above the occasional transaction threshold **[verify]** |
+| **Customers** | Mostly legal entities and sole traders, with long-term recurring relationships |
+| **Key data** | Engagement type (bookkeeping, audit, payroll, tax advice, tax planning), entity details, directors, beneficial owners, group structure, sector of the client's business |
+| **Risk factors** | Complex or cross-border structures, cash-intensive client businesses, tax planning involving high-risk jurisdictions, nominee arrangements, reluctance to provide ownership information |
+| **Specific features** | Bulk import of existing client portfolio for AMLR remediation; refresh campaigns; beneficial owner ownership tree; option to route suspicion reports via a self-regulatory body where the member state provides for it **[verify]** |
+
+### 3.2 Notaries, lawyers and other independent legal professionals
+*AMLR Art. 3(3)(b)* — covered only when they take part in, or help plan, certain transactions for a client.
+
+| | Product behaviour |
+|---|---|
+| **Scope check** | A **"Is this matter in scope?"** step per matter: buying/selling real property or businesses; managing client money, securities or other assets (incl. crypto-assets); opening or managing bank, savings, securities or crypto-asset accounts; organising contributions for companies; creating, operating or managing trusts, companies, foundations or similar structures. Out-of-scope matters are recorded as such |
+| **CDD trigger** | Per in-scope matter / client relationship |
+| **Key data** | Matter type, transaction value, counterparties, source of funds, client entity and beneficial owners |
+| **Risk factors** | Unexplained urgency, unusual payment routes, third-party funding, use of client account without an underlying transaction, complex structures |
+| **Specific features** | Matter-level (not only client-level) due diligence; **legal privilege flag**: suspicion reporting workflow records when the privilege exemption is applied, and why; reporting via self-regulatory body where applicable **[verify]** |
+
+### 3.3 Trust or company service providers (TCSPs)
+*AMLR Art. 3(3)(c)*
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Every relationship: company formation, acting as or arranging director/secretary/nominee shareholder/trustee, registered office or business address services |
+| **Key data** | Entity or trust details, settlors, trustees, protectors, beneficiaries, beneficial owners, services provided, nominee arrangements |
+| **Risk factors** | Shelf companies, nominee services, multi-layered structures, links to high-risk third countries, frequent changes of ownership |
+| **Specific features** | Trust and legal arrangement beneficial owner model (all parties, not only ≥25% owners); service register per entity; discrepancy reporting to central beneficial ownership registers **[verify]** |
+
+### 3.4 Estate agents (incl. letting agents)
+*AMLR Art. 3(3)(d)* — letting is covered for monthly rent of **€10,000 or more [verify]**.
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Every purchase/sale transaction; lettings at or above the monthly rent threshold |
+| **Parties** | CDD on **both buyer and seller** (and both landlord and tenant for covered lettings) **[verify]** |
+| **Key data** | Property address and type, price/rent, party role, financing method (mortgage, own funds, cash, crypto), source of funds, intermediaries |
+| **Risk factors** | Cash or crypto payment, purchase through a company or trust, foreign buyer from a high-risk country, price far above/below market, quick resale, third-party payer |
+| **Specific features** | **Transaction record** linking property + all parties; source-of-funds evidence checklist; transaction-level risk score as well as party-level score |
+
+### 3.5 Traders in precious metals and precious stones
+*AMLR Art. 3(3)(e)*
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Occasional transactions at or above the applicable threshold **[verify]** and all business relationships (e.g. regular wholesale buyers/sellers) |
+| **Key data** | Item type (gold, silver, platinum, diamonds, other stones), weight/quality, value, origin, payment method, supplier/buyer |
+| **Risk factors** | Cash, anonymous or third-party payers, unclear origin, conflict-affected supply regions, repeated transactions just below thresholds |
+| **Specific features** | **Point-of-sale quick check** (identify and screen a customer in under two minutes); **linked transaction detection** (same customer, short period — per AMLA linked-transactions standard); supply chain/origin record |
+
+### 3.6 Traders in high-value goods
+*AMLR Art. 3(3)(f) and the high-value goods definition (Annex) **[verify values]***
+
+| Goods | Value threshold **[verify]** |
+|---|---|
+| Jewellery, goldsmith or silversmith articles | ≥ €10,000 |
+| Clocks and watches | ≥ €10,000 |
+| Motor vehicles | ≥ €250,000 |
+| Aircraft | ≥ €7,500,000 |
+| Watercraft | ≥ €7,500,000 |
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Sale or purchase of a listed item at or above its threshold, regardless of payment method **[verify]** |
+| **Key data** | Item category, description, serial/VIN/registration, value, payment method, buyer/seller, delivery country |
+| **Risk factors** | Third-party payment, payment from high-risk countries, export shortly after purchase, purchase through a company with unclear ownership, cash or crypto |
+| **Specific features** | Item catalogue with automatic threshold check; point-of-sale quick check; linked transaction detection |
+
+### 3.7 Art and cultural goods traders, galleries, auction houses and free-zone storage
+*AMLR Art. 3(3) **[verify letter]*** — for transactions or a series of linked transactions of **€10,000 or more [verify]**.
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Sale, purchase, brokering or storage (incl. free zones and customs warehouses) at or above the threshold |
+| **Key data** | Artwork details, provenance, value, buyer, seller, consignor, intermediaries, storage location |
+| **Risk factors** | Anonymous bidders, agents acting for undisclosed principals, unclear provenance, payments from third parties, items moved to free zones |
+| **Specific features** | **Auction mode** (pre-registration CDD for bidders, post-sale CDD for buyer and consignor); provenance record; free-zone storage register |
+
+### 3.8 Gambling service providers
+*AMLR Art. 3(3) **[verify letter]*** — CDD for winnings or stakes of **€2,000 or more [verify]**, or on account opening for online gambling.
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Player account opening (online); stakes/winnings at or above the threshold (land-based) |
+| **Key data** | Player identity, payment methods, deposit/withdrawal history, source of funds for high spenders |
+| **Risk factors** | Deposits not matched by play, multiple payment methods, deposits from third parties, play pattern changes, high-risk country |
+| **Specific features** | High-volume onboarding API; **transaction monitoring rules** for deposits, withdrawals and play; affordability/source-of-funds review queue |
+
+### 3.9 Crowdfunding service providers and intermediaries (outside Regulation (EU) 2020/1503)
+*AMLR Art. 3(3) **[verify letter]***
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Onboarding of project owners and investors/contributors |
+| **Key data** | Project owner entity and beneficial owners, project details, investor/contributor identity, amounts |
+| **Risk factors** | Project owners with opaque ownership, contributions from high-risk countries, round-number or rapid contributions, investor = project owner links |
+| **Specific features** | Two-sided onboarding (project owners and backers); campaign-level monitoring |
+
+### 3.10 Mortgage and consumer credit intermediaries (non-financial institutions)
+*AMLR Art. 3(3) **[verify letter]***
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Every client for whom credit is intermediated |
+| **Key data** | Borrower identity, purpose of credit, property (for mortgages), income/source of funds, lender |
+| **Risk factors** | Early repayment from unexplained funds, inconsistent income documents, property purchased through companies |
+| **Specific features** | Case per credit application; document consistency checks |
+
+### 3.11 Investment migration operators
+*AMLR Art. 3(3) **[verify letter]*** — businesses that represent or help third-country nationals get residence rights in exchange for investment.
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Every client |
+| **Key data** | Applicant and family members, nationality, investment type and amount, **source of wealth and source of funds** |
+| **Risk factors** | High-risk or sanctioned nationalities, PEPs, complex funding routes |
+| **Specific features** | **Enhanced due diligence by default**; family member records; source-of-wealth evidence pack |
+
+### 3.12 Professional football clubs and football agents *(applies from 10 July 2029)*
+*AMLR Art. 3(3) **[verify letter and club scope criteria]***
+
+| | Product behaviour |
+|---|---|
+| **CDD trigger** | Transactions with investors, sponsors, advertisers, other clubs and agents; player transfers |
+| **Key data** | Counterparty, transaction type (transfer, sponsorship, investment, agency fee), value, beneficial owners of investors and sponsors |
+| **Risk factors** | Investors from high-risk countries, opaque ownership of sponsors, transfer fees far from market value, third-party ownership |
+| **Specific features** | Transfer and sponsorship transaction registers; profile available but activated by date |
+
+### 3.13 Other groups
+The product must also support member states that add **further sectors under national law** (AMLR allows extension to other sectors **[verify]**). This is done through a configurable **"Custom Sector Profile"** in the Country Pack.
 
 ---
 
-## 8. Technical approach (for the MVP)
+## 4. Users and roles
 
-- **Web app:** Next.js + TypeScript, Tailwind for UI.
-- **Database:** PostgreSQL (EU region), Prisma ORM. Separate data per firm (multi-tenant with row-level security).
-- **Files:** EU-hosted object storage, encrypted.
-- **Auth:** email + password with 2FA; roles: Owner, Compliance Officer, Staff, Read-only (supervisor/auditor view).
-- **Hosting:** EU only (GDPR, client trust).
-- **AI:** called through a server-side service with logging; no client data used for model training.
-- **Languages:** English and Lithuanian at launch; Latvian and Estonian next.
-
----
-
-## 9. Roadmap
-
-| Phase | When (target) | Scope |
+| Role | Description | Permissions |
 |---|---|---|
-| 0. Validate | Nov–Dec 2026 | Interview 10–15 accountants, estate agents, dealers in Lithuania; test pricing; click-through prototype |
-| 1. MVP | Jan–Mar 2027 | §4.1–4.7 for accountants and estate agents; EU sanctions screening |
-| 2. Pilot | Apr–Jun 2027 | 5–10 paying pilot firms; HVG trader template + cash log; PEP data provider; policy builder; AI drafting |
-| 3. AMLR go-live | 10 July 2027 | Public launch in Lithuania, aligned with final AMLA CDD standard |
-| 4. Expand | H2 2027 | Latvia, Estonia; ID verification integration; training module |
-| 5. Scale | 2028+ | More EU countries and languages, registry integrations, API, partner channel (accounting software, real estate CRMs) |
+| **Owner / Management body member** | Person in the management body responsible for AML compliance (AMLR Art. 11 **[verify]**) | Approves policies and risk assessments, sees everything, manages subscription |
+| **Compliance Officer** | Day-to-day AML compliance, receives internal suspicion reports | Approves high-risk clients, decides on FIU reports, manages settings |
+| **Staff** | Front-office and admin staff who onboard customers | Create and update customers, run screenings, raise internal reports |
+| **Read-only / Auditor** | Internal or external auditor, supervisor during inspection | View and export only, time-limited access |
+
+Users are mostly **not compliance experts**. Every screen states what is required, why, and what to do next, in plain language.
 
 ---
 
-## 10. Open questions (for you to decide)
+## 5. Functional modules
 
-1. **First segment:** accountants, estate agents, or HVG traders? (Recommendation: **accountants** — recurring clients, many company clients with beneficial owners, and they influence their own clients.)
-2. **PEP data:** which provider and budget? This is the largest running cost.
-3. **AMLSync link:** same brand ("AMLSyncAI by AMLSync") or separate brand?
-4. **Sales channel:** direct, or through professional associations (e.g. accountants' and real estate associations)?
-5. **Remote onboarding:** include ID verification in MVP or later?
-6. **Pilot customers:** do you already know 3–5 firms who'd test it?
+### 5.1 Firm Risk Assessment (AMLR Art. 10)
+- Guided questionnaire built from the Sector Profile(s) and Country Pack: customers, products and services, delivery channels, geography, cash use, volumes.
+- Uses the EU supranational risk assessment and national risk assessment factors for the relevant member state.
+- Output: inherent risk, description of controls, residual risk, action list; signed by the management body member.
+- Version history; review reminders (at least annually **[verify]** and whenever the business changes).
+
+### 5.2 Policies, Procedures and Governance (AMLR Art. 9, 11)
+- **Policy Builder** that generates an AML/CFT policy and procedures from the firm profile and risk assessment.
+- Records the appointed management body member and compliance officer, with dates.
+- Approval workflow and version history.
+- Staff acknowledgement that they have read the policy.
+
+### 5.3 Customer Onboarding — CDD (AMLR Art. 19–22)
+- **Natural persons:** full name, date and place of birth, nationality(ies), residential address, ID document details, occupation/source of income, purpose and intended nature of the relationship.
+- **Legal entities:** name, legal form, registration number, registered address and principal place of business, directors and senior managers, ownership and control structure.
+- **Trusts and legal arrangements:** settlors, trustees, protectors, beneficiaries or class of beneficiaries, other controllers.
+- **Representatives:** people acting on behalf of the customer and their authority.
+- **Verification:** document upload, remote ID verification integration, register extract retrieval where available.
+- Data fields follow the **AMLA CDD regulatory technical standard**. A field library is updated when the standard changes.
+- **Completeness checklist:** a customer cannot be marked "accepted" until required items are complete, or an approved exception is recorded.
+- **Bulk import** of existing customers with gap report (for AMLR remediation of existing files).
+
+### 5.4 Beneficial Ownership (AMLR Art. 51–55 **[verify]**)
+- Capture of ownership (≥25% direct or indirect) and control by other means.
+- **Ownership tree** with automatic calculation of indirect percentages through multiple layers.
+- When no beneficial owner can be identified, records senior managing officials and the steps taken.
+- Comparison with central beneficial ownership register data; **discrepancy reporting** workflow.
+
+### 5.5 Customer Risk Scoring (AMLR Art. 20, 33–34)
+- **Rule-based, transparent** model: customer type, geography (incl. EU high-risk third-country list), sector, product/service, delivery channel, PEP status, cash use, structure complexity, sector-specific factors from §3.
+- Default weights per Sector Profile, adjustable by the Compliance Officer with change log.
+- Result: **Low / Medium / High**, showing every factor that contributed.
+- **Simplified due diligence** allowed for low risk where permitted.
+- **Enhanced due diligence** checklist for high risk: source of wealth, source of funds, additional verification, management approval, increased monitoring.
+- Mandatory EDD triggers: high-risk third countries, PEPs, very high-net-worth individuals (≥ €50 million assets **[verify]**), other cases defined in AMLR.
+- Manual override only with a written reason and approval.
+
+### 5.6 Screening
+- **Sanctions:** EU consolidated list of financial sanctions (mandatory), UN Security Council list; optional national, UK and US lists.
+- **PEPs, family members and close associates** (as required by the AMLA CDD standard).
+- **Adverse media** (optional).
+- Fuzzy name matching with transliteration (Latin, Cyrillic, Greek, Arabic and other scripts).
+- **Match review:** each potential match is resolved as *true match* or *false positive* with a mandatory comment.
+- **Continuous re-screening** of all active customers and beneficial owners when lists change; alerts for new hits.
+- Asset freeze workflow for true sanctions matches, plus notification to the competent authority **[verify]**.
+
+### 5.7 Transactions and Linked-Transaction Detection
+- Transaction register per customer: date, amount, currency, payment method, counterparty, item/property/matter.
+- Automatic threshold checks per Sector Profile and Country Pack.
+- **Linked-transaction detection** following the AMLA linked-transactions standard (same customer or related parties, over a defined period).
+- **Cash payment limit:** warns when a cash payment would exceed €10,000 or a lower national limit **[verify]**.
+- Configurable monitoring rules for higher-volume sectors (gambling, crowdfunding).
+
+### 5.8 Ongoing Monitoring and File Refresh (AMLR Art. 26)
+- Refresh dates per customer: **at least every 1 year for high risk, at least every 5 years for others**.
+- Event triggers: ownership change, new screening hit, change of country, unusual transaction, expired ID document.
+- Dashboard: overdue, due in 30/60/90 days, completed.
+- Refresh campaigns for groups of customers.
+
+### 5.9 Suspicion Reporting (AMLR Art. 69 onwards)
+- **Internal report:** any user can raise a concern on a customer or transaction.
+- **Compliance Officer review:** investigation notes, evidence, decision (report / do not report) with reasons.
+- **FIU report draft:** structured data and narrative in the format of the member state's FIU (via Country Pack); export for submission through the FIU's channel. Direct submission integration where the FIU offers one **[verify per FIU]**.
+- Records the transaction decision while a report is pending, and records any FIU suspension order.
+- **Tipping-off protection:** warning banner on the customer; restricted visibility of the case.
+- Legal privilege and self-regulatory body routing for §3.1/§3.2 professions where applicable.
+
+### 5.10 Records, Audit Log and Data Retention (AMLR Art. 77)
+- Immutable audit log of every create, update, view of sensitive data, decision, export: user, timestamp, old/new value.
+- Retention: **5 years** after the end of the relationship or occasional transaction, with deletion workflow afterwards (extension if required by a competent authority **[verify]**).
+- **Supervisor export:** one customer or the whole firm, as PDF report + document archive.
+- Statistics needed for supervisor questionnaires (customer counts by risk, EDD cases, reports filed).
+
+### 5.11 Training Records (AMLR Art. 12 **[verify]**)
+- Short role-based training modules per Sector Profile.
+- Completion tracking, certificates, yearly reminders.
+
+### 5.12 Expert Support (AMLSync)
+- In-app request for a human review by an AMLSync specialist: complex customer files, EDD cases, policy review, AMLR gap check.
+- Reviewer gets time-limited, logged access to the selected files only.
 
 ---
 
-## 11. Success measures
+## 6. Country Packs (EU-wide configuration)
 
-- Time to onboard a client: **under 10 minutes** for a standard low-risk client.
-- 100% of active clients with a risk rating and a next-refresh date.
-- Supervisor file exported in **one click**.
-- 10 paying firms by AMLR go-live; churn under 3% per month.
+One Country Pack per EU member state. Each holds:
+
+| Item | Example |
+|---|---|
+| **Languages** | UI, generated documents and policy templates in the national language(s) — all 24 official EU languages |
+| **FIU** | Name, report format, submission channel |
+| **Supervisors and self-regulatory bodies** | Per sector |
+| **National risk assessment** | Country-specific risk factors and red flags |
+| **Cash limit** | €10,000 or lower national limit |
+| **Registers** | Company register and beneficial ownership register access (national or via BRIS / BORIS **[verify]**) |
+| **ID documents** | Accepted national ID types and formats; eIDAS electronic identification where available |
+| **Additional sectors** | Sectors added under national law |
+| **Retention and other national options** | Where AMLR allows national choices |
+
+Country Packs are data, not code: updating a national rule does not need a new release.
+
+---
+
+## 7. AI features
+
+Principle: **AI drafts, extracts and suggests; a named user decides and signs.** No automatic accept/reject, risk rating or FIU submission.
+
+| Feature | What it does | Control |
+|---|---|---|
+| **Document extraction** | Reads ID documents, company extracts, trust deeds and invoices; pre-fills CDD fields | User confirms each field |
+| **Ownership mapping** | Builds a draft ownership tree from uploaded extracts | User confirms structure and percentages |
+| **Screening assistant** | Explains why a hit is likely or unlikely to be the same person | User decides and comments |
+| **Adverse media summary** | Summarises news results with links to sources | User reviews |
+| **EDD and risk memo drafting** | Drafts the written rationale for the customer's risk rating | Editable; signed by user |
+| **Suspicion report drafting** | Turns case notes into a structured FIU narrative | Compliance Officer approves |
+| **Policy and risk assessment drafting** | Drafts documents from questionnaire answers | Management approval |
+| **AML assistant** | Plain-language answers on AMLR obligations for the user's sector and country, citing articles | Shows "consult an expert" when uncertain |
+
+Requirements: EU-hosted processing; customer data not used to train models; every AI output stored with input references in the audit log; EU AI Act classification assessed **[verify]**.
+
+---
+
+## 8. Integrations
+
+| Area | Integration |
+|---|---|
+| Sanctions data | EU Financial Sanctions Files, UN list; optional OFAC, UK lists |
+| PEP / adverse media data | Commercial data provider via API |
+| Identity verification | Remote ID verification provider (document + liveness); eIDAS eID |
+| Company & beneficial ownership data | National registers / BRIS / beneficial ownership registers interconnection |
+| Business software | API and webhooks; connectors for accounting software, real estate CRMs, point-of-sale and auction platforms |
+| Data import | CSV/Excel import of customers and transactions |
+
+---
+
+## 9. Non-functional requirements
+
+- **Hosting:** EU only; data residency per customer region option.
+- **Security:** encryption in transit and at rest; 2FA mandatory; role-based access; separation of each firm's data; regular penetration testing; ISO 27001 / SOC 2 aligned controls.
+- **GDPR:** the product is a data processor; DPA included; data minimisation; access and deletion requests supported within AML retention rules.
+- **Availability:** 99.9% target; daily backups; screening lists updated at least daily.
+- **Accessibility:** WCAG 2.1 AA.
+- **Devices:** web app on desktop and tablet; mobile-friendly point-of-sale quick check.
+- **Performance:** standard low-risk customer onboarding completed in under 10 minutes; point-of-sale quick check under 2 minutes; screening result under 5 seconds.
+
+---
+
+## 10. Technical architecture (initial)
+
+- **Front end:** Next.js, TypeScript, Tailwind CSS.
+- **Back end:** Node.js/TypeScript API.
+- **Database:** PostgreSQL (EU region) with row-level security per firm; Prisma ORM.
+- **File storage:** encrypted EU object storage.
+- **Background jobs:** list updates, re-screening, refresh reminders, linked-transaction detection.
+- **Configuration:** Sector Profiles and Country Packs stored as versioned configuration data.
+- **AI service:** separate server-side service with logging and EU data processing.
