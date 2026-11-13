@@ -1,0 +1,685 @@
+// AMLSyncAI core data model (spec §8A).
+//
+// Multi-tenant: every tenant-owned table carries firmId and is protected by
+// PostgreSQL row-level security (see prisma/rls.sql). Decision objects store
+// the EU Core version and Country Profile version in force (spec §3A.3, §11.0).
+// Field-level encrypted columns (spec §8C.6) are stored as Bytes with an
+// "Enc" suffix and are encrypted/decrypted in the application with the firm's key.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  OWNER // Owner / Compliance Manager (member of the management body, Art. 11)
+  COMPLIANCE_OFFICER
+  STAFF
+  EXTERNAL_REVIEWER // AMLSync Expert: recommend only (Art. 18)
+  READ_ONLY // supervisor / auditor view
+}
+
+enum Sector {
+  ACCOUNTANT
+  ESTATE_AGENT
+  HVG_TRADER
+  PRECIOUS_METALS
+  TCSP
+  LEGAL
+  ART_TRADER
+  GAMBLING
+  CROWDFUNDING
+  CREDIT_INTERMEDIARY
+  INVESTMENT_MIGRATION
+  FOOTBALL
+  OTHER
+}
+
+enum PartyKind {
+  NATURAL
+  LEGAL
+  ARRANGEMENT
+}
+
+enum PartyRole {
+  CLIENT
+  BUYER
+  SELLER
+  LANDLORD
+  TENANT
+  SUPPLIER
+  REPRESENTATIVE
+  BENEFICIARY
+}
+
+enum MatterType {
+  ENGAGEMENT
+  PROPERTY_SALE
+  LETTING
+  GOODS_SALE
+  COMPANY_FORMATION
+  TRANSACTION
+}
+
+enum MatterStatus {
+  OPEN
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum CddStatus {
+  OPEN
+  COMPLETE
+  SDD
+  EDD
+  REFUSED
+  TERMINATED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum VerificationMethod {
+  EID
+  IN_PERSON
+  DOCUMENT_NFC_LIVENESS
+}
+
+enum OwnershipLinkType {
+  SHAREHOLDING
+  CONTROL
+  TRUST_SETTLOR
+  TRUSTEE
+  TRUST_PROTECTOR
+  TRUST_BENEFICIARY
+  NOMINEE
+  SENIOR_MANAGING_OFFICIAL
+}
+
+enum DataSource {
+  REGISTER
+  DECLARATION
+  UPLOADED_EXTRACT
+}
+
+enum ScreeningListKind {
+  SANCTIONS
+  PEP
+  ADVERSE_MEDIA
+}
+
+enum MatchDecision {
+  PENDING
+  TRUE_MATCH
+  FALSE_POSITIVE
+}
+
+enum CaseType {
+  INTERNAL_SUSPICION
+  SANCTIONS_HIT
+  DISCREPANCY
+  FIU_REQUEST
+}
+
+enum ReportType {
+  STR
+  THRESHOLD
+  CASH
+  DISCREPANCY
+  SANCTIONS_NOTICE
+  SUPERVISOR_NOTICE
+}
+
+enum ReportStatus {
+  DRAFT
+  EXPORTED
+  SUBMITTED
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+enum ApprovalDecision {
+  APPROVED
+  REJECTED
+}
+
+enum DocumentStatus {
+  DRAFT
+  PENDING_APPROVAL
+  IN_FORCE
+  SUPERSEDED
+}
+
+enum FeatureRequestStatus {
+  RECEIVED
+  UNDER_REVIEW
+  PLANNED
+  IN_PROGRESS
+  RELEASED
+  NOT_PLANNED
+}
+
+// ---------------------------------------------------------------------------
+// Firm, offices, users
+// ---------------------------------------------------------------------------
+
+model Firm {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  emailDomain   String   @unique // one firm per domain (§8C.2)
+  homeState     String   @db.Char(2)
+  sectors       Sector[]
+  size          Int?
+  services      String[]
+  clientTypes   String[]
+  usesCash      Boolean  @default(false)
+  crossBorderPct Int?
+  createdAt     DateTime @default(now())
+
+  offices               Office[]
+  users                 User[]
+  countryProfiles       CountryProfileVersion[]
+  riskAssessments       FirmRiskAssessment[]
+  policies              PolicyDocument[]
+  parties               Party[]
+  matters               Matter[]
+  cases                 Case[]
+  tasks                 Task[]
+  approvals             Approval[]
+  auditEvents           AuditEvent[]
+  securityEvents        SecurityEvent[]
+  emailDomainVerification EmailDomainVerification?
+  featureRequests       FeatureRequest[]
+}
+
+model Office {
+  id          String  @id @default(uuid()) @db.Uuid
+  firmId      String  @db.Uuid
+  firm        Firm    @relation(fields: [firmId], references: [id])
+  name        String
+  memberState String  @db.Char(2)
+  isHome      Boolean @default(false)
+  matters     Matter[]
+
+  @@index([firmId])
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  firmId        String    @db.Uuid
+  firm          Firm      @relation(fields: [firmId], references: [id])
+  email         String    @unique
+  name          String
+  roles         Role[]
+  external      Boolean   @default(false) // §8C.3: labelled everywhere
+  passwordHash  String? // Argon2id
+  emailVerifiedAt DateTime?
+  mfaEnrolledAt DateTime?
+  lastMfaAt     DateTime? // step-up: fresh MFA within 5 minutes
+  deactivatedAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  approvals     Approval[]
+  auditEvents   AuditEvent[]
+
+  @@index([firmId])
+}
+
+model EmailDomainVerification {
+  id            String   @id @default(uuid()) @db.Uuid
+  firmId        String   @unique @db.Uuid
+  firm          Firm     @relation(fields: [firmId], references: [id])
+  firmName      String
+  emailDomain   String
+  freeOrDisposable Boolean
+  hasMx         Boolean
+  domainAgeDays Int?
+  confirmedAt   DateTime?
+  createdAt     DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Rules: EU Core version is a string constant in code; Country Profiles are
+// versioned per firm (and optionally per office for host states).
+// ---------------------------------------------------------------------------
+
+model CountryProfileVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  firm        Firm     @relation(fields: [firmId], references: [id])
+  officeId    String?  @db.Uuid // null = home-state profile
+  memberState String   @db.Char(2)
+  version     Int
+  data        Json // validated by src/lib/rules/country-profile.ts
+  enteredById String   @db.Uuid
+  source      String?
+  approvalId  String?  @unique @db.Uuid // Compliance Officer approval required (§3A.3)
+  createdAt   DateTime @default(now())
+
+  @@unique([firmId, officeId, version])
+  @@index([firmId])
+}
+
+// ---------------------------------------------------------------------------
+// Firm level
+// ---------------------------------------------------------------------------
+
+model FirmRiskAssessment {
+  id              String         @id @default(uuid()) @db.Uuid
+  firmId          String         @db.Uuid
+  firm            Firm           @relation(fields: [firmId], references: [id])
+  version         Int
+  status          DocumentStatus @default(DRAFT)
+  answers         Json
+  result          Json // inherent risk, controls, residual risk, action list
+  euCoreVersion   String
+  countryProfileVersion Int
+  aiSections      Json? // AI-drafted sections and human edits (§11.12)
+  approvalId      String?        @unique @db.Uuid
+  createdAt       DateTime       @default(now())
+
+  @@unique([firmId, version])
+}
+
+model PolicyDocument {
+  id            String         @id @default(uuid()) @db.Uuid
+  firmId        String         @db.Uuid
+  firm          Firm           @relation(fields: [firmId], references: [id])
+  kind          String // "policy" | "procedure"
+  version       Int
+  status        DocumentStatus @default(DRAFT)
+  content       Json
+  euCoreVersion String
+  approvalId    String?        @unique @db.Uuid
+  createdAt     DateTime       @default(now())
+  acknowledgements PolicyAcknowledgement[]
+
+  @@unique([firmId, kind, version])
+}
+
+model PolicyAcknowledgement {
+  id         String         @id @default(uuid()) @db.Uuid
+  firmId     String         @db.Uuid
+  policyId   String         @db.Uuid
+  policy     PolicyDocument @relation(fields: [policyId], references: [id])
+  userId     String         @db.Uuid
+  acknowledgedAt DateTime   @default(now())
+
+  @@unique([policyId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Parties, ownership, matters
+// ---------------------------------------------------------------------------
+
+model Party {
+  id          String    @id @default(uuid()) @db.Uuid
+  firmId      String    @db.Uuid
+  firm        Firm      @relation(fields: [firmId], references: [id])
+  kind        PartyKind
+  displayName String
+  /// Natural: names, DOB, place of birth, nationalities, residence, occupation…
+  /// Legal: legal form, reg. no., LEI, registered office, country of creation…
+  details     Json
+  nationalIdEnc Bytes? // field-level encrypted (§8C.6)
+  taxIdEnc      Bytes?
+  bearerShares  Boolean @default(false)
+  createdAt   DateTime  @default(now())
+
+  ownedBy       OwnershipLink[] @relation("owned")
+  owns          OwnershipLink[] @relation("owner")
+  matterRoles   MatterParty[]
+  verifications IdentityVerification[]
+  extracts      RegistryExtract[]
+  screenings    ScreeningResult[]
+  cddFiles      CddFile[]
+  documents     Document[]
+
+  @@index([firmId])
+}
+
+model OwnershipLink {
+  id          String            @id @default(uuid()) @db.Uuid
+  firmId      String            @db.Uuid
+  ownerId     String            @db.Uuid
+  owner       Party             @relation("owner", fields: [ownerId], references: [id])
+  ownedId     String            @db.Uuid
+  owned       Party             @relation("owned", fields: [ownedId], references: [id])
+  type        OwnershipLinkType
+  pct         Decimal?          @db.Decimal(9, 6)
+  controlDescription String?
+  source      DataSource
+  heldFrom    DateTime? // Art. 62: date interest held
+  heldUntil   DateTime?
+
+  @@index([firmId])
+  @@index([ownedId])
+}
+
+model Matter {
+  id          String       @id @default(uuid()) @db.Uuid
+  firmId      String       @db.Uuid
+  firm        Firm         @relation(fields: [firmId], references: [id])
+  officeId    String?      @db.Uuid
+  office      Office?      @relation(fields: [officeId], references: [id])
+  type        MatterType
+  sector      Sector
+  title       String
+  status      MatterStatus @default(OPEN)
+  details     Json // sector template answers: property, price, item, financing…
+  createdAt   DateTime     @default(now())
+
+  parties      MatterParty[]
+  transactions Transaction[]
+
+  @@index([firmId])
+}
+
+model MatterParty {
+  id       String    @id @default(uuid()) @db.Uuid
+  firmId   String    @db.Uuid
+  matterId String    @db.Uuid
+  matter   Matter    @relation(fields: [matterId], references: [id])
+  partyId  String    @db.Uuid
+  party    Party     @relation(fields: [partyId], references: [id])
+  role     PartyRole
+
+  @@unique([matterId, partyId, role])
+  @@index([firmId])
+}
+
+model Transaction {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  matterId    String   @db.Uuid
+  matter      Matter   @relation(fields: [matterId], references: [id])
+  customerId  String   @db.Uuid
+  date        DateTime @db.Date
+  amountEUR   Decimal  @db.Decimal(14, 2)
+  originalAmount   Decimal? @db.Decimal(14, 2)
+  originalCurrency String?  @db.Char(3)
+  fxRate      Decimal? @db.Decimal(14, 6) // rate recorded at entry (§8B)
+  method      String
+  occasional  Boolean
+  createdAt   DateTime @default(now())
+
+  @@index([firmId, customerId, date])
+}
+
+// ---------------------------------------------------------------------------
+// CDD
+// ---------------------------------------------------------------------------
+
+model CddFile {
+  id            String    @id @default(uuid()) @db.Uuid
+  firmId        String    @db.Uuid
+  partyId       String    @db.Uuid
+  party         Party     @relation(fields: [partyId], references: [id])
+  role          PartyRole
+  status        CddStatus @default(OPEN)
+  purpose       String?
+  nextRefreshOn DateTime? @db.Date
+  sddVerifyBy   DateTime? @db.Date
+  endedOn       DateTime? @db.Date // end of relationship / refusal → retention clock
+  retentionUntil DateTime? @db.Date
+  legalHoldUntil DateTime? @db.Date
+  gateOverride  Json? // { byUserId, reason, at }
+  createdAt     DateTime  @default(now())
+
+  riskAssessments ClientRiskAssessment[]
+
+  @@index([firmId])
+}
+
+model IdentityVerification {
+  id             String             @id @default(uuid()) @db.Uuid
+  firmId         String             @db.Uuid
+  partyId        String             @db.Uuid
+  party          Party              @relation(fields: [partyId], references: [id])
+  method         VerificationMethod
+  assuranceLevel String? // eIDAS substantial / high
+  provider       String?
+  providerRef    String?
+  fallbackReason String? // required when not eID (§11.5)
+  verifiedAt     DateTime
+
+  @@index([firmId])
+}
+
+model RegistryExtract {
+  id         String     @id @default(uuid()) @db.Uuid
+  firmId     String     @db.Uuid
+  partyId    String     @db.Uuid
+  party      Party      @relation(fields: [partyId], references: [id])
+  register   String // e.g. "BRIS", "JANGIS"
+  source     DataSource
+  data       Json
+  documentId String?    @db.Uuid
+  retrievedAt DateTime
+
+  @@index([firmId])
+}
+
+model ScreeningResult {
+  id          String            @id @default(uuid()) @db.Uuid
+  firmId      String            @db.Uuid
+  partyId     String            @db.Uuid
+  party       Party             @relation(fields: [partyId], references: [id])
+  listKind    ScreeningListKind
+  listName    String
+  listVersion String
+  matchData   Json
+  decision    MatchDecision     @default(PENDING)
+  reviewerId  String?           @db.Uuid
+  comment     String?
+  screenedAt  DateTime
+  decidedAt   DateTime?
+
+  @@index([firmId, partyId])
+}
+
+model ClientRiskAssessment {
+  id            String    @id @default(uuid()) @db.Uuid
+  firmId        String    @db.Uuid
+  cddFileId     String    @db.Uuid
+  cddFile       CddFile   @relation(fields: [cddFileId], references: [id])
+  calculated    RiskLevel
+  final         RiskLevel
+  score         Int
+  factors       Json
+  overrideReason String?
+  overrideById  String?   @db.Uuid
+  rulesetVersion String
+  euCoreVersion  String
+  countryProfileVersion Int
+  createdAt     DateTime  @default(now())
+
+  @@index([firmId])
+}
+
+model Document {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  partyId     String?  @db.Uuid
+  party       Party?   @relation(fields: [partyId], references: [id])
+  kind        String // id, company-extract, proof-of-address, sof-evidence…
+  storageKey  String // object storage key; served via short-lived signed URLs
+  mimeType    String
+  sizeBytes   Int
+  sha256      String
+  malwareScan String   @default("pending") // pending | clean | quarantined
+  uploadedAt  DateTime @default(now())
+
+  @@index([firmId])
+}
+
+// ---------------------------------------------------------------------------
+// Cases & reports (restricted: Compliance Officer only, §8C.7)
+// ---------------------------------------------------------------------------
+
+model Case {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  firm        Firm     @relation(fields: [firmId], references: [id])
+  type        CaseType
+  partyIds    String[] @db.Uuid
+  matterIds   String[] @db.Uuid
+  contentEnc  Bytes // field-level encrypted case content
+  decision    String? // report | no-report (with reasons) — every assessment kept
+  decisionReasons String?
+  privilegeApplies Boolean @default(false)
+  privilegeReason  String?
+  holdStartedOn DateTime? @db.Date
+  holdEndsOn    DateTime? @db.Date
+  ownerVisible Boolean @default(false)
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  reports     Report[]
+
+  @@index([firmId])
+}
+
+model Report {
+  id           String       @id @default(uuid()) @db.Uuid
+  firmId       String       @db.Uuid
+  caseId       String?      @db.Uuid
+  case         Case?        @relation(fields: [caseId], references: [id])
+  matterId     String?      @db.Uuid
+  type         ReportType
+  status       ReportStatus @default(DRAFT)
+  format       String
+  contentEnc   Bytes
+  submissionRef String?
+  receiptDocumentId String? @db.Uuid
+  euCoreVersion String
+  countryProfileVersion Int
+  createdAt    DateTime     @default(now())
+  submittedAt  DateTime?
+
+  @@index([firmId])
+}
+
+// ---------------------------------------------------------------------------
+// Calendar, approvals, audit
+// ---------------------------------------------------------------------------
+
+model Task {
+  id          String     @id @default(uuid()) @db.Uuid
+  firmId      String     @db.Uuid
+  firm        Firm       @relation(fields: [firmId], references: [id])
+  kind        String // refresh, discrepancy-report, transaction-hold, fiu-request…
+  objectType  String
+  objectId    String     @db.Uuid
+  dueOn       DateTime   @db.Date
+  status      TaskStatus @default(OPEN)
+  assigneeId  String?    @db.Uuid
+  article     String?
+  createdAt   DateTime   @default(now())
+
+  @@index([firmId, status, dueOn])
+}
+
+/// Immutable: no UPDATE/DELETE (enforced in prisma/rls.sql).
+model Approval {
+  id          String           @id @default(uuid()) @db.Uuid
+  firmId      String           @db.Uuid
+  firm        Firm             @relation(fields: [firmId], references: [id])
+  objectType  String
+  objectId    String           @db.Uuid
+  decision    ApprovalDecision
+  reason      String?
+  userId      String           @db.Uuid
+  user        User             @relation(fields: [userId], references: [id])
+  role        Role
+  euCoreVersion String
+  countryProfileVersion Int
+  createdAt   DateTime         @default(now())
+
+  @@index([firmId, objectType, objectId])
+}
+
+/// Append-only (enforced in prisma/rls.sql).
+model AuditEvent {
+  id          BigInt   @id @default(autoincrement())
+  firmId      String   @db.Uuid
+  firm        Firm     @relation(fields: [firmId], references: [id])
+  userId      String?  @db.Uuid
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String // create | update | delete | view | export | approve
+  objectType  String
+  objectId    String
+  oldValue    Json?
+  newValue    Json?
+  at          DateTime @default(now())
+
+  @@index([firmId, objectType, objectId])
+}
+
+model SecurityEvent {
+  id        BigInt   @id @default(autoincrement())
+  firmId    String?  @db.Uuid
+  firm      Firm?    @relation(fields: [firmId], references: [id])
+  userId    String?  @db.Uuid
+  kind      String // login, login-failed, mfa-change, new-device, rate-limit, bot-block, export, staff-access
+  ip        String?
+  userAgent String?
+  details   Json?
+  at        DateTime @default(now())
+
+  @@index([firmId, at])
+}
+
+// ---------------------------------------------------------------------------
+// Feature requests (§4.10) — cross-tenant; firm names never shown to others
+// ---------------------------------------------------------------------------
+
+model FeatureRequest {
+  id          String               @id @default(uuid()) @db.Uuid
+  firmId      String               @db.Uuid
+  firm        Firm                 @relation(fields: [firmId], references: [id])
+  userId      String               @db.Uuid
+  title       String
+  problem     String
+  frequency   String
+  importance  String // nice-to-have | important | blocking
+  module      String
+  regulatory  Boolean              @default(false)
+  legalReference String?
+  status      FeatureRequestStatus @default(RECEIVED)
+  statusReason String?
+  releaseNoteUrl String?
+  mergedIntoId String?             @db.Uuid
+  hidden      Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+
+  votes       FeatureVote[]
+
+  @@index([status])
+}
+
+model FeatureVote {
+  id        String         @id @default(uuid()) @db.Uuid
+  requestId String         @db.Uuid
+  request   FeatureRequest @relation(fields: [requestId], references: [id])
+  userId    String         @db.Uuid
+  createdAt DateTime       @default(now())
+
+  @@unique([requestId, userId])
+}
