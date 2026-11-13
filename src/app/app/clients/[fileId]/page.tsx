@@ -12,8 +12,10 @@ import { PartyFields } from "@/components/party-fields";
 import {
   acceptAction, addOwnerAction, decideMatchAction, eddChecklistAction, endAction, recordExtractAction, recordVerificationAction,
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
-  revokePortalLinkAction, sendPortalLinkAction, staffUploadAction,
+  revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction,
 } from "../actions";
+import { raiseSuspicionAction } from "../../cases/actions";
+import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
@@ -178,6 +180,15 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                 <Submit variant="secondary">Record extract</Submit>
               </ActionForm>
             )}
+            {can(r, "client.edit") && cf.extracts.length > 0 && (
+              <details className="rounded border border-border p-3">
+                <summary className="cursor-pointer text-sm font-medium">The register differs from what the client declared</summary>
+                <ActionForm action={openDiscrepancyAction.bind(null, fileId)} className="mt-2 space-y-2">
+                  <Field label="Describe the difference" name="description" required />
+                  <Submit variant="secondary">Open discrepancy (14-day clock)</Submit>
+                </ActionForm>
+              </details>
+            )}
             <p className="text-xs text-muted">BRIS and KYB aggregator lookups are not connected yet.</p>
           </Card>
         )}
@@ -231,8 +242,8 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
             {edit && (
               <ActionForm action={staffUploadAction.bind(null, fileId)}>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Document type" name="kind">
-                    <select name="kind" className={sel} aria-label="Document type">{Object.entries(DOCUMENT_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+                  <Field label="Kind of document" name="kind">
+                    <select name="kind" className={sel} aria-label="Kind of document">{Object.entries(DOCUMENT_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
                   </Field>
                   <Field label="File" name="file">
                     <input type="file" name="file" aria-label="File" accept=".pdf,.jpg,.jpeg,.png,.heic,.docx" className="text-sm" />
@@ -501,6 +512,8 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </ActionForm>
         </Card>
       )}
+
+      {can(r, "case.raise") && <RaiseSuspicion action={raiseSuspicionAction.bind(null, { partyIds: [cf.party.id], matterIds: [] })} />}
 
       {approvals.length > 0 && (
         <Card title="Decisions and approvals">

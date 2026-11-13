@@ -17,6 +17,7 @@ import { thresholdReportDue } from "@/lib/rules/deadlines";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { toIsoDate } from "@/lib/rules/dates";
 import { encryptField } from "@/lib/server/crypto";
+import { matterHeld } from "@/lib/server/cases";
 
 const ROLES = ["CLIENT", "BUYER", "SELLER", "LANDLORD", "TENANT", "SUPPLIER", "REPRESENTATIVE", "BENEFICIARY"] as const;
 const TYPES = ["ENGAGEMENT", "PROPERTY_SALE", "LETTING", "GOODS_SALE", "COMPANY_FORMATION", "TRANSACTION"] as const;
@@ -166,12 +167,12 @@ export async function matterState(tx: Tx, firmId: string, matterId: string): Pro
     const accepted = ["COMPLETE", "SDD", "EDD"].includes(f.status);
     files.push(accepted ? { ...cf.state, identityVerified: true, boResolved: true, purposeRecorded: true, eddChecklistComplete: true, seniorApprovalRecorded: true, pepApprovalRecorded: true } : cf.state);
   }
-  const hold = await tx.case.count({ where: { matterIds: { has: matterId }, holdEndsOn: { gte: new Date(toIsoDate(new Date())) } } });
+  const held = await matterHeld(tx, matterId);
   return {
     sector: SECTOR_KEY[m.sector] ?? "other",
     type: m.type.toLowerCase().replace("_", "-") as MatterState["type"],
     files,
-    transactionHold: hold > 0,
+    transactionHold: held,
     sanctionsBlocked: m.status === "ON_HOLD",
   };
 }

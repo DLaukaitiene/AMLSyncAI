@@ -562,6 +562,10 @@ model Case {
   holdStartedOn DateTime? @db.Date
   holdEndsOn    DateTime? @db.Date
   ownerVisible Boolean @default(false)
+  status      String   @default("open") // open | decided | answered | resolved | closed
+  dueOn       DateTime? @db.Date
+  closedAt    DateTime?
+  fiuInstruction String? // proceed | stop — recorded during the Art. 71 hold
   createdById String   @db.Uuid
   createdAt   DateTime @default(now())
 

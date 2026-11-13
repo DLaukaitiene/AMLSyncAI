@@ -16,6 +16,7 @@ import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { validateSmoFallback } from "@/lib/rules/beneficial-ownership";
 import type { Prisma } from "@prisma/client";
 import { createPortalLink, revokePortalLink } from "@/lib/server/portal";
+import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
 const STEP_UP = (path: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: path } });
@@ -243,6 +244,7 @@ export async function decideMatchAction(fileId: string, resultId: string, _: Act
         },
       });
       await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Case", objectId: c.id });
+      await ensureSanctionsNotice(tx, s.firm.id, c.id);
       const matters = await tx.matterParty.findMany({ where: { partyId: r.partyId }, select: { matterId: true } });
       await tx.matter.updateMany({ where: { id: { in: matters.map((m) => m.matterId) }, status: "OPEN" }, data: { status: "ON_HOLD" } });
     }
@@ -368,4 +370,17 @@ export async function staffUploadAction(fileId: string, _: ActionState, fd: Form
   if (!r.ok) return { error: r.error };
   revalidatePath(`/app/clients/${fileId}`);
   return { message: r.scan === "clean" ? "Uploaded." : "Uploaded. The file can be opened once the malware scan has finished." };
+}
+
+export async function openDiscrepancyAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  const description = String(fd.get("description") ?? "").trim();
+  if (description.length < 10) return { error: "Describe the difference between the register and what the client declared.", fieldErrors: { description: ["At least 10 characters."] } };
+  await withTenant(s.firm.id, async (tx) => {
+    const f = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
+    const { profile } = await currentProfile(tx, s.firm.id);
+    await openDiscrepancy(tx, { firmId: s.firm.id, userId: s.user.id }, f.partyId, profile.boRegister?.name ?? "Central BO register", description);
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Discrepancy opened. Ask the client to correct the register; otherwise report it within 14 days (Art. 24). The Compliance Officer has the case." };
 }

@@ -11,6 +11,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/app/clients", label: "Clients", show: can(r, "client.view") },
     { href: "/app/matters", label: "Matters", show: can(r, "client.view") },
     { href: "/app/calendar", label: "Calendar", show: true },
+    { href: "/app/cases", label: "Cases", show: can(r, "case.view") },
+    { href: "/app/reports", label: "Reports", show: can(r, "case.view") },
     { href: "/app/settings/country-profile", label: "Country Profile", show: can(r, "countryProfile.view") },
     { href: "/app/settings/screening-lists", label: "Screening lists", show: can(r, "countryProfile.view") },
     { href: "/app/team", label: "Team", show: true },

@@ -8,6 +8,8 @@ import { ActionForm, Field, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { PartyFields } from "@/components/party-fields";
 import { addPartyAction, addTransactionAction, completeMatterAction, matterState } from "../actions";
+import { raiseSuspicionAction } from "../../cases/actions";
+import { RaiseSuspicion } from "@/components/raise-suspicion";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const STATUS: Record<string, string> = { OPEN: "CDD in progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
@@ -101,6 +103,8 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
         )}
         {reports.length > 0 && <p className="text-sm">Report drafts: {reports.map((r) => `${r.type.toLowerCase()} (${r.status.toLowerCase()})`).join(", ")}</p>}
       </section>
+
+      {can(s.user.roles, "case.raise") && <RaiseSuspicion action={raiseSuspicionAction.bind(null, { partyIds: m.parties.map((p) => p.partyId), matterIds: [matterId] })} />}
 
       {m.status !== "COMPLETED" && (
         <section className="space-y-3 rounded-md border border-border p-4">
