@@ -22,6 +22,12 @@ export default async function FirmPage() {
       <h1 className="text-2xl font-semibold">Firm</h1>
       <ul className="divide-y divide-border rounded-md border border-border text-sm">
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/risk-assessment">Business-wide risk assessment</Link><span className="text-muted">{ra ? `v${ra.version} in force` : "not approved yet"}</span></li>
+        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/governance">Governance and annual report</Link><span className="text-muted">Art. 11</span></li>
+        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/training">Training</Link><span className="text-muted">Art. 12</span></li>
+        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/integrity">Integrity and conflicts</Link><span className="text-muted">Art. 13</span></li>
+        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/whistleblowing">Whistleblowing channel</Link><span className="text-muted">Art. 14</span></li>
+        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/outsourcing">Outsourcing register</Link><span className="text-muted">Art. 18</span></li>
+        <li className="flex justify-between px-4 py-2"><a className="text-accent underline" href="/api/supervisor-file/firm">Download the firm supervisor file</a><span className="text-muted">PDF + ZIP</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/policies">Policies and procedures</Link><span className="text-muted">{policy ? `policy v${policy.version}` : "no policy in force"}{procedure ? ` · procedures v${procedure.version}` : ""}</span></li>
       </ul>
       <section className="space-y-2">

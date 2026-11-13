@@ -3,11 +3,12 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { bucket, type CalendarBucket } from "@/lib/rules/deadlines";
 import { toIsoDate } from "@/lib/rules/dates";
+import { can } from "@/lib/auth/permissions";
 
 const KIND: Record<string, string> = {
   refresh: "CDD refresh", "sdd-verification": "SDD verification (60 days)", "cdd-required": "CDD required", "threshold-report": "Threshold report",
   "discrepancy-report": "BO register discrepancy (14 days)", "transaction-hold": "Transaction hold (3 working days)", "fiu-request": "FIU request",
-  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "portal-stalled": "Client hasn't completed the portal (7+ days)",
+  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "annual-report": "Annual compliance report", "integrity-declaration": "Integrity declaration", "whistleblowing-ack": "Acknowledge whistleblowing report (7 days)", "portal-stalled": "Client hasn't completed the portal (7+ days)",
 };
 const TITLES: Record<CalendarBucket, string> = { overdue: "Overdue", "due-30-days": "Due in the next 30 days", later: "Later", done: "Done" };
 
@@ -15,8 +16,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const s = await requireUser();
   const { show } = await searchParams;
   const today = toIsoDate(new Date());
+  // Case and whistleblowing deadlines are need-to-know: hidden from users who can't open them (§8C.7).
+  const hidden = [
+    ...(can(s.user.roles, "case.view") ? [] : ["Case"]),
+    ...(can(s.user.roles, "approve.compliance") ? [] : ["WhistleblowingReport"]),
+  ];
   const tasks = await withTenant(s.firm.id, (tx) =>
-    tx.task.findMany({ where: show === "done" ? { status: "DONE" } : { status: "OPEN" }, orderBy: { dueOn: "asc" }, take: 500 }),
+    tx.task.findMany({
+      where: { ...(show === "done" ? { status: "DONE" } : { status: "OPEN" }), objectType: { notIn: hidden }, NOT: { kind: { in: hidden.includes("Case") ? ["transaction-hold", "fiu-request", "discrepancy-report"] : [] } } },
+      orderBy: { dueOn: "asc" },
+      take: 500,
+    }),
   );
   const groups = new Map<CalendarBucket, typeof tasks>();
   for (const t of tasks) {
@@ -25,7 +35,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   }
   const href = (t: (typeof tasks)[number]) =>
     t.objectType === "CddFile" ? `/app/clients/${t.objectId}` : t.objectType === "Matter" ? `/app/matters/${t.objectId}` : t.objectType === "Case" ? `/app/cases/${t.objectId}`
-    : t.objectType === "FirmRiskAssessment" || t.objectType === "Firm" ? "/app/firm/risk-assessment" : t.objectType === "PolicyDocument" ? "/app/firm/policies" : "#";
+    : t.objectType === "FirmRiskAssessment" || t.objectType === "Firm" ? "/app/firm/risk-assessment" : t.objectType === "PolicyDocument" ? (t.kind === "annual-report" ? "/app/firm/governance" : "/app/firm/policies")
+    : t.objectType === "User" ? "/app/firm/integrity" : t.objectType === "WhistleblowingReport" ? "/app/firm/whistleblowing" : "#";
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

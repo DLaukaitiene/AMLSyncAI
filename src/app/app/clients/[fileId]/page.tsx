@@ -81,6 +81,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           {cf.file.nextRefreshOn && ` · Next refresh ${cf.file.nextRefreshOn.toISOString().slice(0, 10)}`}
           {cf.file.retentionUntil && ` · Delete after ${cf.file.retentionUntil.toISOString().slice(0, 10)}`}
         </p>
+        {can(r, "approve.compliance") && <a className="text-sm text-accent underline" href={`/api/supervisor-file/client/${fileId}`}>Download supervisor file (PDF + documents, ZIP)</a>}
       </div>
 
       {hasCase && (

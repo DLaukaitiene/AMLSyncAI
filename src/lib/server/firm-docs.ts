@@ -127,7 +127,10 @@ export async function approvePolicy(tx: Tx, ctx: Ctx, id: string) {
   });
   await tx.policyDocument.updateMany({ where: { kind: d.kind, status: "IN_FORCE" }, data: { status: "SUPERSEDED" } });
   await tx.policyDocument.update({ where: { id }, data: { status: "IN_FORCE", approvalId: approval.id } });
-  await upsertTask(tx, { firmId: ctx.firmId, kind: "policy-review", objectType: "PolicyDocument", objectId: id, dueOn: addYears(toIsoDate(new Date()), 1), article: "Art. 9" });
+  await upsertTask(tx, {
+    firmId: ctx.firmId, kind: d.kind === "annual-report" ? "annual-report" : "policy-review", objectType: "PolicyDocument", objectId: id,
+    dueOn: addYears(toIsoDate(new Date()), 1), article: d.kind === "annual-report" ? "Art. 11" : "Art. 9",
+  });
   await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "approve", objectType: "PolicyDocument", objectId: id, fields: ["status"] });
 }
 

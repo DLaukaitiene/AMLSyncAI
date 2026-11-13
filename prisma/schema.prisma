@@ -856,3 +856,91 @@ model PortalLink {
   @@index([firmId])
   @@index([cddFileId])
 }
+
+// ---------------------------------------------------------------------------
+// Governance and firm-level records (spec §4.1, §11.1)
+// ---------------------------------------------------------------------------
+
+/// Compliance manager (management body) and compliance officer appointments (Art. 11).
+model Appointment {
+  id        String    @id @default(uuid()) @db.Uuid
+  firmId    String    @db.Uuid
+  function  String // compliance-manager | compliance-officer
+  userId    String    @db.Uuid
+  fromDate  DateTime  @db.Date
+  toDate    DateTime? @db.Date
+  reason    String? // reason for ending the appointment
+  createdAt DateTime  @default(now())
+
+  @@index([firmId])
+}
+
+model TrainingModule {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  title       String
+  content     String
+  minutes     Int      @default(30)
+  createdAt   DateTime @default(now())
+  assignments TrainingAssignment[]
+
+  @@index([firmId])
+}
+
+model TrainingAssignment {
+  id          String         @id @default(uuid()) @db.Uuid
+  firmId      String         @db.Uuid
+  moduleId    String         @db.Uuid
+  module      TrainingModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  userId      String         @db.Uuid
+  assignedAt  DateTime       @default(now())
+  dueOn       DateTime       @db.Date
+  completedAt DateTime?
+  attestation String? // "I completed this training and understood it" + name
+
+  @@unique([moduleId, userId, dueOn])
+  @@index([firmId])
+}
+
+/// Integrity, skills and conflict-of-interest declarations (Art. 13).
+model IntegrityDeclaration {
+  id         String   @id @default(uuid()) @db.Uuid
+  firmId     String   @db.Uuid
+  userId     String   @db.Uuid
+  kind       String // joining | annual
+  answers    Json
+  conflicts  String?
+  declaredAt DateTime @default(now())
+
+  @@index([firmId])
+}
+
+/// Internal whistleblowing channel (Art. 14, Directive 2019/1937). Content encrypted; reporter optional.
+model WhistleblowingReport {
+  id          String    @id @default(uuid()) @db.Uuid
+  firmId      String    @db.Uuid
+  contentEnc  Bytes
+  reporterId  String?   @db.Uuid // null = anonymous
+  status      String    @default("received") // received | acknowledged | closed
+  acknowledgedAt DateTime?
+  closedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([firmId])
+}
+
+/// Outsourcing register (Art. 18).
+model OutsourcingArrangement {
+  id                   String    @id @default(uuid()) @db.Uuid
+  firmId               String    @db.Uuid
+  provider             String
+  tasks                String
+  agreementSignedOn    DateTime? @db.Date
+  supervisorNotifiedOn DateTime? @db.Date
+  startOn              DateTime? @db.Date
+  endOn                DateTime? @db.Date
+  notes                String?
+  createdAt            DateTime  @default(now())
+
+  @@index([firmId])
+}

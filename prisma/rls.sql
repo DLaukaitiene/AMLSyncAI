@@ -12,7 +12,8 @@ BEGIN
     'PolicyAcknowledgement','Party','OwnershipLink','Matter','MatterParty','Transaction',
     'CddFile','IdentityVerification','RegistryExtract','ScreeningResult',
     'ClientRiskAssessment','Document','Case','Report','Task','Approval','AuditEvent',
-    'EmailDomainVerification','Invitation','PortalLink'
+    'EmailDomainVerification','Invitation','PortalLink',
+    'Appointment','TrainingModule','TrainingAssignment','IntegrityDeclaration','WhistleblowingReport','OutsourcingArrangement'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
