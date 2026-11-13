@@ -691,8 +691,37 @@ model FeatureRequest {
   createdAt   DateTime             @default(now())
 
   votes       FeatureVote[]
+  comments    FeatureComment[]
+  history     FeatureStatusChange[]
 
   @@index([status])
+  @@index([userId, createdAt])
+}
+
+model FeatureComment {
+  id        String         @id @default(uuid()) @db.Uuid
+  requestId String         @db.Uuid
+  request   FeatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId    String         @db.Uuid
+  firmId    String         @db.Uuid
+  fromTeam  Boolean        @default(false) // AMLSyncAI team
+  text      String
+  hidden    Boolean        @default(false)
+  createdAt DateTime       @default(now())
+
+  @@index([requestId])
+}
+
+model FeatureStatusChange {
+  id        String               @id @default(uuid()) @db.Uuid
+  requestId String               @db.Uuid
+  request   FeatureRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  status    FeatureRequestStatus
+  note      String?
+  byEmail   String
+  createdAt DateTime             @default(now())
+
+  @@index([requestId])
 }
 
 model FeatureVote {
