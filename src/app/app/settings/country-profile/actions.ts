@@ -6,7 +6,7 @@ import { requireUser, hasRecentMfa } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
 import { audit } from "@/lib/server/audit";
-import { diffProfiles, parseCountryProfile, type CountryProfileInput } from "@/lib/rules/country-profile";
+import { defaultCountryProfile, diffProfiles, parseCountryProfile, type CountryProfileInput } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -59,8 +59,9 @@ export async function saveProfileAction(_: ActionState, fd: FormData): Promise<A
   const s = await requireUser("countryProfile.edit");
   if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/country-profile" } };
 
+  const officeId = String(fd.get("officeId") ?? "") || null;
   return withTenant(s.firm.id, async (tx) => {
-    const cur = await currentProfile(tx, s.firm.id);
+    const cur = await currentProfile(tx, s.firm.id, officeId);
     const parsed = parseCountryProfile(readForm(fd, cur.profile.memberState));
     if (!parsed.ok) {
       const fieldErrors: Record<string, string[]> = {};
@@ -73,7 +74,7 @@ export async function saveProfileAction(_: ActionState, fd: FormData): Promise<A
     const version = cur.version + 1;
     const row = await tx.countryProfileVersion.create({
       data: {
-        firmId: s.firm.id, memberState: parsed.profile.memberState, version, enteredById: s.user.id,
+        firmId: s.firm.id, officeId, memberState: parsed.profile.memberState, version, enteredById: s.user.id,
         source: str(fd, "source") || null, data: parsed.profile as object,
       },
     });
@@ -89,4 +90,24 @@ export async function saveProfileAction(_: ActionState, fd: FormData): Promise<A
     revalidatePath("/app", "layout");
     return { message: `Saved as version ${version}. Changed: ${changes.map((c) => c.field).join(", ")}.` };
   });
+}
+
+/** An office or branch in another member state gets its own (host-state) Country Profile (§3A.3 rule 2). */
+export async function addOfficeAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("countryProfile.edit");
+  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/country-profile" } };
+  const name = String(fd.get("name") ?? "").trim();
+  const memberState = String(fd.get("memberState") ?? "").trim().toUpperCase();
+  if (name.length < 2) return { error: "Name the office.", fieldErrors: { name: ["Required."] } };
+  if (!/^[A-Z]{2}$/.test(memberState)) return { error: "Choose the member state.", fieldErrors: { memberState: ["2-letter code"] } };
+  await withTenant(s.firm.id, async (tx) => {
+    const o = await tx.office.create({ data: { firmId: s.firm.id, name, memberState } });
+    const row = await tx.countryProfileVersion.create({
+      data: { firmId: s.firm.id, officeId: o.id, memberState, version: 1, enteredById: s.user.id, source: "Defaults (EU Core)", data: defaultCountryProfile(memberState) as object },
+    });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Office", objectId: o.id, fields: ["memberState"] });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "CountryProfile", objectId: row.id, fields: ["version"] });
+  });
+  revalidatePath("/app/settings/country-profile");
+  return { message: `Office added with a ${memberState} Country Profile at EU defaults. Fill it in for that member state.` };
 }

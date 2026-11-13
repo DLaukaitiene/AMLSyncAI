@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { linkLanding, portalContext } from "@/lib/server/portal";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
+import { DocView } from "@/components/doc-view";
+import type { GeneratedDoc } from "@/lib/docs/model";
 import { noChangeAction, requestCodeAction, saveAction, uploadAction, verifyCodeAction } from "./actions";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
@@ -173,6 +175,12 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           <button type="submit" name="intent" value="submit" className="rounded bg-accent px-4 py-2 text-sm font-medium text-white dark:text-black">Submit</button>
         </div>
       </ActionForm>
+      {ctx.privacy ? (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-muted">How {ctx.firmName} uses your data (privacy notice)</summary>
+          <div className="mt-3"><DocView doc={ctx.privacy as unknown as GeneratedDoc} /></div>
+        </details>
+      ) : null}
       <p className="text-xs text-muted">
         {ctx.firmName} processes your data to meet its obligations under Regulation (EU) 2024/1624 and keeps it for 5 years after the business relationship ends.
       </p>

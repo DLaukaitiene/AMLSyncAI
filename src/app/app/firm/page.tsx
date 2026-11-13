@@ -27,6 +27,7 @@ export default async function FirmPage() {
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/integrity">Integrity and conflicts</Link><span className="text-muted">Art. 13</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/whistleblowing">Whistleblowing channel</Link><span className="text-muted">Art. 14</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/outsourcing">Outsourcing register</Link><span className="text-muted">Art. 18</span></li>
+        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/privacy">Privacy notice and DPIA</Link><span className="text-muted">Art. 76, GDPR</span></li>
         <li className="flex justify-between px-4 py-2"><a className="text-accent underline" href="/api/supervisor-file/firm">Download the firm supervisor file</a><span className="text-muted">PDF + ZIP</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/policies">Policies and procedures</Link><span className="text-muted">{policy ? `policy v${policy.version}` : "no policy in force"}{procedure ? ` · procedures v${procedure.version}` : ""}</span></li>
       </ul>

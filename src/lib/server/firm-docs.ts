@@ -6,6 +6,8 @@ import { currentProfile } from "./country-profile";
 import { upsertTask } from "./cdd";
 import { assess, riskAssessmentDoc, type Answers } from "@/lib/firm/risk-assessment";
 import { buildPolicy, buildProcedures } from "@/lib/firm/policy-builder";
+import { dpiaDoc, privacyNoticeDoc } from "@/lib/firm/privacy";
+import { aiEnabled } from "./ai";
 import type { GeneratedDoc } from "@/lib/docs/model";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { addYears, toIsoDate } from "@/lib/rules/dates";
@@ -139,4 +141,18 @@ export async function acknowledgePolicy(tx: Tx, ctx: Ctx, id: string) {
   if (d.status !== "IN_FORCE") throw new Error("Only the policy in force can be acknowledged.");
   await tx.policyAcknowledgement.upsert({ where: { policyId_userId: { policyId: id, userId: ctx.userId } }, create: { firmId: ctx.firmId, policyId: id, userId: ctx.userId }, update: {} });
   await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "update", objectType: "PolicyDocument", objectId: id, fields: ["acknowledged"] });
+}
+
+/** Privacy notice / DPIA draft from the firm and its Country Profile. */
+export async function generatePrivacyDoc(tx: Tx, ctx: Ctx, kind: "privacy-notice" | "dpia") {
+  const firm = await tx.firm.findUniqueOrThrow({ where: { id: ctx.firmId } });
+  const { profile } = await currentProfile(tx, ctx.firmId);
+  await tx.policyDocument.deleteMany({ where: { kind, status: "DRAFT" } });
+  const last = await tx.policyDocument.findFirst({ where: { kind }, orderBy: { version: "desc" } });
+  const version = (last?.version ?? 0) + 1;
+  const input = { firm: { name: firm.name, memberState: firm.homeState, emailDomain: firm.emailDomain }, profile, aiEnabled: aiEnabled() };
+  const doc = kind === "privacy-notice" ? privacyNoticeDoc(input, version, toIsoDate(new Date())) : dpiaDoc(input, version, toIsoDate(new Date()));
+  const row = await tx.policyDocument.create({ data: { firmId: ctx.firmId, kind, version, content: doc as unknown as Prisma.InputJsonValue, euCoreVersion: EU_CORE_VERSION } });
+  await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "PolicyDocument", objectId: row.id });
+  return row.id;
 }

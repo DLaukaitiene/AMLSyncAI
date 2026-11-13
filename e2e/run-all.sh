@@ -11,3 +11,4 @@ for suite in auth portal cases firm governance backbook monitoring; do
 done
 reset; echo "== cdd"; CODE1=$(code) CODE2=$(code) node e2e/cdd-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== feedback (needs PLATFORM_ADMIN_EMAILS=triage@amlsyncai-team.lt)"; CODE1=$(code) CODE2=$(code) CODE3=$(code) node e2e/feedback-flow.cjs | grep -E "✘|errors" || true
+reset; echo "== extras"; CODE1=$(code) CODE2=$(code) node e2e/extras-flow.cjs | grep -E "✘|errors" || true

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
 import { requireUser, hasRecentMfa, revokeAllSessions } from "@/lib/server/session";
-import { createInvitation, inviteSchema } from "@/lib/server/auth/flows";
+import { createInvitation, inviteSchema, resetUserMfa } from "@/lib/server/auth/flows";
+import { adminDb } from "@/lib/server/db";
 import { withTenant } from "@/lib/server/db";
 import { audit, securityEvent } from "@/lib/server/audit";
 import { formToObject, zodErrors } from "@/lib/server/form";
@@ -57,4 +58,23 @@ export async function signOutEverywhereAction(): Promise<ActionState> {
   await revokeAllSessions(s.user.id, s.sessionId);
   await securityEvent({ firmId: s.firm.id, userId: s.user.id, kind: "sign-out-everywhere" });
   return { message: "All your other sessions were signed out." };
+}
+
+export async function resetMfaAction(userId: string): Promise<ActionState> {
+  const s = await requireUser("team.remove");
+  if (!hasRecentMfa(s)) return STEP_UP;
+  try {
+    await resetUserMfa(s.firm.id, s.user.id, userId);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath("/app/team");
+  return { message: "Two-factor reset. The user sets it up again at the next sign-in." };
+}
+
+export async function revokeSessionAction(sessionId: string): Promise<ActionState> {
+  const s = await requireUser();
+  await adminDb.session.updateMany({ where: { id: sessionId, userId: s.user.id }, data: { revokedAt: new Date() } });
+  revalidatePath("/app/team");
+  return { message: "Session signed out." };
 }

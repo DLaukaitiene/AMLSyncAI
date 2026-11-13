@@ -4,7 +4,8 @@ import { can, ROLE_LABELS, type AppRole } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { StepUpLink } from "@/components/step-up";
-import { inviteAction, removeUserAction, revokeInviteAction, signOutEverywhereAction } from "./actions";
+import { inviteAction, removeUserAction, resetMfaAction, revokeInviteAction, revokeSessionAction, signOutEverywhereAction } from "./actions";
+import { adminDb } from "@/lib/server/db";
 
 export default async function TeamPage() {
   const s = await requireUser();
@@ -15,6 +16,7 @@ export default async function TeamPage() {
     domain: (await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } })).emailDomain,
   }));
 
+  const sessions = await adminDb.session.findMany({ where: { userId: s.user.id, revokedAt: null, stage: "ACTIVE", expiresAt: { gt: new Date() } }, orderBy: { lastSeenAt: "desc" } });
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Team</h1>
@@ -29,7 +31,27 @@ export default async function TeamPage() {
                 {u.external && <span className="ml-2 rounded border border-border px-1 text-xs">external</span>}
                 <span className="block text-muted">{u.roles.map((r) => ROLE_LABELS[r as AppRole]).join(", ")}{!u.mfaEnrolledAt && " · two-factor not set up yet"}</span>
               </span>
-              {manage && u.id !== s.user.id && <ActionButton action={removeUserAction.bind(null, u.id)} variant="danger">Remove</ActionButton>}
+              {manage && u.id !== s.user.id && (
+                <span className="flex gap-2">
+                  {u.mfaEnrolledAt && <ActionButton action={resetMfaAction.bind(null, u.id)}>Reset two-factor</ActionButton>}
+                  <ActionButton action={removeUserAction.bind(null, u.id)} variant="danger">Remove</ActionButton>
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">My sessions</h2>
+        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          {sessions.map((x) => (
+            <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+              <span>
+                {x.userAgent?.slice(0, 80) ?? "Unknown device"} · {x.ip ?? "—"}
+                <span className="block text-muted">Signed in {x.createdAt.toISOString().slice(0, 16).replace("T", " ")} · last active {x.lastSeenAt.toISOString().slice(0, 16).replace("T", " ")} UTC{x.id === s.sessionId ? " · this session" : ""}</span>
+              </span>
+              {x.id !== s.sessionId && <ActionButton action={revokeSessionAction.bind(null, x.id)}>Sign out</ActionButton>}
             </li>
           ))}
         </ul>

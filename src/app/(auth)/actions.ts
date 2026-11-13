@@ -13,6 +13,7 @@ import {
   signupSchema,
   startSignup,
   verifySecondFactor,
+  requestSelfRecovery,
 } from "@/lib/server/auth/flows";
 import { createSession, destroySession, getSession, markMfa, requestMeta } from "@/lib/server/session";
 import { formToObject, isBot, safeNext, zodErrors } from "@/lib/server/form";
@@ -104,4 +105,10 @@ export async function logoutAction() {
   if (s) await securityEvent({ firmId: s.user.firmId, userId: s.user.id, kind: "logout" });
   await destroySession();
   redirect("/login");
+}
+
+export async function recoverAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const { ip } = await requestMeta();
+  if (!isBot(fd)) await requestSelfRecovery(String(fd.get("email") ?? ""), String(fd.get("password") ?? ""), ip);
+  return { message: "If the details are correct, we've emailed the next steps. For your security, two-factor can be set up again only after 72 hours, and the firm's Owner is notified." };
 }

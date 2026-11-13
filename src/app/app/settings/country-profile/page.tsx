@@ -6,7 +6,8 @@ import { EU_CORE } from "@/lib/rules/eu-core";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
-import { saveProfileAction } from "./actions";
+import { addOfficeAction, saveProfileAction } from "./actions";
+import Link from "next/link";
 
 const NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -24,20 +25,31 @@ function Section({ title, children, note }: { title: string; children: React.Rea
 
 const area = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
 
-export default async function CountryProfilePage() {
+export default async function CountryProfilePage({ searchParams }: { searchParams: Promise<{ office?: string }> }) {
   const s = await requireUser("countryProfile.view");
   const edit = can(s.user.roles, "countryProfile.edit");
-  const { cur, versions } = await withTenant(s.firm.id, async (tx) => ({
-    cur: await currentProfile(tx, s.firm.id),
-    versions: await tx.countryProfileVersion.findMany({ where: { officeId: null }, orderBy: { version: "desc" }, take: 20, select: { version: true, createdAt: true, source: true } }),
-  }));
+  const sp = await searchParams;
+  const { cur, versions, offices, office } = await withTenant(s.firm.id, async (tx) => {
+    const offices = await tx.office.findMany({ where: { isHome: false }, orderBy: { name: "asc" } });
+    const office = offices.find((o) => o.id === sp.office) ?? null;
+    return {
+      offices,
+      office,
+      cur: await currentProfile(tx, s.firm.id, office?.id ?? null),
+      versions: await tx.countryProfileVersion.findMany({ where: { officeId: office?.id ?? null }, orderBy: { version: "desc" }, take: 20, select: { version: true, createdAt: true, source: true } }),
+    };
+  });
   const p = cur.profile;
   const checklist = setupChecklist(p);
 
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Country Profile · {NAMES.of(p.memberState)}</h1>
+        <h1 className="text-2xl font-semibold">Country Profile · {NAMES.of(p.memberState)}{office ? ` · ${office.name} (host state)` : " · home state"}</h1>
+        <nav className="flex flex-wrap gap-3 text-sm">
+          <Link className={office ? "text-accent underline" : "font-semibold"} href="/app/settings/country-profile">Home state</Link>
+          {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
+        </nav>
         <p className="max-w-3xl text-sm text-muted">
           AMLSyncAI applies the general EU rules (EU Core {EU_CORE.version}). Here your firm enters its national details. Values can only fill in
           or tighten the EU rules, never relax them. Every change creates a new version, needs a Compliance Officer and is logged. Earlier
@@ -62,6 +74,7 @@ export default async function CountryProfilePage() {
       {!edit && <p className="text-sm text-muted">Only a Compliance Officer can change the Country Profile.</p>}
 
       <ActionForm action={saveProfileAction} className="max-w-3xl space-y-6">
+        <input type="hidden" name="officeId" value={office?.id ?? ""} />
         <fieldset disabled={!edit} className="space-y-6">
           <Section title="Authorities" note="Required. Without them, reports can be drafted and exported but not marked as submitted.">
             <div className="grid gap-4 sm:grid-cols-3">
@@ -156,6 +169,18 @@ export default async function CountryProfilePage() {
           </div>
         )}
       </ActionForm>
+
+      {edit && !office && (
+        <section className="max-w-xl space-y-2">
+          <h2 className="text-lg font-semibold">Office in another member state</h2>
+          <p className="text-sm text-muted">Branches or activity in another member state use that state&apos;s Country Profile for their matters (Art. 8) [verify scope with counsel].</p>
+          <ActionForm action={addOfficeAction} className="grid gap-3 sm:grid-cols-3">
+            <Field label="Office name" name="name" required />
+            <Field label="Member state" name="memberState" required hint="2-letter code, e.g. PL" />
+            <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit><StepUpLink /></div>
+          </ActionForm>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Version history</h2>

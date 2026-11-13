@@ -217,7 +217,8 @@ export async function passwordLogin(
   }
 
   await adminDb.user.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null } });
-  return { ok: true, user: { id: user.id, firmId: user.firmId, mfaEnrolled: !!user.mfaEnrolledAt } };
+  const recovered = await applyDueRecovery(user.id);
+  return { ok: true, user: { id: user.id, firmId: user.firmId, mfaEnrolled: !!user.mfaEnrolledAt && !recovered } };
 }
 
 /** Sends a new-device alert when this IP + browser hasn't been seen for the user (§8C.3). */
@@ -401,4 +402,81 @@ export async function resetPassword(token: string, password: string): Promise<Fl
   await adminDb.session.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } });
   await securityEvent({ firmId: user.firmId, userId: user.id, kind: "password-reset" });
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Two-factor recovery (§8C.3): never by email alone.
+// - Multi-user firms: another Owner / Compliance Officer resets it (resetUserMfa).
+// - Single-user firms: password + re-confirmed company email + 72-hour wait,
+//   during which the Owner's email is notified and can cancel.
+// ---------------------------------------------------------------------------
+
+export const RECOVERY_WAIT_HOURS = 72;
+
+export async function resetUserMfa(firmId: string, byUserId: string, userId: string) {
+  if (byUserId === userId) throw new Error("Ask another Owner or Compliance Officer to reset your two-factor authentication.");
+  const u = await adminDb.user.findUniqueOrThrow({ where: { id: userId } });
+  if (u.firmId !== firmId) throw new Error("Not found");
+  await adminDb.user.update({ where: { id: userId }, data: { mfaEnrolledAt: null, totpSecretEnc: null, recoveryCodeHashes: [] } });
+  await adminDb.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+  await securityEvent({ firmId, userId: byUserId, kind: "mfa-reset", details: { target: userId } });
+  await sendEmail(u.email, "AMLSyncAI: your two-factor authentication was reset", "A colleague reset your two-factor authentication. Sign in with your password and set it up again. If you didn't ask for this, contact your Compliance Officer.");
+}
+
+export async function requestSelfRecovery(email: string, password: string, ip: string | null): Promise<void> {
+  if (!(await hit(`recover:ip:${ip}`, LIMITS.passwordResetPerIp))) return;
+  const u = await adminDb.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  if (!u || !u.passwordHash || u.deactivatedAt || !(await verifyPassword(u.passwordHash, password))) {
+    await verifyPassword(await dummyHash(), password);
+    return; // same response either way
+  }
+  const others = await adminDb.user.count({ where: { firmId: u.firmId, deactivatedAt: null, id: { not: u.id }, roles: { hasSome: ["OWNER", "COMPLIANCE_OFFICER"] } } });
+  if (others > 0) {
+    await sendEmail(u.email, "AMLSyncAI: two-factor recovery", "Ask another Owner or Compliance Officer of your firm to reset your two-factor authentication in Team.");
+    return;
+  }
+  const confirm = randomToken();
+  const cancel = randomToken();
+  const notBefore = new Date(Date.now() + RECOVERY_WAIT_HOURS * 3600_000);
+  await adminDb.emailToken.create({ data: { id: sha256(confirm), purpose: "mfa-recovery", email: u.email, expiresAt: new Date(notBefore.getTime() + 7 * 86_400_000), data: { userId: u.id, notBefore: notBefore.toISOString(), cancelId: sha256(cancel), confirmed: false } } });
+  await securityEvent({ firmId: u.firmId, userId: u.id, kind: "mfa-recovery-requested", ip });
+  const owners = await adminDb.user.findMany({ where: { firmId: u.firmId, roles: { has: "OWNER" }, deactivatedAt: null } });
+  for (const o of new Map([...owners, u].map((x) => [x.email, x])).values()) {
+    await sendEmail(o.email, "AMLSyncAI: two-factor recovery requested",
+      `Someone asked to recover two-factor authentication for ${u.email}.\n\nIf this was you, confirm your email: ${appUrl(`/recover/confirm/${confirm}`)}\nYou can then sign in and set up two-factor again after ${notBefore.toISOString().slice(0, 16).replace("T", " ")} UTC (72 hours).\n\nIf this wasn't you, cancel it now: ${appUrl(`/recover/cancel/${cancel}`)}`);
+  }
+}
+
+export async function confirmSelfRecovery(token: string): Promise<{ ok: boolean; notBefore?: string }> {
+  const t = await adminDb.emailToken.findUnique({ where: { id: sha256(token) } });
+  if (!t || t.purpose !== "mfa-recovery" || t.usedAt || t.expiresAt < new Date()) return { ok: false };
+  const d = t.data as { notBefore: string };
+  await adminDb.emailToken.update({ where: { id: t.id }, data: { data: { ...(t.data as object), confirmed: true } } });
+  return { ok: true, notBefore: d.notBefore };
+}
+
+export async function cancelSelfRecovery(token: string): Promise<boolean> {
+  const all = await adminDb.emailToken.findMany({ where: { purpose: "mfa-recovery", usedAt: null } });
+  const t = all.find((x) => (x.data as { cancelId?: string }).cancelId === sha256(token));
+  if (!t) return false;
+  await adminDb.emailToken.update({ where: { id: t.id }, data: { usedAt: new Date(), data: { ...(t.data as object), cancelled: true } } });
+  const d = t.data as { userId: string };
+  const u = await adminDb.user.findUnique({ where: { id: d.userId } });
+  await securityEvent({ firmId: u?.firmId, userId: d.userId, kind: "mfa-recovery-cancelled" });
+  return true;
+}
+
+/** At login: a confirmed recovery past its 72-hour wait resets MFA once. */
+export async function applyDueRecovery(userId: string): Promise<boolean> {
+  const tokens = await adminDb.emailToken.findMany({ where: { purpose: "mfa-recovery", usedAt: null, expiresAt: { gt: new Date() } } });
+  const t = tokens.find((x) => {
+    const d = x.data as { userId: string; notBefore: string; confirmed: boolean };
+    return d.userId === userId && d.confirmed && new Date(d.notBefore) <= new Date();
+  });
+  if (!t) return false;
+  await adminDb.emailToken.update({ where: { id: t.id }, data: { usedAt: new Date() } });
+  await adminDb.user.update({ where: { id: userId }, data: { mfaEnrolledAt: null, totpSecretEnc: null, recoveryCodeHashes: [] } });
+  const u = await adminDb.user.findUniqueOrThrow({ where: { id: userId } });
+  await securityEvent({ firmId: u.firmId, userId, kind: "mfa-recovered" });
+  return true;
 }

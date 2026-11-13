@@ -7,7 +7,10 @@ const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm
 
 export default async function NewMatterPage() {
   const s = await requireUser("client.edit");
-  const firm = await withTenant(s.firm.id, (tx) => tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } }));
+  const { firm, offices } = await withTenant(s.firm.id, async (tx) => ({
+    firm: await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } }),
+    offices: await tx.office.findMany({ where: { isHome: false } }),
+  }));
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-semibold">New matter</h1>
@@ -23,6 +26,14 @@ export default async function NewMatterPage() {
             <option value="TRANSACTION">Occasional transaction</option>
           </select>
         </Field>
+        {offices.length > 0 && (
+          <Field label="Office" name="officeId">
+            <select name="officeId" className={sel} aria-label="Office" defaultValue="">
+              <option value="">Head office ({firm.homeState})</option>
+              {offices.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.memberState})</option>)}
+            </select>
+          </Field>
+        )}
         {firm.sectors.length > 1 && (
           <Field label="Sector" name="sector">
             <select name="sector" className={sel} aria-label="Sector">{firm.sectors.map((x) => <option key={x} value={x}>{x}</option>)}</select>

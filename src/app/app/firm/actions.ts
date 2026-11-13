@@ -8,7 +8,7 @@ import { withTenant } from "@/lib/server/db";
 import { audit, changedFields } from "@/lib/server/audit";
 import { upsertTask } from "@/lib/server/cdd";
 import { SECTORS } from "@/lib/server/auth/flows";
-import { acknowledgePolicy, approvePolicy, approveRiskAssessment, draftRiskAssessment, editPolicySection, generatePolicies, saveRiskAnswers } from "@/lib/server/firm-docs";
+import { acknowledgePolicy, approvePolicy, approveRiskAssessment, draftRiskAssessment, editPolicySection, generatePolicies, generatePrivacyDoc, saveRiskAnswers } from "@/lib/server/firm-docs";
 import { CONTROL_QUESTIONS, RISK_QUESTIONS } from "@/lib/firm/risk-assessment";
 import { toIsoDate } from "@/lib/rules/dates";
 import { draftText } from "@/lib/server/ai";
@@ -121,4 +121,11 @@ export async function aiSectionAction(id: string, sectionId: string, back: strin
     revalidatePath(back);
     return { message: "Section redrafted with AI and marked for review." };
   });
+}
+
+export async function generatePrivacyAction(kind: "privacy-notice" | "dpia"): Promise<ActionState> {
+  const s = await requireUser("approve.compliance");
+  await withTenant(s.firm.id, (tx) => generatePrivacyDoc(tx, { firmId: s.firm.id, userId: s.user.id }, kind));
+  revalidatePath("/app/firm/privacy");
+  return { message: "Draft generated." };
 }

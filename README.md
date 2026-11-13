@@ -6,16 +6,19 @@ The product specification is in [`docs/PRODUCT_SPEC.md`](docs/PRODUCT_SPEC.md). 
 
 ## Status
 
-Work in progress — a web-based SaaS (runs in the browser; client portal will be mobile-friendly web). Built so far:
+Work in progress on branch `feat/foundation`. A web-based SaaS (browser; the client portal is a mobile-friendly web page). Built so far, all V1 modules of the spec at least in a first version:
 
-- **Sign-up and login** (§8C): company-email sign-up with confirmation link, sign-up codes (`SIGNUP_MODE=invite`), mandatory two-factor (authenticator app + recovery codes), step-up re-authentication, invitation-only users, password reset, lockout, rate limits, new-device alerts.
-- **Country Profile** editor: versioned, Compliance Officer only, rejects anything that relaxes the EU rules; setup checklist on the dashboard.
-- **Clients (CDD)**: people and companies, identity verification and register-extract records, ownership tree with automatic beneficial-owner calculation, senior-managing-official fallback, screening of the whole structure with match review, automatic risk scoring (EDD/SDD), EDD checklist, senior-management and PEP approvals, hard gates, accept / refuse / terminate.
-- **Matters**: multiple parties with roles (buyer + seller, customer + supplier), transactions with CDD triggers, linked transactions, cash cap, Art. 74 threshold report drafts, completion and funds-transfer gates.
-- **Compliance Calendar**, **Screening lists** (firm CSV upload; official lists via `scripts/load-list.mts`; daily re-screen at `POST /api/cron/rescreen`), **Team**, **Security log**, **Records** (5-year deletion, legal hold; the audit log keeps no identifiable data).
-- **Rules engine** (`src/lib/rules`) and **security rules** (`src/lib/security`) with unit tests mapped to §11.
+- **Sign-up and access** (§8C): company-email sign-up with sign-up codes, mandatory two-factor, invitation-only users, step-up re-authentication, sessions list, two-factor reset by a colleague or 72-hour self-recovery, lockout, rate limits, bot honeypot, security log, `security.txt`.
+- **Country Profile** (§3A) for the home state and for offices in other member states; the EU Core floor is enforced.
+- **Clients and CDD** (§4.2–4.4): data set, identity / register records, ownership tree and beneficial owners, screening of the whole structure, risk scoring, EDD/PEP approvals, Russia/Belarus rule pack, hard gates, accept / refuse / terminate, explanation letter (Art. 76(5)).
+- **Client portal** (§4A.1): secure links with one-time codes, questionnaire, uploads, signature, reminders, periodic "nothing changed" refresh.
+- **Matters** with multi-party CDD, transactions, linked-transaction and cash rules, threshold reports, per-matter monitoring.
+- **Suspicion reporting** (§4.6): internal reports, CO decisions, STR drafts and export, transaction hold, FIU requests, discrepancies, sanctions notices.
+- **Firm level**: risk assessment, Policy Builder, governance and annual report, training, integrity declarations, whistleblowing, outsourcing register, privacy notice and DPIA.
+- **Records**: supervisor files (client and firm, PDF + ZIP), 5-year deletion with legal hold; the audit log holds no identifiable data.
+- **Back-book remediation**, **feature requests** with AMLSyncAI triage, **AI drafting** (STR narrative, policy sections; off by default).
 
-Not yet built: client self-service portal and eID/NFC vendors, BRIS/KYB registry lookups, PEP data provider, suspicion-report case management and FIU export, firm risk assessment, Policy Builder, training/integrity/whistleblowing, supervisor-file export, feature requests, AI drafting.
+Not yet connected (need vendor decisions): eID broker, NFC/liveness vendor, BRIS / KYB registry lookups, PEP data provider, ClamAV, SMTP provider, object storage, EU AI provider.
 
 ## Development
 
@@ -36,8 +39,7 @@ The app's tenant connection (`DATABASE_APP_URL`) must be a non-superuser role wi
 |---|---|
 | `npm test` | Unit tests (Vitest) |
 | `npm run typecheck` / `npm run lint` / `npm run build` | Checks and production build |
-| `CODE=… node e2e/auth-flow.cjs` | Browser test: sign-up, MFA, Country Profile, invitations, login |
-| `CODE1=… CODE2=… DATABASE_URL=… node e2e/cdd-flow.cjs` | Browser test: CDD, ownership, screening, EDD/PEP, refusal, retention deletion, matters (load `e2e/fixtures/test-sanctions.csv` first) |
+| `./e2e/run-all.sh` | Every browser end-to-end suite against a running server (see the script header for the environment it needs) |
 
 ## Layout
 

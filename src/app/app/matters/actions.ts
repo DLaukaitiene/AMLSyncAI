@@ -37,9 +37,10 @@ export async function createMatterAction(_: ActionState, fd: FormData): Promise<
   for (const k of ["property", "price", "financing", "item", "goodsCategory", "value", "engagementType", "monthlyRent"]) if (o[k]) details[k] = o[k];
   const id = await withTenant(s.firm.id, async (tx) => {
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } });
+    const officeId = o.officeId ? (await tx.office.findUnique({ where: { id: o.officeId } }))?.id ?? null : null;
     const m = await tx.matter.create({
       data: {
-        firmId: s.firm.id, type, sector: (sector && firm.sectors.includes(sector as never) ? sector : firm.sectors[0] ?? "OTHER") as never,
+        firmId: s.firm.id, officeId, type, sector: (sector && firm.sectors.includes(sector as never) ? sector : firm.sectors[0] ?? "OTHER") as never,
         title: o.title.trim(), details,
       },
     });
@@ -100,7 +101,8 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
 
   return withTenant(s.firm.id, async (tx) => {
     const matter = await tx.matter.findUniqueOrThrow({ where: { id: matterId } });
-    const { profile, version } = await currentProfile(tx, s.firm.id);
+    // A matter of an office in another member state uses that office's Country Profile.
+    const { profile, version } = await currentProfile(tx, s.firm.id, matter.officeId);
     const messages: string[] = [];
 
     if (method === "cash") {

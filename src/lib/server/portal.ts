@@ -135,7 +135,8 @@ export async function portalContext(token: string) {
     const cf = await loadClientFile(tx, l.firmId, l.cddFileId);
     // Only this party's own uploads — never another party's.
     const documents = await tx.document.findMany({ where: { partyId: l.partyId, uploadedBy: `portal:${l.id}` }, select: { id: true, kind: true, fileName: true, malwareScan: true } });
-    return { link: l, party: file.party, file, firmName: firm.name, eddRequired: cf.risk.eddRequired, documents };
+    const privacy = await tx.policyDocument.findFirst({ where: { kind: "privacy-notice", status: "IN_FORCE" }, orderBy: { version: "desc" } });
+    return { link: l, party: file.party, file, firmName: firm.name, eddRequired: cf.risk.eddRequired, documents, privacy: privacy?.content ?? null };
   });
 }
 
