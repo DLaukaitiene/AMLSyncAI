@@ -30,7 +30,8 @@ export function ActionForm({
         // doesn't clear what the user typed when the server returns an error.
         onSubmit={(e) => {
           e.preventDefault();
-          const fd = new FormData(e.currentTarget);
+          // Include the clicked button's name/value (e.g. intent=save vs intent=submit).
+          const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
           startTransition(() => formAction(fd));
         }}
         className={className ?? "space-y-4"}

@@ -12,7 +12,9 @@ import { PartyFields } from "@/components/party-fields";
 import {
   acceptAction, addOwnerAction, decideMatchAction, eddChecklistAction, endAction, recordExtractAction, recordVerificationAction,
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
+  revokePortalLinkAction, sendPortalLinkAction, staffUploadAction,
 } from "../actions";
+import { DOCUMENT_KINDS } from "@/lib/server/storage";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -20,7 +22,8 @@ const LABELS: Record<string, string> = {
   residenceCountry: "Residence", address: "Address", occupation: "Occupation", email: "Email", phone: "Phone", pepFunction: "Public function",
   pepLeftOfficeOn: "Left office", name: "Legal name", legalForm: "Legal form", registrationNumber: "Registration no.", lei: "LEI",
   registeredOffice: "Registered office", principalPlaceOfBusiness: "Principal place of business", countryOfCreation: "Country of creation",
-  natureOfBusiness: "Nature of business",
+  natureOfBusiness: "Nature of business", sourceOfFunds: "Source of funds (declared)", sourceOfWealth: "Source of wealth (declared)",
+  taxResidence: "Tax residence", actingForWhom: "Acting for", signatoryRole: "Signatory role",
 };
 
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
@@ -45,10 +48,13 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
     const lastRisk = await tx.clientRiskAssessment.findFirst({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" } });
     const approvals = await tx.approval.findMany({ where: { objectId: fileId }, orderBy: { createdAt: "desc" }, include: { user: { select: { name: true } } } });
     const hasCase = (await tx.case.count({ where: { partyIds: { has: cf.party.id } } })) > 0;
-    return { cf, lastRisk, approvals, hasCase };
+    const links = await tx.portalLink.findMany({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" }, take: 5 });
+    const documents = await tx.document.findMany({ where: { partyId: cf.party.id }, orderBy: { uploadedAt: "desc" } });
+    return { cf, lastRisk, approvals, hasCase, links, documents };
   });
   if (!data) notFound();
-  const { cf, lastRisk, approvals, hasCase } = data;
+  const { cf, lastRisk, approvals, hasCase, links, documents } = data;
+  const activeLink = links.find((l) => l.status === "SENT" || l.status === "OPENED");
   const r = s.user.roles;
   const edit = can(r, "client.edit") && cf.file.status === "OPEN";
   const items = openCddItems(cf.state);
@@ -98,7 +104,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Client data">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            {Object.entries(d).filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0) && typeof v !== "boolean").map(([k, v]) => (
+            {Object.entries(d).filter(([k]) => k !== "portalDeclaration" && k !== "additionalEddCaseIds").filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0) && typeof v !== "boolean").map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-muted">{LABELS[k] ?? k}</dt>
                 <dd>{Array.isArray(v) ? v.join(", ") : String(v)}</dd>
@@ -176,6 +182,68 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </Card>
         )}
       </div>
+
+      <Card title="Client portal and documents">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-3 text-sm">
+            {links.length > 0 && (
+              <ul>
+                {links.map((l) => (
+                  <li key={l.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      {l.sentTo} · {l.status.toLowerCase()}
+                      {l.submittedAt ? ` ${l.submittedAt.toISOString().slice(0, 10)}` : ` · expires ${l.expiresAt.toISOString().slice(0, 10)}`}
+                      {l.remindersSent ? ` · ${l.remindersSent} reminder(s)` : ""}
+                    </span>
+                    {edit && (l.status === "SENT" || l.status === "OPENED") && <ActionButton action={revokePortalLinkAction.bind(null, fileId, l.id)}>Revoke</ActionButton>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!!(d.portalDeclaration as { signedName?: string } | undefined)?.signedName && (
+              <p>Declaration signed by {(d.portalDeclaration as { signedName: string; signedAt: string }).signedName} on {(d.portalDeclaration as { signedAt: string }).signedAt.slice(0, 10)}.</p>
+            )}
+            {edit && (
+              <ActionForm action={sendPortalLinkAction.bind(null, fileId)}>
+                <Field label={activeLink ? "Send a new link (the current one stops working)" : "Send the client a secure link to fill in their details"} name="email" type="email" defaultValue={String(d.email ?? activeLink?.sentTo ?? "")} hint="The client answers the questions, uploads documents and signs. Links expire after 14 days." />
+                <Submit variant="secondary">Send link</Submit>
+              </ActionForm>
+            )}
+          </div>
+          <div className="space-y-3 text-sm">
+            {documents.length ? (
+              <ul>
+                {documents.map((doc) => (
+                  <li key={doc.id}>
+                    {DOCUMENT_KINDS[doc.kind] ?? doc.kind}:{" "}
+                    {doc.malwareScan === "clean" ? (
+                      <a className="text-accent underline" href={`/api/files/${doc.id}`}>{doc.fileName}</a>
+                    ) : (
+                      <span>{doc.fileName} <span className="text-muted">({doc.malwareScan === "quarantined" ? "blocked by malware scan" : "waiting for malware scan"})</span></span>
+                    )}
+                    <span className="text-muted"> · {doc.uploadedBy.startsWith("portal") ? "from client" : "staff"} · {doc.uploadedAt.toISOString().slice(0, 10)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted">No documents yet.</p>
+            )}
+            {edit && (
+              <ActionForm action={staffUploadAction.bind(null, fileId)}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Document type" name="kind">
+                    <select name="kind" className={sel} aria-label="Document type">{Object.entries(DOCUMENT_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+                  </Field>
+                  <Field label="File" name="file">
+                    <input type="file" name="file" aria-label="File" accept=".pdf,.jpg,.jpeg,.png,.heic,.docx" className="text-sm" />
+                  </Field>
+                </div>
+                <Submit variant="secondary">Upload</Submit>
+              </ActionForm>
+            )}
+          </div>
+        </div>
+      </Card>
 
       {cf.bo && (
         <Card title="Ownership and beneficial owners (Art. 51–60)" id="ownership">

@@ -12,7 +12,7 @@ BEGIN
     'PolicyAcknowledgement','Party','OwnershipLink','Matter','MatterParty','Transaction',
     'CddFile','IdentityVerification','RegistryExtract','ScreeningResult',
     'ClientRiskAssessment','Document','Case','Report','Task','Approval','AuditEvent',
-    'EmailDomainVerification','Invitation'
+    'EmailDomainVerification','Invitation','PortalLink'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

@@ -1,6 +1,7 @@
 import "server-only";
 import { withTenant, type Tx } from "./db";
 import { audit } from "./audit";
+import { deleteBlob } from "./storage";
 import { currentProfile } from "./country-profile";
 import { retentionEnds } from "@/lib/rules/deadlines";
 import { addYears, toIsoDate, type IsoDate } from "@/lib/rules/dates";
@@ -48,7 +49,8 @@ export async function partiesDueForDeletion(tx: Tx, today: IsoDate = toIsoDate(n
 
 /** Deletes the parties and everything about them. Irrecoverable from the app. */
 export async function purgeParties(firmId: string, userId: string, partyIds: string[], today: IsoDate = toIsoDate(new Date())) {
-  return withTenant(firmId, async (tx) => {
+  const blobKeys: string[] = [];
+  const n = await withTenant(firmId, async (tx) => {
     const due = new Set((await partiesDueForDeletion(tx, today)).map((p) => p.partyId));
     const ids = partyIds.filter((id) => due.has(id));
     if (ids.length === 0) return 0;
@@ -77,7 +79,10 @@ export async function purgeParties(firmId: string, userId: string, partyIds: str
       }
     }
 
-    await tx.document.deleteMany({ where: { partyId: { in: ids } } }); // TODO: delete object-storage blobs once file storage is added
+    const docs = await tx.document.findMany({ where: { partyId: { in: ids } }, select: { storageKey: true } });
+    blobKeys.push(...docs.map((d) => d.storageKey));
+    await tx.document.deleteMany({ where: { partyId: { in: ids } } });
+    await tx.portalLink.deleteMany({ where: { partyId: { in: ids } } });
     await tx.party.deleteMany({ where: { id: { in: ids } } }); // cascades: links, matter roles, CDD files, risk, screening, extracts, IDV
 
     // Matters left with no parties are deleted too.
@@ -92,6 +97,9 @@ export async function purgeParties(firmId: string, userId: string, partyIds: str
     for (const id of ids) await audit(tx, { firmId, userId, action: "purge", objectType: "Party", objectId: id });
     return ids.length;
   });
+  // Files are removed after the database transaction has committed.
+  for (const k of blobKeys) await deleteBlob(k);
+  return n;
 }
 
 /** Legal hold (Art. 77(3)): blocks deletion; at most 5 extra years after the retention date. */

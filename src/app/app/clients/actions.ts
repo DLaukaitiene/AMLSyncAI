@@ -15,6 +15,8 @@ import { EDD_CHECKLIST } from "@/lib/rules/risk-scoring";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { validateSmoFallback } from "@/lib/rules/beneficial-ownership";
 import type { Prisma } from "@prisma/client";
+import { createPortalLink, revokePortalLink } from "@/lib/server/portal";
+import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
 const STEP_UP = (path: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: path } });
 
@@ -328,4 +330,42 @@ export async function endAction(fileId: string, _: ActionState, fd: FormData): P
   );
   revalidatePath(`/app/clients/${fileId}`);
   return { message: `${kind === "REFUSED" ? "Refusal" : "Termination"} recorded. The 5-year retention clock has started.${suspicion === "raise" ? " An internal suspicion report was sent to the Compliance Officer." : ""}` };
+}
+
+// ---------------------------------------------------------------------------
+// Client portal and documents
+// ---------------------------------------------------------------------------
+
+export async function sendPortalLinkAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  const email = String(fd.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter the client's email address.", fieldErrors: { email: ["Valid email required."] } };
+  await withTenant(s.firm.id, (tx) => createPortalLink(tx, { firmId: s.firm.id, userId: s.user.id }, fileId, email));
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: `Secure link sent to ${email}. Reminders go out on day 1, 3 and 7.` };
+}
+
+export async function revokePortalLinkAction(fileId: string, linkId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  await withTenant(s.firm.id, (tx) => revokePortalLink(tx, { firmId: s.firm.id, userId: s.user.id }, linkId));
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Link revoked." };
+}
+
+export async function staffUploadAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  const kind = String(fd.get("kind"));
+  const file = fd.get("file");
+  if (!(kind in DOCUMENT_KINDS)) return { error: "Choose the document type." };
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file." };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const r = await withTenant(s.firm.id, async (tx) => {
+    const cdd = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
+    const res = await storeDocument(tx, { firmId: s.firm.id, partyId: cdd.partyId, kind, fileName: file.name, bytes, uploadedBy: `staff:${s.user.id}` });
+    if (res.ok) await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Document", objectId: res.documentId, fields: ["kind"] });
+    return res;
+  });
+  if (!r.ok) return { error: r.error };
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: r.scan === "clean" ? "Uploaded." : "Uploaded. The file can be opened once the malware scan has finished." };
 }

@@ -7,7 +7,7 @@ import { toIsoDate } from "@/lib/rules/dates";
 const KIND: Record<string, string> = {
   refresh: "CDD refresh", "sdd-verification": "SDD verification (60 days)", "cdd-required": "CDD required", "threshold-report": "Threshold report",
   "discrepancy-report": "BO register discrepancy (14 days)", "transaction-hold": "Transaction hold (3 working days)", "fiu-request": "FIU request",
-  "former-pep": "Former PEP review", "retention-end": "Records deletion",
+  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "portal-stalled": "Client hasn't completed the portal (7+ days)",
 };
 const TITLES: Record<CalendarBucket, string> = { overdue: "Overdue", "due-30-days": "Due in the next 30 days", later: "Later", done: "Done" };
 

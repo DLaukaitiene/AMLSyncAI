@@ -536,6 +536,8 @@ model Document {
   sizeBytes   Int
   sha256      String
   malwareScan String   @default("pending") // pending | clean | quarantined
+  fileName    String   @default("file")
+  uploadedBy  String   @default("staff") // "staff:<userId>" or "portal:<linkId>"
   uploadedAt  DateTime @default(now())
 
   @@index([firmId])
@@ -811,4 +813,42 @@ model ScreeningEntry {
 
   @@index([listId])
   @@index([normalized], type: Gin)
+}
+
+// ---------------------------------------------------------------------------
+// Client self-service portal (spec §4A.1, §8C.5)
+// ---------------------------------------------------------------------------
+
+enum PortalStatus {
+  SENT
+  OPENED
+  SUBMITTED
+  REVOKED
+}
+
+/// One link per party and CDD file. The URL holds only a random token, never personal data.
+model PortalLink {
+  id          String       @id @default(uuid()) @db.Uuid
+  firmId      String       @db.Uuid
+  partyId     String       @db.Uuid
+  cddFileId   String       @db.Uuid
+  tokenHash   String       @unique
+  tokenEnc    Bytes // encrypted with the firm key, so reminders can re-send the same link
+  sentTo      String // email the link and the one-time codes go to
+  status      PortalStatus @default(SENT)
+  expiresAt   DateTime // 14 days, firm may set shorter
+  codeHash    String?
+  codeExpiresAt DateTime?
+  codeAttempts Int         @default(0)
+  sessionHash String? // portal session after the one-time code
+  sessionExpiresAt DateTime?
+  remindersSent Int        @default(0)
+  lastReminderAt DateTime?
+  submittedAt DateTime?
+  submission  Json? // what the client declared (copied into the CDD file on submit)
+  createdById String       @db.Uuid
+  createdAt   DateTime     @default(now())
+
+  @@index([firmId])
+  @@index([cddFileId])
 }
