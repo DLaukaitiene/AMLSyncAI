@@ -12,3 +12,4 @@ done
 reset; echo "== cdd"; CODE1=$(code) CODE2=$(code) node e2e/cdd-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== feedback (needs PLATFORM_ADMIN_EMAILS=triage@amlsyncai-team.lt)"; CODE1=$(code) CODE2=$(code) CODE3=$(code) node e2e/feedback-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== extras"; CODE1=$(code) CODE2=$(code) node e2e/extras-flow.cjs | grep -E "✘|errors" || true
+reset; echo "== isolation + accessibility"; CODE1=$(code) CODE2=$(code) node e2e/isolation-a11y.cjs | grep -E "✘|✔|a11y" || true

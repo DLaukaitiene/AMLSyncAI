@@ -23,19 +23,21 @@ export default async function Dashboard() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           ["Active clients", data.clients, "/app/clients"],
           ["Open matters", data.openMatters, "/app/matters"],
           ["Overdue", data.overdue, "/app/calendar"],
           ["Due in 30 days", data.due30, "/app/calendar"],
         ].map(([label, value, href]) => (
-          <Link key={label as string} href={href as string} className="rounded-md border border-border p-4 hover:border-accent">
-            <dt className="text-sm text-muted">{label}</dt>
-            <dd className={`text-2xl font-semibold ${label === "Overdue" && (value as number) > 0 ? "text-red-700 dark:text-red-300" : ""}`}>{value}</dd>
-          </Link>
+          <li key={label as string}>
+            <Link href={href as string} className="block rounded-md border border-border p-4 hover:border-accent">
+              <span className="block text-sm text-muted">{label}</span>
+              <span className={`block text-2xl font-semibold ${label === "Overdue" && (value as number) > 0 ? "text-red-700 dark:text-red-300" : ""}`}>{value}</span>
+            </Link>
+          </li>
         ))}
-      </dl>
+      </ul>
 
       {missing.length > 0 && (
         <section className="space-y-2">
