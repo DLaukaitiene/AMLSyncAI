@@ -55,6 +55,12 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await sec.getByRole("button", { name: "Save section" }).last().click();
   await p.getByText("plus a sector module for HVG sales staff").first().waitFor();
   log("section edited");
+  await sec.getByRole("button", { name: "Improve with AI" }).first().click();
+  await p.getByText("Section redrafted with AI").first().waitFor();
+  await p.reload();
+  await p.locator("section", { hasText: "Draft: AML/CTF policy v1" }).getByText("AI-drafted — review").first().waitFor();
+  await p.getByText("Contains AI-drafted sections (marked)").first().waitFor();
+  log("policy section improved with AI; marked on the approval screen");
   for (const title of ["AML/CTF policy", "AML/CTF procedures"]) {
     await p.locator("section", { hasText: `Draft: ${title} v1` }).getByRole("button", { name: "Approve and put in force" }).click();
     await p.getByRole("heading", { name: `In force: ${title} v1` }).waitFor();

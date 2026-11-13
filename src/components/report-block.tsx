@@ -3,7 +3,9 @@ import { ActionForm, Field, Submit } from "./form";
 import { StepUpLink } from "./step-up";
 import { REPORT_LABELS } from "@/lib/server/cases";
 import { canMarkSubmitted, type CountryProfile } from "@/lib/rules/country-profile";
-import { narrativeAction, submittedAction } from "@/app/app/cases/actions";
+import { aiNarrativeAction, narrativeAction, submittedAction } from "@/app/app/cases/actions";
+import { ActionButton } from "./action-button";
+import { aiEnabled } from "@/lib/server/ai";
 
 const KIND: Record<ReportType, Parameters<typeof canMarkSubmitted>[1]> = {
   STR: "str", THRESHOLD: "threshold-report", CASH: "cash-report", DISCREPANCY: "discrepancy-report", SANCTIONS_NOTICE: "sanctions-notice", SUPERVISOR_NOTICE: "supervisor-notice",
@@ -13,11 +15,13 @@ const KIND: Record<ReportType, Parameters<typeof canMarkSubmitted>[1]> = {
 export function ReportBlock({
   r,
   narrative,
+  aiDrafted,
   profile,
   back,
 }: {
   r: { id: string; type: ReportType; status: string; submissionRef: string | null; submittedAt: Date | null; createdAt: Date };
   narrative?: string;
+  aiDrafted?: boolean;
   profile: CountryProfile;
   back: string;
 }) {
@@ -30,18 +34,26 @@ export function ReportBlock({
       </p>
       {r.type === "STR" && r.status !== "SUBMITTED" && (
         <ActionForm action={narrativeAction.bind(null, r.id, back)} className="space-y-2">
+          {aiDrafted && <p className="text-xs"><span className="rounded border border-amber-500 px-1">AI-drafted</span> Review and correct every fact. The original AI text is kept with the report.</p>}
           <Field label="Narrative (edit before exporting)" name="narrative">
             <textarea name="narrative" rows={8} aria-label="Narrative" defaultValue={narrative} className="w-full rounded border border-border bg-transparent px-3 py-2 text-sm" />
           </Field>
           <Submit variant="secondary">Save draft</Submit>
         </ActionForm>
       )}
+      {r.type === "STR" && r.status !== "SUBMITTED" && aiEnabled() && <ActionButton action={aiNarrativeAction.bind(null, r.id, back)}>Draft narrative with AI</ActionButton>}
       {r.status !== "SUBMITTED" && (
         <>
           <a href={`/api/reports/${r.id}`} className="inline-block text-accent underline">Export for upload</a>
           {gate.allowed ? (
             <ActionForm action={submittedAction.bind(null, r.id, back)} className="space-y-2">
               <Field label="Submission reference / receipt number" name="reference" required />
+              {aiDrafted && (
+                <>
+                  <input type="hidden" name="aiDrafted" value="1" />
+                  <label className="flex items-center gap-2"><input type="checkbox" name="reviewedAi" /> I reviewed and corrected the AI-drafted narrative</label>
+                </>
+              )}
               <Submit>Mark as submitted</Submit>
               <StepUpLink />
             </ActionForm>

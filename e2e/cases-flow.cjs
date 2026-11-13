@@ -92,8 +92,17 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   await p.getByLabel("FIU name").fill("FNTT"); await p.getByLabel("FIU reporting channel").fill("https://www.fntt.lt");
   await submit(p, "Save new version", "Saved as version 2");
   await p.goto(caseUrl);
+  // AI draft of the narrative (AI_PROVIDER=mock in tests)
+  await submit(p, "Draft narrative with AI", "AI draft added");
+  await p.reload();
+  if (!/\[AI draft\]/.test(await p.getByLabel("Narrative", { exact: true }).inputValue())) throw new Error("AI narrative missing");
+  await p.getByText("AI-drafted", { exact: true }).first().waitFor();
+  log("STR narrative drafted with AI and marked AI-drafted");
   await p.getByLabel("Submission reference / receipt number *").fill("FNTT-2026-00042");
+  await submit(p, "Mark as submitted", "Confirm that you reviewed and corrected the AI-drafted narrative.");
+  await p.getByLabel("I reviewed and corrected the AI-drafted narrative").check();
   await submit(p, "Mark as submitted", /submitted \d{4}-\d{2}-\d{2}, ref\. FNTT-2026-00042/);
+  log("AI-drafted STR can only be submitted after the CO confirms the review");
   log("STR marked submitted with receipt reference");
 
   // FIU says proceed → hold lifted

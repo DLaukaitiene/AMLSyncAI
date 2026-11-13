@@ -9,7 +9,7 @@ export default async function ReportsPage() {
   const s = await requireUser("case.view");
   const { reports, profile } = await withTenant(s.firm.id, async (tx) => ({
     reports: (await tx.report.findMany({ orderBy: { createdAt: "desc" }, take: 200 })).map((r) => ({
-      ...r, narrative: (JSON.parse(decryptField(s.firm.id, r.contentEnc)) as { narrative?: string }).narrative,
+      ...r, ...(({ narrative, aiDrafted }) => ({ narrative, aiDrafted }))(JSON.parse(decryptField(s.firm.id, r.contentEnc)) as { narrative?: string; aiDrafted?: boolean }),
     })),
     profile: (await currentProfile(tx, s.firm.id)).profile,
   }));
@@ -26,7 +26,7 @@ export default async function ReportsPage() {
           {(r.caseId || r.matterId) && (
             <Link className="text-xs text-accent underline" href={r.caseId ? `/app/cases/${r.caseId}` : `/app/matters/${r.matterId}`}>{r.caseId ? "Open case" : "Open matter"}</Link>
           )}
-          <ReportBlock r={r} narrative={r.narrative} profile={profile} back="/app/reports" />
+          <ReportBlock r={r} narrative={r.narrative} aiDrafted={r.aiDrafted} profile={profile} back="/app/reports" />
         </div>
       ))}
     </div>

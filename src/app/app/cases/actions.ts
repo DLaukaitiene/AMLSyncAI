@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
 import { requireUser, hasRecentMfa } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
+import { draftText } from "@/lib/server/ai";
+import { decryptField, encryptField } from "@/lib/server/crypto";
+import { audit } from "@/lib/server/audit";
 import {
   addCaseNote, answerFiuRequest, decideSuspicion, logFiuRequest, markReportSubmitted, raiseSuspicion, recordFiuInstruction,
   resolveDiscrepancy, updateReportNarrative, ensureSanctionsNotice, type CaseDecision,
@@ -104,8 +107,27 @@ export async function narrativeAction(reportId: string, back: string, _: ActionS
 export async function submittedAction(reportId: string, back: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("case.view");
   if (!hasRecentMfa(s)) return STEP_UP(back);
+  if (fd.get("aiDrafted") === "1" && fd.get("reviewedAi") !== "on") return { error: "Confirm that you reviewed and corrected the AI-drafted narrative." };
   const r = await withTenant(s.firm.id, (tx) => markReportSubmitted(tx, { firmId: s.firm.id, userId: s.user.id }, reportId, String(fd.get("reference") ?? "")));
   if (!r.ok) return { error: r.error };
   revalidatePath(back);
   return { message: "Marked as submitted." };
+}
+
+/** AI draft of the STR narrative (spec §5). Stored with the original AI text; the CO edits and approves. */
+export async function aiNarrativeAction(reportId: string, back: string): Promise<ActionState> {
+  const s = await requireUser("case.view");
+  return withTenant(s.firm.id, async (tx) => {
+    const rep = await tx.report.findUniqueOrThrow({ where: { id: reportId } });
+    if (rep.type !== "STR" || rep.status === "SUBMITTED") return { error: "Only an STR draft can be drafted with AI." };
+    const content = JSON.parse(decryptField(s.firm.id, rep.contentEnc));
+    const { narrative: _old, aiDraft: _a, ...facts } = content;
+    void _old; void _a;
+    const r = await draftText(tx, { firmId: s.firm.id, userId: s.user.id }, "str-narrative", reportId, facts);
+    if (!r.ok) return { error: r.error };
+    await tx.report.update({ where: { id: reportId }, data: { contentEnc: encryptField(s.firm.id, JSON.stringify({ ...content, narrative: r.text, aiDraft: r.text, aiDraftedAt: new Date().toISOString(), aiDrafted: true })) } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Report", objectId: reportId, fields: ["narrative", "aiDraft"] });
+    revalidatePath(back);
+    return { message: "AI draft added. Check every fact against the case before you export it." };
+  });
 }

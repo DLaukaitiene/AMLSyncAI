@@ -11,6 +11,9 @@ import { SECTORS } from "@/lib/server/auth/flows";
 import { acknowledgePolicy, approvePolicy, approveRiskAssessment, draftRiskAssessment, editPolicySection, generatePolicies, saveRiskAnswers } from "@/lib/server/firm-docs";
 import { CONTROL_QUESTIONS, RISK_QUESTIONS } from "@/lib/firm/risk-assessment";
 import { toIsoDate } from "@/lib/rules/dates";
+import { draftText } from "@/lib/server/ai";
+import type { GeneratedDoc } from "@/lib/docs/model";
+import type { Prisma } from "@prisma/client";
 
 const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 
@@ -96,4 +99,26 @@ export async function acknowledgeAction(id: string): Promise<ActionState> {
   await withTenant(s.firm.id, (tx) => acknowledgePolicy(tx, { firmId: s.firm.id, userId: s.user.id }, id));
   revalidatePath("/app/firm/policies");
   return { message: "Thank you — acknowledgement recorded." };
+}
+
+/** AI rewrite of one draft section; marked AI-drafted, the original kept for the record (spec §11.12). */
+export async function aiSectionAction(id: string, sectionId: string, back: string): Promise<ActionState> {
+  const s = await requireUser("approve.compliance");
+  return withTenant(s.firm.id, async (tx) => {
+    const d = await tx.policyDocument.findUniqueOrThrow({ where: { id } });
+    if (d.status !== "DRAFT") return { error: "Only a draft can be changed." };
+    const doc = d.content as unknown as GeneratedDoc;
+    const sec = doc.sections.find((x) => x.id === sectionId);
+    if (!sec) return { error: "Section not found." };
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } });
+    const current = sec.blocks.map((b) => ("p" in b ? b.p : "list" in b ? b.list.join("\n") : "")).join("\n\n");
+    const r = await draftText(tx, { firmId: s.firm.id, userId: s.user.id }, "policy-section", id, { document: doc.title, section: sec.heading, sectors: firm.sectors, memberState: firm.homeState, currentText: current });
+    if (!r.ok) return { error: r.error };
+    const history = ((doc as unknown as { aiHistory?: unknown[] }).aiHistory ?? []).concat([{ sectionId, before: current, ai: r.text, at: new Date().toISOString(), by: s.user.id }]);
+    const sections = doc.sections.map((x) => (x.id === sectionId ? { ...x, aiDrafted: true, blocks: r.text.split(/\n{2,}/).map((p) => ({ p: p.trim() })).filter((b) => b.p) } : x));
+    await tx.policyDocument.update({ where: { id }, data: { content: { ...doc, sections, aiHistory: history } as unknown as Prisma.InputJsonValue } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "PolicyDocument", objectId: id, fields: [sectionId, "aiDrafted"] });
+    revalidatePath(back);
+    return { message: "Section redrafted with AI and marked for review." };
+  });
 }

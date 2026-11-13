@@ -24,7 +24,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
     const parties = await tx.party.findMany({ where: { id: { in: c.partyIds } }, include: { cddFiles: { select: { id: true, role: true } } } });
     const matters = await tx.matter.findMany({ where: { id: { in: c.matterIds } }, select: { id: true, title: true } });
     const reports = (await tx.report.findMany({ where: { caseId }, orderBy: { createdAt: "asc" } })).map((r) => ({
-      ...r, narrative: (JSON.parse(decryptField(s.firm.id, r.contentEnc)) as { narrative?: string }).narrative,
+      ...r, ...(({ narrative, aiDrafted }) => ({ narrative, aiDrafted }))(JSON.parse(decryptField(s.firm.id, r.contentEnc)) as { narrative?: string; aiDrafted?: boolean }),
     }));
     const users = new Map((await tx.user.findMany({ select: { id: true, name: true } })).map((u) => [u.id, u.name]));
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } });
@@ -139,7 +139,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       {reports.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-semibold">Reports</h2>
-          {reports.map((r) => <ReportBlock key={r.id} r={r} narrative={r.narrative} profile={profile} back={`/app/cases/${caseId}`} />)}
+          {reports.map((r) => <ReportBlock key={r.id} r={r} narrative={r.narrative} aiDrafted={r.aiDrafted} profile={profile} back={`/app/cases/${caseId}`} />)}
         </section>
       )}
     </div>

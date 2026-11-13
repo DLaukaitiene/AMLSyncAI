@@ -976,3 +976,23 @@ model OutsourcingArrangement {
 
   @@index([firmId])
 }
+
+/// Every AI call (spec §5, §8C.8, §11.12): prompt and output encrypted per firm; no data used for training.
+model AiCall {
+  id           String   @id @default(uuid()) @db.Uuid
+  firmId       String   @db.Uuid
+  userId       String   @db.Uuid
+  purpose      String // str-narrative | policy-section | …
+  objectId     String?
+  provider     String
+  model        String
+  promptEnc    Bytes
+  outputEnc    Bytes?
+  stopReason   String?
+  inputTokens  Int?
+  outputTokens Int?
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([firmId, createdAt])
+}

@@ -5,7 +5,8 @@ import type { GeneratedDoc } from "@/lib/docs/model";
 import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
-import { acknowledgeAction, approvePolicyAction, editSectionAction, generatePoliciesAction } from "../actions";
+import { acknowledgeAction, aiSectionAction, approvePolicyAction, editSectionAction, generatePoliciesAction } from "../actions";
+import { aiEnabled } from "@/lib/server/ai";
 
 export default async function PoliciesPage() {
   const s = await requireUser();
@@ -48,17 +49,21 @@ export default async function PoliciesPage() {
               <summary className="cursor-pointer text-sm">Edit sections</summary>
               <div className="mt-3 space-y-4">
                 {d.doc.sections.map((sec) => (
-                  <ActionForm key={sec.id} action={editSectionAction.bind(null, d.id, sec.id)} className="space-y-1">
+                  <div key={sec.id} className="space-y-1">
+                  <ActionForm action={editSectionAction.bind(null, d.id, sec.id)} className="space-y-1">
                     <label className="block text-sm font-medium" htmlFor={`${d.id}-${sec.id}`}>{sec.heading}</label>
                     <textarea id={`${d.id}-${sec.id}`} name="text" rows={5} className="w-full rounded border border-border bg-transparent px-3 py-2 text-sm"
                       defaultValue={sec.blocks.map((b) => ("p" in b ? b.p : "list" in b ? b.list.join("\n") : "")).join("\n\n")} />
                     <Submit variant="secondary">Save section</Submit>
                   </ActionForm>
+                  {aiEnabled() && <ActionButton action={aiSectionAction.bind(null, d.id, sec.id, "/app/firm/policies")}>Improve with AI</ActionButton>}
+                  </div>
                 ))}
               </div>
             </details>
           )}
           <DocView doc={d.doc} />
+          {d.doc.sections.some((x) => x.aiDrafted) && <p className="text-sm">Contains AI-drafted sections (marked). Approving confirms you reviewed them.</p>}
           {can(s.user.roles, "approve.management")
             ? <ActionButton action={approvePolicyAction.bind(null, d.id)} variant="primary">Approve and put in force</ActionButton>
             : <p className="text-sm text-muted">Needs approval by management (Owner).</p>}
