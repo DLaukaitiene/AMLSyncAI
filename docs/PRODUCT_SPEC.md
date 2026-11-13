@@ -1,6 +1,6 @@
-# AMLSyncAI — Product Specification (v0.7, draft)
+# AMLSyncAI — Product Specification (v0.8, draft)
 
-*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies*
+*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11)*
 
 > **Legal note:** Article references are to Regulation (EU) 2024/1624 (AMLR) unless stated. AMLA's technical standards are still final drafts awaiting Commission adoption. Items marked **[verify]** depend on national law or pending standards. Get legal sign-off before any customer-facing compliance claim.
 
@@ -21,7 +21,7 @@ The product helps them do the work AMLR requires and **prove it to a supervisor*
 | Revenue | Project / FTE fees | Monthly subscription per firm |
 | Link | Can offer "AMLSync expert review" as a paid add-on inside the software | Feeds AMLSync with health-check and remediation leads |
 
-**Why now:** AMLR replaces national AML laws with one directly applicable regulation, so **one product can serve all 27 member states from launch**: one AMLR engine plus a **Country Pack** per state for the national options. The deadline (10 July 2027) creates urgency. AMLA is publishing technical standards (final draft CDD RTS submitted to the Commission on 1 October 2026; expected to apply 6 months after entry into force) that will tell everyone exactly what data to collect — software can build that in once. The CDD RTS also forces **remediation of existing client files**, which every new customer will need help with.
+**Why now:** AMLR replaces national AML laws with one directly applicable regulation, so **one product can serve all 27 member states from launch**: one AMLR engine with the general EU rules built in, plus a **Country Profile** that each firm fills in itself for its national options. The deadline (10 July 2027) creates urgency. AMLA is publishing technical standards (final draft CDD RTS submitted to the Commission on 1 October 2026; expected to apply 6 months after entry into force) that will tell everyone exactly what data to collect — software can build that in once. The CDD RTS also forces **remediation of existing client files**, which every new customer will need help with.
 
 ---
 
@@ -58,7 +58,7 @@ These groups use the same modules (firm risk assessment, policies, CDD, BO, scre
 
 This is the core of the spec: every module exists because of a legal obligation.
 
-Scope: **EU** = identical in every member state · **EU + N** = EU rule with a national parameter that comes from the Country Pack (see §3A).
+Scope: **EU** = identical in every member state · **EU + N** = EU rule with a national parameter that the firm enters in its Country Profile (see §3A).
 
 Legend: **V1** = launch release, live in all 27 member states by 10 July 2027 · **V2** = full automation and deeper sector templates (Q4 2027 – Q1 2028) · **V3** = integrations, platform and football (2028–2029). Rule: **everything the law requires for every group we sell to is in V1**; V2 and V3 add automation and convenience — never missing obligations.
 
@@ -98,7 +98,7 @@ Legend: **V1** = launch release, live in all 27 member states by 10 July 2027 ·
 | 29 | Refrain from suspicious transaction; proceed if no FIU instruction within 3 working days | Art. 71 | Transaction **hold** with clock | EU | V1 |
 | 30 | No tipping-off (dissuading a client is not tipping-off for professionals) | Art. 73 | Warnings + restricted access | EU | V1 |
 | 31 | Threshold reports: cars ≥ €250,000, aircraft/watercraft ≥ €7.5m | Art. 74 | **Threshold Reporting** | EU + N | V1 |
-| 32 | Cash cap €10,000 or lower national cap; national cash reports (e.g. LT ≥ €15,000 to FNTT **[verify]**) | Art. 80; national law | **Cash log** with Country Pack | EU + N | V1 |
+| 32 | Cash cap €10,000 or lower national cap; national cash reports (e.g. LT ≥ €15,000 to FNTT **[verify]**) | Art. 80; national law | **Cash log** with Country Profile | EU + N | V1 |
 | **Data & records** ||||||
 | 33 | Retain 5 years from end of relationship / occasional transaction / refusal; delete after; authority extension ≤ 5 years | Art. 77, 78 | **Audit Log & Records** + legal hold | EU + N | V1 |
 | 34 | Data protection: inform clients, criminal-data distinctions, no commercial reuse, human intervention + explanation for automated decisions | Art. 76; GDPR | Privacy notice template, **Explain decision**, DPA/DPIA | EU + N | V1 |
@@ -108,7 +108,11 @@ Legend: **V1** = launch release, live in all 27 member states by 10 July 2027 ·
 
 ## 3A. Regulatory layers — what is the same across the EU and what is country-specific
 
-AMLR is a **regulation**: it applies directly and identically in every member state from 10 July 2027, and member states may only deviate where AMLR expressly allows it. AMLD6 (Directive (EU) 2024/1640) is a **directive**: each state transposes it, so supervisors, FIUs, BO registers and penalties are national. The product mirrors this: one **EU Core** rule set, plus one **Country Pack** per member state that can only fill in parameters or tighten rules where EU law permits.
+AMLR is a **regulation**: it applies directly and identically in every member state from 10 July 2027, and member states may only deviate where AMLR expressly allows it. AMLD6 (Directive (EU) 2024/1640) is a **directive**: each state transposes it, so supervisors, FIUs, BO registers and penalties are national. The product mirrors this:
+- **EU Core** — the general EU rules, built into the product and maintained by AMLSyncAI. This is the only rule set AMLSyncAI ships.
+- **Country Profile** — country-specific parameters that **each firm enters and maintains itself** in a guided settings screen. A Country Profile can only fill in parameters or tighten rules where EU law permits; it can never relax the EU Core.
+
+AMLSyncAI does not ship or maintain national content. It provides the fields, validation, guidance text explaining what each parameter means and where to find it, and safe defaults (§3A.2).
 
 ### 3A.1 EU Core — identical in all 27 member states (built once)
 
@@ -131,12 +135,14 @@ AMLR is a **regulation**: it applies directly and identically in every member st
 | Technical standards | AMLA RTS/ITS and guidelines (CDD, thresholds, risk factors, PEPs, outsourcing, business risk assessment) | AMLR mandates to AMLA |
 | Other EU law | GDPR; AI Act; eIDAS / EUDI Wallet; DAC (event-driven updates) | — |
 
-### 3A.2 Country Pack — set per member state (configured, not coded)
+### 3A.2 Country Profile — entered by the firm (configured, not coded)
+
+Each parameter has: a guidance note (what it is, where to find it), a field type (number, text, contact, list, file upload, toggle), a **default** used until the firm enters a value, and an "entered by / date / source" record. Defaults never weaken the EU Core: where no safe default exists the field is **required** and blocks the dependent workflow until filled.
 
 | Parameter | Why it varies | Source | Used by |
 |---|---|---|---|
 | **Supervisor per sector** and its contact/notification channel | AMLD6 designates national supervisors and self-regulatory bodies (e.g. bar, notaries' chamber, audit oversight body) | AMLD6; national law | Governance, outsourcing notice, officer-removal notice, supervisor file |
-| **FIU** and its report channel (portal / goAML / API), submission language, receipt format | National FIUs | AMLD6; Art. 69(6) | Suspicion Reporting, FIU request inbox |
+| **FIU** name, contact and report channel (portal / goAML / other), receipt format | National FIUs | AMLD6; Art. 69(6) | Suspicion Reporting, FIU request inbox |
 | **SRO reporting route** for lawyers, notaries, accountants, auditors, tax advisors | State option | Art. 70(1) | Suspicion Reporting |
 | **Privilege exemption narrowed** for higher-risk transaction types | State option | Art. 70(3) | Privilege flag logic |
 | **Deadlines set by the FIU** for Art. 74 threshold reports and Art. 80 above-limit reports | Set nationally | Art. 74, 80(4) | Threshold Reporting, Compliance Calendar |
@@ -154,17 +160,35 @@ AMLR is a **regulation**: it applies directly and identically in every member st
 | **Legal entity forms**, registration and tax ID formats | National company law | — | CDD data model, BO tree |
 | **Record-retention extensions** ordered by authorities; longer retention required by national law; transitional rule for pending proceedings | Competent authorities / state option | Art. 77(3)–(4) | Records & legal hold |
 | **Whistleblowing channel** details | National transposition of Directive 2019/1937 | Art. 14 | Whistleblowing |
-| **Data protection authority**, privacy-notice language, any national rules on processing AML data | GDPR national layer | Art. 76; GDPR | Privacy templates, DPIA |
+| **Data protection authority** and any national rules on processing AML data | GDPR national layer | Art. 76; GDPR | Privacy templates, DPIA |
 | **Penalties** for obliged entities and managers | AMLD6 transposed nationally | AMLD6 | Firm risk assessment, training content |
-| **Language(s)** for policies, client communication and reports to authorities | National practice | — | Document generation, client portal |
 | **Working days and public holidays** | National | — | All deadline clocks |
 
+**Defaults until the firm enters a value**
+
+| Parameter | Default | Required before use? |
+|---|---|---|
+| Cash cap | €10,000 (EU cap) | No — firm lowers it if national law does |
+| National cash reports | Off | No |
+| Supervisor, FIU, sanctions authority, BO register channel | Empty | **Yes** — blocks marking the related notice/report as submitted |
+| SRO reporting route | Off (report to FIU) | No |
+| Privilege narrowing | Off (full Art. 70(2) exemption) | No |
+| Additional EDD cases, national risk assessment factors | None | No — but flagged in the firm risk assessment as "not yet reviewed" |
+| National PEP functions list | PEP data provider coverage only | No — firm can upload the national list |
+| National sanctions list | EU + UN lists only | No — firm can upload |
+| Working days and public holidays | Monday–Friday, no holidays | No — firm adds holidays (deadlines may be shorter than necessary, never longer) |
+| Retention | 5 years (EU Core) | No |
+| Gambling / football exemptions, additional obliged entities | None | No |
+| ID document types, ID-number and company-number formats | Free text, no format validation | No |
+
 ### 3A.3 Rules for the rules engine
-1. **EU Core always applies.** A Country Pack can **add** or **tighten** (lower cash cap, extra EDD cases, extra obliged entities) or **fill in** a parameter (supervisor, FIU channel, deadlines) — it can never relax an EU Core rule.
-2. **Which pack applies:** the pack of the member state where the firm is established; for branches or activity in another state, the host-state pack is added for the matters Art. 8 sends to host-state law **[verify scope with counsel]**.
-3. **Every decision stores** the EU Core version and the Country Pack version used.
-4. **Change management:** AMLA standards update the EU Core once for everyone; national changes update one pack. Customers get plain-language release notes and, where needed, auto-created tasks.
-5. **Pack completeness gate:** a member state is sold only when its pack has every parameter in §3A.2 filled and legally reviewed; until then, missing national parameters are shown to the firm as a task, never silently defaulted.
+1. **EU Core always applies.** A Country Profile can **add** or **tighten** (lower cash cap, extra EDD cases, extra obliged entities) or **fill in** a parameter (supervisor, FIU channel, deadlines) — it can never relax an EU Core rule.
+2. **Which profile applies:** the firm's home-state Country Profile; for branches or activity in another state, the firm can add a host-state Country Profile for that Office, applied to the matters Art. 8 sends to host-state law **[verify scope with counsel]**.
+3. **Every decision stores** the EU Core version and the Country Profile version used. Every change to a Country Profile is versioned, logged and needs compliance officer approval.
+4. **Change management:** AMLA standards and EU law changes update the EU Core once for everyone (plain-language release notes and auto-created tasks). National changes are the firm's responsibility: the firm edits its own Country Profile; a yearly "review your Country Profile" task is created automatically.
+5. **Completeness gate:** at onboarding a setup checklist shows which parameters are required, which use defaults and which are empty. Required empty fields block only the workflows that depend on them (e.g. no FIU channel → STR can be drafted and exported but not marked submitted) and appear as open tasks — never silently defaulted.
+6. **Firm-added lists:** firms can upload their own national sanctions list, national prominent-public-functions list and high-risk factors (CSV); these are screened and scored exactly like EU Core lists.
+7. **Templates (later):** a firm may export its Country Profile and share it (e.g. via a professional body); importing one still requires the receiving firm's approval. *(V3)*
 
 ---
 
@@ -176,10 +200,10 @@ AMLR is a **regulation**: it applies directly and identically in every member st
 |---|---|---|---|
 | **When** | Live in all member states by **10 July 2027** | Q4 2027 – Q1 2028 | 2028 – 2029 |
 | **Goal** | Every in-scope firm in any member state meets **every** AMLR duty and can show its supervisor a complete file | Cut staff time to approvals only; deeper templates for the other groups | Work inside the tools firms already use; football clubs and agents |
-| **Markets** | **All 27 member states**: Country Pack for each; UI and client portal in all 24 official EU languages (AI-assisted translation, legal terms reviewed) | Country Pack refinements as national laws, FIUs and AMLA standards settle | Same |
+| **Markets** | **All 27 member states** on the general EU Core; each firm configures its own Country Profile. **English only** (UI, client portal, generated documents) | Better Country Profile guidance and validation as national laws, FIUs and AMLA standards settle | Shareable Country Profile templates |
 | **Groups** | Detailed: accountants / auditors / tax advisors, estate agents, HVG & precious-metal traders. Core-engine templates: TCSPs, lawyers & notaries, art traders, other non-financial obliged entities (§2.2) | Richer templates for TCSPs, lawyers & notaries, art traders | Football clubs & agents (from 10 July 2029) |
 | **Firm level** | Firm risk assessment, Policy Builder, governance + annual report, training (lite), integrity & conflict forms, whistleblowing channel, outsourcing register | Automated annual cycle, role-based training paths with certificates, Independent Review module, multi-office / network policies, cross-border notifications | Reliance agreements between firms |
-| **Client onboarding** | Multi-party matters, **client self-service portal**, national eIDs (eIDAS-notified schemes via an eID broker) with **NFC chip + liveness** fallback, hard gates, registry auto-unwrapping (BRIS + national BO registers), BO % calculation, discrepancy workflow, refuse/terminate, supplier CDD for HVG, trusts (manual form) | Guided trusts, recommended-documents engine, reusable identity across matters | EUDI Wallet, embeddable onboarding form, reusable KYC with reliance |
+| **Client onboarding** | Multi-party matters, **client self-service portal**, national eIDs (eIDAS-notified schemes via an eID broker) with **NFC chip + liveness** fallback, hard gates, registry auto-unwrapping (BRIS + EU-wide KYB aggregator; manual BO-register extract upload where no automated source), BO % calculation, discrepancy workflow, refuse/terminate, supplier CDD for HVG, trusts (manual form) | Guided trusts, recommended-documents engine, reusable identity across matters | EUDI Wallet, embeddable onboarding form, reusable KYC with reliance |
 | **Screening** | EU, UN and national sanctions + **PEP/RCA via provider**, whole ownership tree incl. > 50% aggregation, sanctions-hit workflow, Russia/Belarus rule pack, daily delta re-screening | **AI match triage**, adverse media with allegation/conviction labels, registry change feeds | — |
 | **Risk & EDD** | Rule-based score from collected data, SDD/EDD logic, EDD checklist, automatic SoF/SoW requests via portal | **AI document reading** & reconciliation of SoF evidence, AI-drafted risk/EDD memos | Configurable risk models for larger firms |
 | **Monitoring** | 1y/5y refresh with client "nothing changed" link, per-matter checks, Compliance Calendar, linked-transaction aggregation, cash log | Perpetual KYC (background registry + screening re-runs, exceptions only), POS/invoice cash feeds | Portfolio analytics, self-inspection |
@@ -190,12 +214,12 @@ AMLR is a **regulation**: it applies directly and identically in every member st
 | **AMLSync services** | AMLSync Expert reviews + Independent Review (Art. 9) | Managed "done for you" queue | Partner consultancies per country |
 
 **Why this split**
-1. **V1 is legally complete for every group in every member state.** All mandatory duties — including HVG threshold and cash reports, PEP screening, integrity checks, whistleblowing and the outsourcing register — are in V1. National differences live in Country Packs, so going EU-wide is configuration, not a rebuild.
+1. **V1 is legally complete for every group in every member state.** All mandatory duties — including HVG threshold and cash reports, PEP screening, integrity checks, whistleblowing and the outsourcing register — are in V1. AMLSyncAI builds only the general EU rules; national differences are entered by each firm in its Country Profile, so going EU-wide is configuration by the customer, not a rebuild or a per-country legal project for AMLSyncAI.
 2. **V1 already automates the biggest time sinks** (client portal, eID / NFC, registry unwrapping, auto-chasing), because "less manual work" is the core promise.
 3. **V2 adds AI and deeper templates** once real usage data exists to tune triage and document reading.
 4. **V3 adds the platform layer** (API, integrations, reliance, EUDI Wallet) and football ahead of 10 July 2029.
 
-Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** inside them are later additions. Lithuanian names (JAR, JANGIS, FNTT) appear as worked examples of a Country Pack.
+Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** inside them are later additions. Lithuanian names (JAR, JANGIS, FNTT) appear only as examples of what a firm might enter in its Country Profile.
 
 
 ### 4.1 Firm setup & Firm Risk Assessment
@@ -213,7 +237,7 @@ Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** in
 - **Legal entities:** name, legal form, registration number, tax ID, LEI, registered office, principal place of business, country of creation, legal representatives, **nominee shareholders/directors**, nature of business.
 - **Representatives and beneficiaries:** anyone acting for the client (with proof of authority, e.g. POA) and anyone else the transaction benefits are identified and verified.
 - **Beneficial owners:** ownership % **calculated automatically** (multiply down each chain, add across chains); control by other means (voting, board appointment, veto, agreements, family, nominees); flag ≥ 25%; Art. 62 data incl. date interest held; visual tree. If no BO is found → record it, identify all senior managing officials, log the steps taken.
-- **Registry check:** pull the company and BO register extract (via BRIS for company data and each state's **central BO register**; e.g. LT: JAR, JADIS, JANGIS), store it, compare with what the client declared. Mismatch → **discrepancy workflow** (ask client to correct, else report to the register within **14 days**).
+- **Registry check:** pull the company and BO register extract (via BRIS and an EU-wide KYB aggregator; where no automated source covers the state, the client or staff **upload the extract** from the register named in the firm's Country Profile, e.g. LT: JANGIS), store it, compare with what the client declared. Mismatch → **discrepancy workflow** (ask client to correct, else report to the register within **14 days**).
 - **Refuse / terminate:** if CDD can't be completed, the tool blocks acceptance, prompts an internal suspicion assessment and records the refusal (retained 5 years from refusal).
 - **Back-book remediation:** import existing clients (CSV), score each file against the new CDD data set, prioritise high-risk files, track the RTS deadlines.
 - **Document upload:** ID, company extract, proof of address, source-of-funds evidence.
@@ -249,11 +273,11 @@ Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** in
 - Internal "something feels off" report by any staff member → compliance officer reviews → decision documented (report / don't report, with reasons). **Every assessment is kept**, including "no report".
 - Covers **attempted** transactions and suspicions arising from failed CDD.
 - **Transaction hold:** the suspicious transaction is blocked until the report is filed; it may go ahead only if the FIU gives no instruction within **3 working days** (or if holding it is impossible — then notify the FIU immediately).
-- Draft of the FIU report with the facts collected. Submission stays with the firm through the national FIU channel set in the Country Pack (e.g. LT: FNTT). SRO route where the country allows it.
+- Draft of the FIU report with the facts collected. Submission stays with the firm through the national FIU channel set in the Country Profile (e.g. LT: FNTT). SRO route where the country allows it.
 - **FIU request inbox:** answer within **5 working days** (or the FIU's shorter deadline).
-- **Privilege flag** for auditors, accountants, tax advisors, lawyers and notaries when ascertaining a client's legal position or defending/representing the client (Art. 70(2)); narrowed where the Country Pack says so (Art. 70(3)).
+- **Privilege flag** for auditors, accountants, tax advisors, lawyers and notaries when ascertaining a client's legal position or defending/representing the client (Art. 70(2)); narrowed where the Country Profile says so (Art. 70(3)).
 - "Tipping-off" warning: the client must not be told; STR records visible only to the compliance officer.
-- **Threshold reports:** automatic FIU reports for motor vehicles ≥ €250,000 and aircraft/watercraft ≥ €7.5m (Art. 74); national cash reports via the Country Pack.
+- **Threshold reports:** automatic FIU reports for motor vehicles ≥ €250,000 and aircraft/watercraft ≥ €7.5m (Art. 74); national cash reports via the Country Profile.
 
 ### 4.7 Audit Log & Records
 - Every change logged: who, what, when, old value, new value. Cannot be edited.
@@ -280,14 +304,14 @@ Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** in
 **Target staff effort:** low-risk individual **< 2 min**, standard company **< 5 min**, EDD case **< 20 min** of staff time; the rest is done by the client and the system.
 
 ### 4A.1 Client does the data entry — self-service portal *(V1 incl. NFC + liveness; EUDI Wallet V3)*
-- Staff enter just a name + email/phone (or the CRM creates the matter) → the system sends each party **its own secure link** (mobile-first, in all 24 official EU languages; multi-party matters send one link per buyer, seller, supplier, representative).
+- Staff enter just a name + email/phone (or the CRM creates the matter) → the system sends each party **its own secure link** (mobile-first, English; multi-party matters send one link per buyer, seller, supplier, representative).
 - Client verifies identity in the preferred order allowed by the AMLA CDD RTS: **national eID** (e.g. Smart-ID / Mobile-ID in the Baltics, itsme in Belgium, BankID-type schemes — via an eIDAS-compliant eID broker; later EUDI Wallet) → in-person route → **remote document + NFC chip read + liveness** as fallback with the justification captured automatically **[verify after RTS adoption]**.
 - Client answers the sector questionnaire (purpose, source of funds, PEP self-declaration, tax residence), uploads documents, declares BOs and representatives, and e-signs the declarations.
 - **Auto-chasing:** reminders by email/SMS at day 1, 3, 7; escalation to staff only when the client stalls; status visible to staff in real time.
 - **Reusable identity within the firm:** a verified person is reused across all their matters (no re-asking until refresh is due or data changes).
 
-### 4A.2 Companies unwrap themselves — registry automation *(V1 all EU registries + foreign parents via KYB aggregator)*
-- Staff (or the client) enter a **company code** → the system pulls the company, shareholder and BO register extracts (BRIS and national business registers for company data; each state's central BO register — e.g. LT: JAR, JADIS, JANGIS; a commercial KYB aggregator where a register has no API and for non-EU parents).
+### 4A.2 Companies unwrap themselves — registry automation *(V1: BRIS + EU-wide KYB aggregator, manual upload fallback)*
+- Staff (or the client) enter a **company code** → the system pulls the company, shareholder and BO register extracts (BRIS for company data; a commercial EU-wide KYB aggregator for shareholder and BO data and for non-EU parents; where neither covers a register, an uploaded extract is read by the system — AI extraction in V2, manual entry in V1).
 - **Recursive unwrapping:** each corporate shareholder is looked up in turn, foreign parents included, until natural persons are reached; the system **calculates indirect percentages** (multiply down / add across), applies control tests, proposes the BO list and, if none qualify, the senior managing officials.
 - **Auto-comparison** of register data vs client declaration → minor mismatch = auto-request to the client to correct; material mismatch = pre-filled **Art. 24 discrepancy report** with the 14-day clock started.
 - Stored extract + timestamp = Art. 23(4) proof of registration, collected automatically.
@@ -318,7 +342,7 @@ Sections 4.1–4.8 describe the V1 modules; items tagged **(V2)** or **(V3)** in
 ### 4A.7 Training and governance automation *(V1 basic; V2 full annual cycle)*
 - New user → role-based training auto-assigned; annual refresh auto-scheduled; certificates generated (and CPD hours for accountants/auditors where recognised **[verify]**).
 - Integrity and conflict-of-interest declarations collected by e-form on joining and yearly.
-- Rule and law changes: Country Pack updates pushed by AMLSync with plain-language release notes and, where needed, auto-generated tasks ("re-approve policy section 4").
+- Rule and law changes: EU Core updates pushed by AMLSyncAI with plain-language release notes and, where needed, auto-generated tasks ("re-approve policy section 4"). Yearly "review your Country Profile" task for national changes.
 
 ### 4A.8 Work inside tools the firm already uses *(V1 email-in, e-signature, CSV; V2 first practice-software/CRM integrations; V3 public API and partners)*
 - **Integrations:** practice/accounting software (the leading packages per country, e.g. DATEV, Exact, Sage, Xero, QuickBooks, Merit, B1.lt **[validate]**), real-estate CRMs, e-signature, Google/Microsoft email and calendar, Zapier/Make and a public API.
@@ -346,7 +370,7 @@ The name says AI, so be specific and conservative. **AI drafts and suggests; a n
 | Explain and triage screening hits ("why this is probably a different person") | Faster false-positive clearing | Decision and comment by the user | V2 |
 | Adverse media summary with allegation / investigation / conviction labels | EDD support | Sources linked; user reviews | V2 |
 | Draft the risk rationale and EDD memo | Better written files | Editable; user signs | V2 |
-| "Ask the AML assistant" (plain-language Q&A on AMLR and the Country Pack) | Users aren't experts | Cites articles; says when to ask an expert (upsell to AMLSync) | V3 |
+| "Ask the AML assistant" (plain-language Q&A on AMLR and the firm's Country Profile) | Users aren't experts | Cites articles; says when to ask an expert (upsell to AMLSync) | V3 |
 
 **Never automated, in any release** (see §4A.9): accept/refuse/terminate decisions, final risk profile, PEP approval, filing FIU or threshold reports, approving the risk assessment and policies, the response to a true sanctions match. Risk scores are always rule-based; AI never sets a risk rating on its own.
 
@@ -375,12 +399,12 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 
 | Need | Options |
 |---|---|
-| Sanctions lists | EU consolidated list (free), UN (free), **national lists of each member state** (via Country Pack); optionally OFAC, UK OFSI |
+| Sanctions lists | EU consolidated list (free), UN (free), national lists **uploaded by the firm** in its Country Profile; optionally OFAC, UK OFSI |
 | PEPs, family members, close associates, adverse media | Commercial data provider (e.g. OpenSanctions commercial licence, or a screening API vendor) — **cost decision** |
 | ID verification (remote clients) | EU vendors with NFC chip reading and liveness covering all EU ID documents (e.g. Ondato, iDenfy, Veriff) |
-| Company and beneficial ownership registers | BRIS (EU business registers interconnection) and national business registers; each member state's **central BO register** (access for obliged entities under AMLD6; e.g. LT: JANGIS) and the BO-register interconnection; commercial KYB aggregator for gaps and non-EU entities |
+| Company and beneficial ownership registers | BRIS (EU business registers interconnection) and national business registers; each member state's **central BO register** reached through the KYB aggregator or the BO-register interconnection where available, otherwise by **uploaded extract** (register name and link entered by the firm in its Country Profile); commercial KYB aggregator for gaps and non-EU entities |
 | eID | National eIDAS-notified schemes via an eID broker (e.g. Smart-ID / Mobile-ID, itsme, national ID cards); **EU Digital Identity Wallet** (eIDAS 2, expected ~end 2027 **[verify]**) — preferred over remote document checks under the AMLA CDD RTS |
-| National data (Country Packs) | Per state: cash cap and cash-report rules, FIU format and channel, sanctions authority and national lists, prominent public functions list (Art. 43), SRO option, supervisors per sector, national risk assessment |
+| National data (Country Profiles) | **Entered by each firm** — not supplied by AMLSyncAI. Per state: cash cap and cash-report rules, FIU format and channel, sanctions authority and national lists, prominent public functions list (Art. 43), SRO option, supervisors per sector, national risk assessment |
 | Sectoral sanctions | EU Regulations 833/2014 (Russia) and 765/2006 (Belarus) — maintained as rule packs |
 | High-risk third countries | EU Commission list (and AMLA updates), FATF lists |
 
@@ -392,10 +416,10 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 - **Database:** PostgreSQL (EU region), Prisma ORM. Separate data per firm (multi-tenant with row-level security).
 - **Files:** EU-hosted object storage, encrypted.
 - **Auth:** email + password with 2FA; roles: Owner / Compliance Manager, Compliance Officer, Staff, External Reviewer (AMLSync — recommend only), Read-only (supervisor/auditor view).
-- **Rules as data:** two layers — the **EU Core** rule set and one **Country Pack** per member state (§3A) — both versioned configuration; packs may only add, tighten or fill in parameters; every decision records both versions applied.
+- **Rules as data:** two layers — the **EU Core** rule set (maintained by AMLSyncAI) and the firm's own **Country Profile(s)** (§3A) — both versioned configuration; Country Profiles may only add, tighten or fill in parameters; every decision records both versions applied.
 - **Hosting:** EU only (GDPR, client trust).
 - **AI:** called through a server-side service with logging; no client data used for model training.
-- **Languages:** all 24 official EU languages at launch for the app, client portal and generated documents (AI-assisted translation with legal-term review).
+- **Language:** English only — app, client portal, generated documents and reports.
 
 ---
 
@@ -403,8 +427,8 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 
 | Object | What it is | Key relations |
 |---|---|---|
-| **Firm** | The obliged entity using AMLSyncAI | Has Users, Sector Profiles, a home Country Pack, Offices |
-| **Office** | Branch or establishment (incl. in other member states) | Belongs to Firm; may add a host-state Country Pack (§3A.3) |
+| **Firm** | The obliged entity using AMLSyncAI | Has Users, Sector Profiles, a home Country Profile, Offices |
+| **Office** | Branch or establishment (incl. in other member states) | Belongs to Firm; may add a host-state Country Profile (§3A.3) |
 | **User** | Person working for the firm or an external reviewer | Has Role(s); signs Approvals |
 | **Firm Risk Assessment** | Business-wide risk assessment, versioned | Belongs to Firm; has Approval |
 | **Policy / Procedure** | Generated document, versioned | Belongs to Firm; has Approval; staff Acknowledgements |
@@ -416,13 +440,13 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 | **Identity Verification** | eID, document + NFC + liveness, or in-person result | Belongs to Party; stores method, assurance level, provider reference |
 | **Registry Extract** | Business or BO register extract | Belongs to Party; timestamped; compared with declarations; may create a Discrepancy |
 | **Screening Result** | Sanctions / PEP / adverse media hit | Belongs to Party; stores list version, match decision, reviewer comment |
-| **Risk Assessment (client)** | Rule-based score and level | Belongs to CDD File; stores rule-set and Country Pack versions, factors, override |
+| **Risk Assessment (client)** | Rule-based score and level | Belongs to CDD File; stores rule-set and Country Profile versions, factors, override |
 | **Case** | Internal suspicion, sanctions hit, discrepancy or FIU request | Linked to Parties / Matters; restricted access; has Report(s) |
 | **Report** | STR, threshold report, cash report, discrepancy report, sanctions notice | Belongs to Case or Matter; stores format, submission receipt |
-| **Task / Deadline** | Any clock in the Compliance Calendar | Linked to any object; calculated from Country Pack working days |
+| **Task / Deadline** | Any clock in the Compliance Calendar | Linked to any object; calculated from Country Profile working days |
 | **Approval** | Named decision by an authorised user | Linked to any decision object; immutable |
 | **Audit Event** | Every create / update / view of sensitive data / export | Linked to any object; append-only |
-| **Rule Set / Country Pack** | Versioned configuration (§3A) | Version referenced by every decision |
+| **Rule Set / Country Profile** | Versioned configuration (§3A) | Version referenced by every decision |
 
 ---
 
@@ -432,12 +456,12 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 |---|---|
 | **Security** | Encryption in transit (TLS 1.2+) and at rest; mandatory 2FA for firm users; role-based access; row-level tenant isolation; restricted visibility for Cases (tipping-off); yearly penetration test; ISO 27001-aligned controls |
 | **Data protection** | EU-only hosting and AI processing; AMLSyncAI as processor with DPA and sub-processor list; data minimisation; deletion after retention period unless on legal hold |
-| **Auditability** | Append-only audit log; every decision stores user, timestamp, inputs, rule-set and Country Pack versions, list versions, AI output and human edits |
+| **Auditability** | Append-only audit log; every decision stores user, timestamp, inputs, rule-set and Country Profile versions, list versions, AI output and human edits |
 | **Availability** | 99.9% monthly target; daily encrypted backups with restore tests; screening lists refreshed at least daily |
 | **Performance** | Screening result < 5 s per party; registry unwrapping < 60 s for a 3-level structure; dashboard load < 2 s |
 | **Accessibility** | WCAG 2.1 AA for the app and client portal |
 | **Devices** | Web app for desktop and tablet; client portal mobile-first |
-| **Localisation** | 24 EU languages; local date, number and ID formats; national working days and holidays per Country Pack |
+| **Localisation** | English only; dates in ISO / DD-MM-YYYY, amounts in EUR (other currencies converted at entry with the rate recorded); national working days and holidays from the firm's Country Profile; client names, addresses and documents accepted in any script (UTF-8) |
 | **Export** | Supervisor file and all records exportable as PDF + ZIP; full data export when a firm leaves |
 
 ---
@@ -476,3 +500,127 @@ Australia brought lawyers, accountants, real-estate agents and TCSPs under AML/C
 5. **Price transparently**: a flat plan plus visible per-check credits is the norm; small firms dislike quote-only.
 6. **Embed in the workflow** (PEXA Clear, Reapit Verify): integrations with the tools agents and accountants use daily drive adoption more than a separate app.
 7. **Ready before the deadline:** AU vendors were live months before 1 July 2026; V1 must be live across the EU before 10 July 2027.
+
+---
+
+## 11. Done criteria (V1)
+
+A V1 module is **done** only when every criterion below passes in an automated or scripted test on a staging environment with test data, and the general criteria in §11.0 are met. Criteria use the defaults in §3A.2 unless a test says otherwise.
+
+### 11.0 General — applies to every module
+- [ ] Every create, update, delete, export and approval writes an **Audit Event** (user, timestamp, object, old value, new value); audit events cannot be edited or deleted by any role, including Owner.
+- [ ] Every decision object stores the **EU Core version** and **Country Profile version** in force at the time.
+- [ ] Role permissions follow §8 (Owner / Compliance Manager, Compliance Officer, Staff, External Reviewer, Read-only); a test per role confirms forbidden actions are blocked in the UI **and** the API.
+- [ ] A firm can never see another firm's data (tenant isolation test on every API endpoint).
+- [ ] All screens, emails, portal pages and generated documents are in **English**, readable at WCAG 2.1 AA (automated accessibility check passes; no critical issues).
+- [ ] Every deadline is calculated from the firm's working days and holidays; changing the holiday list recalculates open deadlines.
+- [ ] Each mandatory step shows a plain-language "what to do and why" hint with the AMLR article.
+
+### 11.1 Firm setup, Country Profile and governance
+- [ ] A new firm can sign up, enter its profile (sector(s), home member state, size, services, client types, cash use) and reach the dashboard in **≤ 10 minutes**.
+- [ ] The **Country Profile** screen lists every §3A.2 parameter with guidance text, default and required flag; the setup checklist shows each as *filled / default / required-missing*.
+- [ ] A Country Profile value that would relax the EU Core is rejected with an explanation (e.g. cash cap > €10,000; retention < 5 years).
+- [ ] Changing a Country Profile parameter requires Compliance Officer approval, creates a new version and is logged; earlier decisions still show the earlier version.
+- [ ] A firm can upload a national sanctions list and a national PEP-functions list (CSV); entries are screened from the next screening run.
+- [ ] With the FIU channel empty, an STR can be drafted and exported but **cannot** be marked submitted; an open task tells the user to complete the Country Profile.
+- [ ] A firm can add an **Office** in another member state with its own Country Profile; matters of that Office use it.
+- [ ] Compliance manager and compliance officer can be appointed (same person allowed); removing the officer generates the supervisor notification draft.
+- [ ] The **annual compliance report** can be generated from system data and approved by the compliance manager.
+- [ ] Integrity & conflict declarations, whistleblowing channel and outsourcing register can each be created, completed and exported; for one-person firms the Art. 13 and Art. 14 items are hidden and the reason is shown.
+- [ ] Training (lite): a user can be assigned a module, complete it and attest; completion appears in the supervisor file.
+
+### 11.2 Firm Risk Assessment
+- [ ] The questionnaire covers ML, TF and sanctions-evasion risk and the Annex I–III factor groups; each answer maps to inherent risk.
+- [ ] Output PDF shows inherent risk, controls, residual risk and an action list, with version number and date.
+- [ ] The assessment cannot be marked final until a management-body member approves it.
+- [ ] A reminder task is created 12 months after approval, and when the firm adds a new service, sector, channel or country.
+- [ ] Country Profile items "national risk assessment" and "additional EDD cases" appear as "not yet reviewed" if left at default.
+
+### 11.3 Policy Builder
+- [ ] The generated policy contains a section for every Art. 9(2) item listed in §4.8; a test checks all headings are present.
+- [ ] Policies require management approval and procedures require at least compliance-manager approval before status is "in force".
+- [ ] Editing an in-force policy creates a new version; staff are asked to re-acknowledge it.
+
+### 11.4 Client onboarding (CDD), matters and hard gates
+- [ ] A matter can hold multiple parties with roles; an estate-agent sale **requires** both buyer and seller CDD files; an HVG/precious-metals sale requires customer **and** supplier.
+- [ ] CDD is triggered automatically for: new business relationship; occasional transaction ≥ €10,000; linked transactions that together reach €10,000; cash ≥ €3,000 (HVG/precious metals); company formation or transfer (TCSP template); a raised suspicion.
+- [ ] **Linked-transaction test:** three €4,000 occasional transactions by the same customer in the linking window trigger CDD on the third.
+- [ ] Natural-person and legal-entity forms capture every field listed in §4.2; required fields are enforced.
+- [ ] A client **cannot** be set to *accepted*, and a matter **cannot** be set to *completed*, while any mandatory item is open; an override is possible only for a Compliance Officer with a written reason and is logged.
+- [ ] Estate-agent gate: funds/property-transfer step cannot be completed before both parties are verified.
+- [ ] Refuse/terminate: when CDD cannot be completed, the user must choose refuse or terminate, is prompted to assess a suspicion, and the refusal record is retained with a 5-year clock from refusal.
+- [ ] Bearer shares or an anonymous customer cannot be saved as accepted.
+- [ ] Back-book: a CSV of ≥ 1,000 existing clients imports in ≤ 5 minutes; each file gets a gap list and a priority (high-risk first).
+
+### 11.5 Client portal and identity verification
+- [ ] Staff can create a party with only name + email or phone; the party receives a secure, expiring link.
+- [ ] Each party in a multi-party matter receives its own link and sees only its own data.
+- [ ] The client can verify identity by eIDAS eID (via broker) or, as fallback, ID document + NFC chip read + liveness; the method and assurance level are stored; using the fallback records the reason.
+- [ ] The client can complete the questionnaire, upload documents, declare BOs/representatives and e-sign; staff see status in real time.
+- [ ] Reminders go out on day 1, 3 and 7; after day 7 a task is created for staff.
+- [ ] A person already verified in the firm is reused on a new matter without re-verification unless a refresh is due or data changed.
+- [ ] A low-risk individual can be onboarded with **≤ 2 minutes** of staff time (timed test script).
+
+### 11.6 Beneficial ownership and registry
+- [ ] **Calculation test:** A owns 60% of X; X owns 50% of the client; A also owns 10% of the client directly → A's ownership is calculated as **40%** and A is flagged as BO.
+- [ ] **Threshold test:** a person at exactly 25.00% is flagged; at 24.99% is not (unless control by other means is recorded).
+- [ ] Control by other means can be recorded for any person and makes them a BO regardless of %.
+- [ ] If no BO is identified, the user must record the steps taken and the senior managing officials, and the file shows "no BO — SMO recorded".
+- [ ] Entering a company code retrieves company data via BRIS / KYB aggregator where available; if no source is available, the user is asked to upload the register extract.
+- [ ] Recursive unwrapping resolves a 3-level structure to natural persons in **≤ 60 seconds**.
+- [ ] A mismatch between the register and the client declaration opens a **discrepancy** case with a 14-day deadline and a pre-filled report.
+- [ ] Trusts: settlor, trustees, protector, beneficiaries/class and other controllers can be recorded (manual form).
+
+### 11.7 Risk scoring, SDD and EDD
+- [ ] The score is calculated automatically from collected data; the screen lists every factor and its contribution.
+- [ ] Any one of: PEP, high-risk third country, EU-list countermeasure country, or a firm-added "additional EDD case" forces at least **High / EDD**.
+- [ ] SDD: allowed only for Low with a recorded reason; verification may be delayed max **60 days** (deadline created); any new risk factor ends SDD automatically.
+- [ ] EDD: the Art. 34(4) checklist is generated; the client receives an automatic SoF/SoW evidence request through the portal; the file cannot be accepted until senior approval is recorded.
+- [ ] PEP: approval needed to **establish and to continue**; a former PEP stays flagged for at least 12 months after leaving office.
+- [ ] Manual override requires a written reason and Compliance Officer role; both scores are kept.
+
+### 11.8 Screening and sanctions
+- [ ] Every party and every person/company in the ownership tree is screened against EU, UN, firm-uploaded national lists and the PEP/RCA provider.
+- [ ] **Aggregation test:** two sanctioned persons owning 30% each of a company → company flagged as > 50% owned by sanctioned persons.
+- [ ] Each possible match must be resolved *true match* / *false positive* with a comment before the file can be accepted.
+- [ ] A new list version triggers re-screening of all active parties within **24 hours**; only new or changed hits create alerts.
+- [ ] Every result stores list name, version and timestamp.
+- [ ] A true sanctions match blocks the matter, opens a **Sanctions Hit** case and generates the notice to the sanctions authority from the Country Profile.
+- [ ] Russia/Belarus rule pack: an accounting/tax/consulting service to a Russian-established entity is blocked with an explanation.
+- [ ] Screening cannot be switched off or reduced for low-risk clients.
+
+### 11.9 Monitoring, refresh and Compliance Calendar
+- [ ] Every accepted client has a next-refresh date: ≤ 1 year for EDD, ≤ 5 years for others.
+- [ ] Before the due date the client automatically receives a "confirm nothing changed / update" link; registry and screening re-run in the background.
+- [ ] A new matter under an existing client is compared with the profile (value, countries, counterparties, source of funds); a mismatch creates a review task.
+- [ ] The Compliance Calendar shows every clock in §4.5 with overdue / due in 30 days / done filters.
+- [ ] Cash log: a cash payment above the firm's cash cap is blocked with a warning; if national cash reports are switched on, the report draft is created.
+
+### 11.10 Suspicion reporting, threshold reports and FIU requests
+- [ ] Any user can raise an internal report; only the Compliance Officer (and Owner, if configured) can see it afterwards.
+- [ ] Every report ends with a recorded decision (report / no report) and reasons; "no report" decisions are kept.
+- [ ] An STR draft is produced from case data and can be exported; marking it submitted requires a receipt upload or reference.
+- [ ] **Transaction hold:** the related matter is blocked when an STR is raised; the hold lifts only on FIU instruction or after **3 working days** without one (calculated with the firm's holidays), logged either way.
+- [ ] An FIU request can be logged with its deadline (default 5 working days, or shorter if entered) and appears in the Calendar.
+- [ ] The customer file shows a tipping-off warning to users who can see the client; the case itself is hidden from them.
+- [ ] Privilege flag: for the professions in §4.6, the user can record that the exemption applies and why; the record is retained.
+- [ ] Art. 74 threshold report draft is created automatically for a motor vehicle sale ≥ €250,000 and aircraft/watercraft ≥ €7.5 million.
+
+### 11.11 Records, retention and supervisor file
+- [ ] One click exports the **supervisor file** for a client (PDF summary + ZIP of documents, screening results, approvals, audit trail).
+- [ ] One click exports the **firm-level** file (risk assessment, policies with approvals, governance, annual reports, training, integrity declarations, outsourcing register).
+- [ ] Records reach their deletion date 5 years after end of relationship / occasional transaction / refusal; the Compliance Officer confirms deletion in a batch; deleted data is irrecoverable from the app.
+- [ ] A **legal hold** on a client prevents deletion until it is lifted (max 5 additional years, reminder created).
+- [ ] AI outputs and the human edits to them are stored with the final document.
+
+### 11.12 AI drafting (V1 scope)
+- [ ] Policy, firm risk assessment, annual report, privacy notice, DPIA and STR narrative drafts are generated from system data in **≤ 60 seconds**.
+- [ ] No AI-generated document becomes final without an approval by a named user; the approval screen marks AI-written sections.
+- [ ] Prompts and outputs are logged; no customer data is sent to a model outside the EU or used for training (contract and configuration check).
+
+### 11.13 Release-level done (V1)
+- [ ] All criteria in §11.0–11.12 pass.
+- [ ] End-to-end test scripts pass for three firms: an accountant (company client with 3-level ownership), an estate agent (sale with buyer and seller, one EDD), and a jewellery trader (cash sale with supplier CDD and linked transactions).
+- [ ] Each end-to-end script also passes with a filled-in non-default Country Profile (lower cash cap, extra EDD case, national sanctions list, holidays).
+- [ ] Penetration test with no open critical or high findings.
+- [ ] Legal review of the EU Core rules and all **[verify]** items completed and recorded.
