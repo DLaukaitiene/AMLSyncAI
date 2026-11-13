@@ -1,28 +1,43 @@
 /**
  * Sanctions ownership aggregation (spec §4.4, §11.8; AMLR Art. 20(1)(d), 26(4)).
  *
- * An entity is treated as sanctions-affected when sanctioned persons together
- * own more than 50% of it, or a sanctioned person controls it. The test is
- * applied up the whole ownership tree: an intermediate entity that is itself
- * more than 50% owned by sanctioned persons counts as sanctioned for the
- * entities below it (EU best-practice approach to Reg. 269/2014 Art. 2).
+ * Sanctioned ownership is added up through every chain:
+ * - a direct stake held by a listed person counts in full;
+ * - a stake held through an intermediate entity counts in proportion to how
+ *   much of that intermediate is itself sanctioned-owned (multiply down the
+ *   chain, add across chains);
+ * - an intermediate that is more than 50% sanctioned-owned (or listed, or
+ *   controlled by a sanctioned person) counts as fully sanctioned, so its
+ *   whole stake is added.
+ * The client is affected when the total exceeds 50%, or it is listed, or a
+ * sanctioned person controls it.
  *
  * Screening is never risk-based and can never be reduced for low-risk clients.
  */
 import { EU_CORE } from "./eu-core";
 import type { ControlRecord, OwnershipLink, OwnershipParty } from "./beneficial-ownership";
 
+export interface SanctionsContributor {
+  ownerId: string;
+  /** Direct stake of this owner in the entity. */
+  pct: number;
+  /** Part of that stake counted as sanctioned. */
+  countedPct: number;
+  why: "listed" | "affected" | "partly-sanctioned-owned";
+}
+
 export interface SanctionsOwnershipResult {
   entityId: string;
-  /** Sum of direct stakes held by sanctioned or sanctions-affected owners, 0–100. */
+  /** Sanctioned ownership added up through all chains, 0–100. */
   sanctionedOwnershipPct: number;
   controlledBySanctioned: boolean;
   isListed: boolean;
   affected: boolean;
   reasons: string[];
-  /** Direct owners that contributed. */
-  contributors: { ownerId: string; pct: number; why: "listed" | "affected" }[];
+  contributors: SanctionsContributor[];
 }
+
+const round4 = (n: number) => Math.round(n * 10_000) / 10_000;
 
 export function assessSanctionsOwnership(
   entityId: string,
@@ -38,46 +53,39 @@ export function assessSanctionsOwnership(
     ownersOf.set(l.ownedId, arr);
   }
   const kind = new Map(parties.map((p) => [p.id, p.kind]));
-  const memo = new Map<string, SanctionsOwnershipResult>();
 
-  const assess = (id: string, stack: Set<string>): SanctionsOwnershipResult => {
-    const cached = memo.get(id);
-    if (cached) return cached;
-
+  const assess = (id: string, path: ReadonlySet<string>): SanctionsOwnershipResult => {
     const isListed = sanctionedIds.has(id);
-    const contributors: SanctionsOwnershipResult["contributors"] = [];
+    const contributors: SanctionsContributor[] = [];
     for (const l of ownersOf.get(id) ?? []) {
-      if (stack.has(l.ownerId)) continue; // cross-holding cycle
+      if (path.has(l.ownerId)) continue; // cross-holding cycle
       if (sanctionedIds.has(l.ownerId)) {
-        contributors.push({ ownerId: l.ownerId, pct: l.pct, why: "listed" });
+        contributors.push({ ownerId: l.ownerId, pct: l.pct, countedPct: l.pct, why: "listed" });
       } else if (kind.get(l.ownerId) !== "natural") {
-        stack.add(l.ownerId);
-        const sub = assess(l.ownerId, stack);
-        stack.delete(l.ownerId);
-        if (sub.affected) contributors.push({ ownerId: l.ownerId, pct: l.pct, why: "affected" });
+        const sub = assess(l.ownerId, new Set([...path, l.ownerId]));
+        if (sub.affected) {
+          contributors.push({ ownerId: l.ownerId, pct: l.pct, countedPct: l.pct, why: "affected" });
+        } else if (sub.sanctionedOwnershipPct > 0) {
+          contributors.push({
+            ownerId: l.ownerId,
+            pct: l.pct,
+            countedPct: round4((l.pct * sub.sanctionedOwnershipPct) / 100),
+            why: "partly-sanctioned-owned",
+          });
+        }
       }
     }
-    const pct = Math.round(contributors.reduce((s, c) => s + c.pct, 0) * 10_000) / 10_000;
+    const pct = round4(contributors.reduce((s, c) => s + c.countedPct, 0));
     const controlledBySanctioned = control.some((c) => c.entityId === id && sanctionedIds.has(c.personId));
 
     const reasons: string[] = [];
     if (isListed) reasons.push("Entity is itself on a sanctions list");
     if (pct > EU_CORE.sanctions.ownershipAggregationPct) {
-      reasons.push(`Sanctioned persons together own ${pct}% (more than ${EU_CORE.sanctions.ownershipAggregationPct}%)`);
+      reasons.push(`Sanctioned persons together own ${pct}% directly and through chains (more than ${EU_CORE.sanctions.ownershipAggregationPct}%)`);
     }
     if (controlledBySanctioned) reasons.push("Controlled by a sanctioned person");
 
-    const result: SanctionsOwnershipResult = {
-      entityId: id,
-      sanctionedOwnershipPct: pct,
-      controlledBySanctioned,
-      isListed,
-      affected: reasons.length > 0,
-      reasons,
-      contributors,
-    };
-    memo.set(id, result);
-    return result;
+    return { entityId: id, sanctionedOwnershipPct: pct, controlledBySanctioned, isListed, affected: reasons.length > 0, reasons, contributors };
   };
 
   return assess(entityId, new Set([entityId]));

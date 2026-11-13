@@ -149,7 +149,40 @@ describe("sanctions ownership aggregation (§11.8)", () => {
       new Set(["S1"]),
     );
     expect(r.affected).toBe(true);
-    expect(r.contributors).toEqual([{ ownerId: "H", pct: 60, why: "affected" }]);
+    expect(r.contributors).toEqual([{ ownerId: "H", pct: 60, countedPct: 60, why: "affected" }]);
+  });
+
+  it("adds sanctioned stakes through chains: 40% of a 50% holder (20%) + 40% direct = 60%", () => {
+    const r = assessSanctionsOwnership(
+      "C",
+      [P("C", "legal"), P("X", "legal"), P("A"), P("B"), P("S2")],
+      [
+        { ownerId: "A", ownedId: "X", pct: 60 },
+        { ownerId: "B", ownedId: "X", pct: 40 },
+        { ownerId: "X", ownedId: "C", pct: 50 },
+        { ownerId: "S2", ownedId: "C", pct: 40 },
+        { ownerId: "A", ownedId: "C", pct: 10 },
+      ],
+      new Set(["B", "S2"]),
+    );
+    expect(r.sanctionedOwnershipPct).toBe(60);
+    expect(r.affected).toBe(true);
+    expect(r.contributors).toContainEqual({ ownerId: "X", pct: 50, countedPct: 20, why: "partly-sanctioned-owned" });
+  });
+
+  it("chain sum below 50% is not flagged", () => {
+    const r = assessSanctionsOwnership(
+      "C",
+      [P("C", "legal"), P("X", "legal"), P("S1"), P("A")],
+      [
+        { ownerId: "S1", ownedId: "X", pct: 40 },
+        { ownerId: "A", ownedId: "X", pct: 60 },
+        { ownerId: "X", ownedId: "C", pct: 100 },
+      ],
+      new Set(["S1"]),
+    );
+    expect(r.sanctionedOwnershipPct).toBe(40);
+    expect(r.affected).toBe(false);
   });
 
   it("flags control by a sanctioned person", () => {

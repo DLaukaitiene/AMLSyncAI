@@ -231,12 +231,16 @@ model User {
   passwordHash  String? // Argon2id
   emailVerifiedAt DateTime?
   mfaEnrolledAt DateTime?
-  lastMfaAt     DateTime? // step-up: fresh MFA within 5 minutes
+  totpSecretEnc Bytes? // field-level encrypted TOTP secret
+  recoveryCodeHashes String[] // one-time recovery codes (Argon2id)
+  failedLogins  Int       @default(0)
+  lockedUntil   DateTime?
   deactivatedAt DateTime?
   createdAt     DateTime  @default(now())
 
   approvals     Approval[]
   auditEvents   AuditEvent[]
+  sessions      Session[]
 
   @@index([firmId])
 }
@@ -358,9 +362,9 @@ model OwnershipLink {
   id          String            @id @default(uuid()) @db.Uuid
   firmId      String            @db.Uuid
   ownerId     String            @db.Uuid
-  owner       Party             @relation("owner", fields: [ownerId], references: [id])
+  owner       Party             @relation("owner", fields: [ownerId], references: [id], onDelete: Cascade)
   ownedId     String            @db.Uuid
-  owned       Party             @relation("owned", fields: [ownedId], references: [id])
+  owned       Party             @relation("owned", fields: [ownedId], references: [id], onDelete: Cascade)
   type        OwnershipLinkType
   pct         Decimal?          @db.Decimal(9, 6)
   controlDescription String?
@@ -395,9 +399,9 @@ model MatterParty {
   id       String    @id @default(uuid()) @db.Uuid
   firmId   String    @db.Uuid
   matterId String    @db.Uuid
-  matter   Matter    @relation(fields: [matterId], references: [id])
+  matter   Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
   partyId  String    @db.Uuid
-  party    Party     @relation(fields: [partyId], references: [id])
+  party    Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
   role     PartyRole
 
   @@unique([matterId, partyId, role])
@@ -408,7 +412,7 @@ model Transaction {
   id          String   @id @default(uuid()) @db.Uuid
   firmId      String   @db.Uuid
   matterId    String   @db.Uuid
-  matter      Matter   @relation(fields: [matterId], references: [id])
+  matter      Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
   customerId  String   @db.Uuid
   date        DateTime @db.Date
   amountEUR   Decimal  @db.Decimal(14, 2)
@@ -430,7 +434,7 @@ model CddFile {
   id            String    @id @default(uuid()) @db.Uuid
   firmId        String    @db.Uuid
   partyId       String    @db.Uuid
-  party         Party     @relation(fields: [partyId], references: [id])
+  party         Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
   role          PartyRole
   status        CddStatus @default(OPEN)
   purpose       String?
@@ -451,7 +455,7 @@ model IdentityVerification {
   id             String             @id @default(uuid()) @db.Uuid
   firmId         String             @db.Uuid
   partyId        String             @db.Uuid
-  party          Party              @relation(fields: [partyId], references: [id])
+  party          Party              @relation(fields: [partyId], references: [id], onDelete: Cascade)
   method         VerificationMethod
   assuranceLevel String? // eIDAS substantial / high
   provider       String?
@@ -466,7 +470,7 @@ model RegistryExtract {
   id         String     @id @default(uuid()) @db.Uuid
   firmId     String     @db.Uuid
   partyId    String     @db.Uuid
-  party      Party      @relation(fields: [partyId], references: [id])
+  party      Party      @relation(fields: [partyId], references: [id], onDelete: Cascade)
   register   String // e.g. "BRIS", "JANGIS"
   source     DataSource
   data       Json
@@ -480,7 +484,7 @@ model ScreeningResult {
   id          String            @id @default(uuid()) @db.Uuid
   firmId      String            @db.Uuid
   partyId     String            @db.Uuid
-  party       Party             @relation(fields: [partyId], references: [id])
+  party       Party             @relation(fields: [partyId], references: [id], onDelete: Cascade)
   listKind    ScreeningListKind
   listName    String
   listVersion String
@@ -498,7 +502,7 @@ model ClientRiskAssessment {
   id            String    @id @default(uuid()) @db.Uuid
   firmId        String    @db.Uuid
   cddFileId     String    @db.Uuid
-  cddFile       CddFile   @relation(fields: [cddFileId], references: [id])
+  cddFile       CddFile   @relation(fields: [cddFileId], references: [id], onDelete: Cascade)
   calculated    RiskLevel
   final         RiskLevel
   score         Int
@@ -517,7 +521,7 @@ model Document {
   id          String   @id @default(uuid()) @db.Uuid
   firmId      String   @db.Uuid
   partyId     String?  @db.Uuid
-  party       Party?   @relation(fields: [partyId], references: [id])
+  party       Party?   @relation(fields: [partyId], references: [id], onDelete: Cascade)
   kind        String // id, company-extract, proof-of-address, sof-evidence…
   storageKey  String // object storage key; served via short-lived signed URLs
   mimeType    String
@@ -615,18 +619,19 @@ model Approval {
   @@index([firmId, objectType, objectId])
 }
 
-/// Append-only (enforced in prisma/rls.sql).
+/// Append-only (enforced in prisma/rls.sql). Deliberately general: it never
+/// stores values or anything that identifies a client, so it can be kept after
+/// client data is deleted at the end of the retention period (spec §4.7).
 model AuditEvent {
   id          BigInt   @id @default(autoincrement())
   firmId      String   @db.Uuid
   firm        Firm     @relation(fields: [firmId], references: [id])
   userId      String?  @db.Uuid
   user        User?    @relation(fields: [userId], references: [id])
-  action      String // create | update | delete | view | export | approve
+  action      String // create | update | delete | view | export | approve | purge
   objectType  String
-  objectId    String
-  oldValue    Json?
-  newValue    Json?
+  objectId    String // random UUID, meaningless once the object is deleted
+  fields      String[] // names of the fields changed — never their values
   at          DateTime @default(now())
 
   @@index([firmId, objectType, objectId])
@@ -682,4 +687,86 @@ model FeatureVote {
   createdAt DateTime       @default(now())
 
   @@unique([requestId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Authentication (spec §8C.2–8C.4)
+// ---------------------------------------------------------------------------
+
+enum SessionStage {
+  MFA_SETUP // password ok, MFA not yet enrolled
+  MFA_PENDING // password ok, waiting for TOTP / recovery code
+  ACTIVE
+}
+
+model Session {
+  id          String       @id // SHA-256 of the session token; the token itself is only in the cookie
+  userId      String       @db.Uuid
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firmId      String       @db.Uuid
+  stage       SessionStage
+  createdAt   DateTime     @default(now())
+  lastSeenAt  DateTime     @default(now())
+  expiresAt   DateTime // absolute timeout (12 h)
+  mfaAt       DateTime? // last MFA — step-up needs < 5 min
+  ip          String?
+  userAgent   String?
+  revokedAt   DateTime?
+
+  @@index([userId])
+}
+
+/// One-time email tokens: sign-up confirmation, password reset.
+model EmailToken {
+  id        String    @id // SHA-256 of the token
+  purpose   String // signup-confirm | password-reset
+  email     String
+  data      Json? // pending sign-up details (firm name, person, password hash)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
+}
+
+model Invitation {
+  id          String    @id @default(uuid()) @db.Uuid
+  firmId      String    @db.Uuid
+  email       String
+  name        String
+  roles       Role[]
+  external    Boolean   @default(false)
+  invitedById String    @db.Uuid
+  tokenHash   String    @unique
+  expiresAt   DateTime // 72 hours
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([firmId])
+}
+
+/// Platform-level sign-up codes issued by AMLSyncAI when SIGNUP_MODE=invite.
+model SignupCode {
+  id        String    @id // SHA-256 of the code
+  note      String?
+  maxUses   Int       @default(1)
+  uses      Int       @default(0)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model RateLimitBucket {
+  key         String   @id
+  windowStart DateTime
+  count       Int
+}
+
+/// Dev/test mail transport only (EMAIL_TRANSPORT=dev). Never used in production.
+model DevEmail {
+  id        String   @id @default(uuid()) @db.Uuid
+  to        String
+  subject   String
+  text      String
+  createdAt DateTime @default(now())
 }

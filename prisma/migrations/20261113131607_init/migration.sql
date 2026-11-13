@@ -58,6 +58,9 @@ CREATE TYPE "DocumentStatus" AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'IN_FORCE', '
 -- CreateEnum
 CREATE TYPE "FeatureRequestStatus" AS ENUM ('RECEIVED', 'UNDER_REVIEW', 'PLANNED', 'IN_PROGRESS', 'RELEASED', 'NOT_PLANNED');
 
+-- CreateEnum
+CREATE TYPE "SessionStage" AS ENUM ('MFA_SETUP', 'MFA_PENDING', 'ACTIVE');
+
 -- CreateTable
 CREATE TABLE "Firm" (
     "id" UUID NOT NULL,
@@ -97,7 +100,10 @@ CREATE TABLE "User" (
     "passwordHash" TEXT,
     "emailVerifiedAt" TIMESTAMP(3),
     "mfaEnrolledAt" TIMESTAMP(3),
-    "lastMfaAt" TIMESTAMP(3),
+    "totpSecretEnc" BYTEA,
+    "recoveryCodeHashes" TEXT[],
+    "failedLogins" INTEGER NOT NULL DEFAULT 0,
+    "lockedUntil" TIMESTAMP(3),
     "deactivatedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -436,8 +442,7 @@ CREATE TABLE "AuditEvent" (
     "action" TEXT NOT NULL,
     "objectType" TEXT NOT NULL,
     "objectId" TEXT NOT NULL,
-    "oldValue" JSONB,
-    "newValue" JSONB,
+    "fields" TEXT[],
     "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "AuditEvent_pkey" PRIMARY KEY ("id")
@@ -487,6 +492,86 @@ CREATE TABLE "FeatureVote" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "FeatureVote_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Session" (
+    "id" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "firmId" UUID NOT NULL,
+    "stage" "SessionStage" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastSeenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "mfaAt" TIMESTAMP(3),
+    "ip" TEXT,
+    "userAgent" TEXT,
+    "revokedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailToken" (
+    "id" TEXT NOT NULL,
+    "purpose" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "data" JSONB,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "usedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Invitation" (
+    "id" UUID NOT NULL,
+    "firmId" UUID NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "roles" "Role"[],
+    "external" BOOLEAN NOT NULL DEFAULT false,
+    "invitedById" UUID NOT NULL,
+    "tokenHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "acceptedAt" TIMESTAMP(3),
+    "revokedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Invitation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SignupCode" (
+    "id" TEXT NOT NULL,
+    "note" TEXT,
+    "maxUses" INTEGER NOT NULL DEFAULT 1,
+    "uses" INTEGER NOT NULL DEFAULT 0,
+    "expiresAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SignupCode_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RateLimitBucket" (
+    "key" TEXT NOT NULL,
+    "windowStart" TIMESTAMP(3) NOT NULL,
+    "count" INTEGER NOT NULL,
+
+    CONSTRAINT "RateLimitBucket_pkey" PRIMARY KEY ("key")
+);
+
+-- CreateTable
+CREATE TABLE "DevEmail" (
+    "id" UUID NOT NULL,
+    "to" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "DevEmail_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -591,6 +676,18 @@ CREATE INDEX "FeatureRequest_status_idx" ON "FeatureRequest"("status");
 -- CreateIndex
 CREATE UNIQUE INDEX "FeatureVote_requestId_userId_key" ON "FeatureVote"("requestId", "userId");
 
+-- CreateIndex
+CREATE INDEX "Session_userId_idx" ON "Session"("userId");
+
+-- CreateIndex
+CREATE INDEX "EmailToken_email_idx" ON "EmailToken"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Invitation_tokenHash_key" ON "Invitation"("tokenHash");
+
+-- CreateIndex
+CREATE INDEX "Invitation_firmId_idx" ON "Invitation"("firmId");
+
 -- AddForeignKey
 ALTER TABLE "Office" ADD CONSTRAINT "Office_firmId_fkey" FOREIGN KEY ("firmId") REFERENCES "Firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -616,10 +713,10 @@ ALTER TABLE "PolicyAcknowledgement" ADD CONSTRAINT "PolicyAcknowledgement_policy
 ALTER TABLE "Party" ADD CONSTRAINT "Party_firmId_fkey" FOREIGN KEY ("firmId") REFERENCES "Firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OwnershipLink" ADD CONSTRAINT "OwnershipLink_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "OwnershipLink" ADD CONSTRAINT "OwnershipLink_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OwnershipLink" ADD CONSTRAINT "OwnershipLink_ownedId_fkey" FOREIGN KEY ("ownedId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "OwnershipLink" ADD CONSTRAINT "OwnershipLink_ownedId_fkey" FOREIGN KEY ("ownedId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Matter" ADD CONSTRAINT "Matter_firmId_fkey" FOREIGN KEY ("firmId") REFERENCES "Firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -628,31 +725,31 @@ ALTER TABLE "Matter" ADD CONSTRAINT "Matter_firmId_fkey" FOREIGN KEY ("firmId") 
 ALTER TABLE "Matter" ADD CONSTRAINT "Matter_officeId_fkey" FOREIGN KEY ("officeId") REFERENCES "Office"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MatterParty" ADD CONSTRAINT "MatterParty_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MatterParty" ADD CONSTRAINT "MatterParty_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MatterParty" ADD CONSTRAINT "MatterParty_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MatterParty" ADD CONSTRAINT "MatterParty_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_matterId_fkey" FOREIGN KEY ("matterId") REFERENCES "Matter"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CddFile" ADD CONSTRAINT "CddFile_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "CddFile" ADD CONSTRAINT "CddFile_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "IdentityVerification" ADD CONSTRAINT "IdentityVerification_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "IdentityVerification" ADD CONSTRAINT "IdentityVerification_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RegistryExtract" ADD CONSTRAINT "RegistryExtract_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RegistryExtract" ADD CONSTRAINT "RegistryExtract_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ScreeningResult" ADD CONSTRAINT "ScreeningResult_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScreeningResult" ADD CONSTRAINT "ScreeningResult_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ClientRiskAssessment" ADD CONSTRAINT "ClientRiskAssessment_cddFileId_fkey" FOREIGN KEY ("cddFileId") REFERENCES "CddFile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ClientRiskAssessment" ADD CONSTRAINT "ClientRiskAssessment_cddFileId_fkey" FOREIGN KEY ("cddFileId") REFERENCES "CddFile"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Document" ADD CONSTRAINT "Document_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Document" ADD CONSTRAINT "Document_partyId_fkey" FOREIGN KEY ("partyId") REFERENCES "Party"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Case" ADD CONSTRAINT "Case_firmId_fkey" FOREIGN KEY ("firmId") REFERENCES "Firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -683,3 +780,6 @@ ALTER TABLE "FeatureRequest" ADD CONSTRAINT "FeatureRequest_firmId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "FeatureVote" ADD CONSTRAINT "FeatureVote_requestId_fkey" FOREIGN KEY ("requestId") REFERENCES "FeatureRequest"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -31,11 +31,11 @@ describe("sign-up email verification (§11.14)", () => {
     expect(r).toMatchObject({ accepted: true, domain: "jip.lt" });
   });
 
-  it("refuses no MX, < 30 days old, unknown age, and a domain already in use", async () => {
+  it("refuses no MX, < 30 days old and a domain already in use; lets unknown age through", async () => {
     expect((await checkSignupEmail("a@firm.eu", lookups({ mx: false }), NOW)).refusal).toBe("no-mx");
     expect((await checkSignupEmail("a@firm.eu", lookups({ age: 29 }), NOW)).refusal).toBe("domain-too-new");
     expect((await checkSignupEmail("a@firm.eu", lookups({ age: 30 }), NOW)).accepted).toBe(true);
-    expect((await checkSignupEmail("a@firm.eu", lookups({ age: null }), NOW)).refusal).toBe("domain-age-unknown");
+    expect((await checkSignupEmail("a@firm.eu", lookups({ age: null }), NOW)).accepted).toBe(true);
     const used = await checkSignupEmail("a@firm.eu", lookups({ inUse: true }), NOW);
     expect(used.refusal).toBe("domain-in-use");
     expect(used.message).toMatch(/Owner to invite/);

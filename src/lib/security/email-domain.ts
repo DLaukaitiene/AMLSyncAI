@@ -3,7 +3,8 @@
  *
  * - Free and disposable email domains are refused.
  * - The domain does NOT have to match the company name (v0.11).
- * - The domain must have MX records and be at least 30 days old [validate threshold].
+ * - The domain must have MX records and must not be known to be under 30 days old
+ *   [validate threshold]; if the age cannot be determined the domain is let through.
  * - One firm per domain.
  * No manual review: every attempt ends as accepted or refused.
  */
@@ -46,7 +47,6 @@ export type DomainRefusal =
   | "disposable-email"
   | "no-mx"
   | "domain-too-new"
-  | "domain-age-unknown"
   | "domain-in-use";
 
 export interface DomainCheckResult {
@@ -79,7 +79,6 @@ const MESSAGES: Record<DomainRefusal, string> = {
   "disposable-email": "Please sign up with your company email address. Temporary email addresses are not accepted.",
   "no-mx": "This email domain cannot receive email. Please use your company email address.",
   "domain-too-new": "This email domain was registered too recently. Please use your company's established email domain.",
-  "domain-age-unknown": "We could not confirm this email domain. Please use your company's established email domain.",
   "domain-in-use": "A firm already uses this email domain. Ask that firm's Owner to invite you.",
 };
 
@@ -102,9 +101,9 @@ export async function checkSignupEmail(email: string, lookups: DomainLookups, no
 
   const registered = await lookups.registeredAt(domain);
   const ageDays = registered ? Math.floor((now.getTime() - registered.getTime()) / 86_400_000) : null;
-  // Secure by default: an unknown age is refused rather than waved through.
-  if (ageDays === null) return refuse("domain-age-unknown", { freeOrDisposable: false, hasMx, domainAgeDays: null });
-  if (ageDays < MIN_DOMAIN_AGE_DAYS) return refuse("domain-too-new", { freeOrDisposable: false, hasMx, domainAgeDays: ageDays });
+  // An unknown age (registry gives no date, e.g. some ccTLDs) is let through;
+  // only a domain known to be younger than 30 days is refused.
+  if (ageDays !== null && ageDays < MIN_DOMAIN_AGE_DAYS) return refuse("domain-too-new", { freeOrDisposable: false, hasMx, domainAgeDays: ageDays });
 
   if (await lookups.domainInUse(domain)) return refuse("domain-in-use", { freeOrDisposable: false, hasMx, domainAgeDays: ageDays });
 
