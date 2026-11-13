@@ -41,7 +41,7 @@ async function submit(p, buttonName, expect) {
   if (!expect) return;
   try {
     await p.getByText(expect).first().waitFor({ timeout: 15000 });
-  } catch (e) {
+  } catch {
     const alerts = await p.locator("form [role=alert], form [role=status]").allInnerTexts();
     throw new Error(`Expected "${expect}" after "${buttonName}". Messages on page: ${JSON.stringify(alerts)}`);
   }
