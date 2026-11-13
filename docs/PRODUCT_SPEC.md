@@ -1,6 +1,6 @@
-# AMLSyncAI — Product Specification (v0.10, draft)
+# AMLSyncAI — Product Specification (v0.11, draft)
 
-*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection; v0.10 replaces firm KYB with **automatic company-email verification** (no manual review)*
+*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection; v0.10 replaces firm KYB with **automatic company-email verification** (no manual review); v0.11 drops the rule that the email domain must match the company name*
 
 > **Legal note:** Article references are to Regulation (EU) 2024/1624 (AMLR) unless stated. AMLA's technical standards are still final drafts awaiting Commission adoption. Items marked **[verify]** depend on national law or pending standards. Get legal sign-off before any customer-facing compliance claim.
 
@@ -460,7 +460,7 @@ Market reference: many AML tools charge per check, and the cheapest monthly scre
 | **Task / Deadline** | Any clock in the Compliance Calendar | Linked to any object; calculated from Country Profile working days |
 | **Approval** | Named decision by an authorised user | Linked to any decision object; immutable |
 | **Audit Event** | Every create / update / view of sensitive data / export | Linked to any object; append-only |
-| **Email Domain Verification** | Result of the company-email check at sign-up (§8C.2) | Belongs to Firm; stores firm name, email domain, match result, confirmation time |
+| **Email Domain Verification** | Result of the company-email check at sign-up (§8C.2) | Belongs to Firm; stores firm name, email domain, check results (free/disposable, MX, domain age), confirmation time |
 | **Security Event** | Login, failed login, MFA change, new device, rate-limit or bot block, export, staff access | Linked to User / Firm; retained ≥ 1 year; feeds alerts |
 | **Feature Request** | Suggestion from a firm user (§4.10) | Has votes, comments, status history, tags; linked to releases |
 | **Rule Set / Country Profile** | Versioned configuration (§3A) | Version referenced by every decision |
@@ -500,8 +500,7 @@ AMLSyncAI does **not** manually check the firms that sign up. A firm is verified
 - **Sign-up asks for:** company name, the person's name, and a **company email address**.
 - **Email must belong to the company:**
   - Free email providers (Gmail, Outlook.com, Yahoo, GMX, etc.) and disposable/temporary email domains are **refused**.
-  - The email domain must **match the company name**: the domain (without the ending, e.g. `.lt`, `.com`) must contain the company name or a recognisable part of it, ignoring legal-form words (UAB, GmbH, SARL, Ltd, BV, etc.), spaces, punctuation and accents. Example: "UAB Baltic Accounting" → `balticaccounting.lt`, `baltic-accounting.eu` and `bacc-balticaccounting.com` pass; `randommail.com` fails.
-  - If the domain does not match, sign-up is refused with a clear message asking the user to use their company email or correct the company name. No manual review queue.
+  - The email domain does **not** have to match the company name; any company-owned domain is accepted.
   - The domain must have valid mail (MX) records and must not be newly registered (domain age under 30 days is refused) **[validate threshold]**.
 - **Email confirmation:** a one-time link/code is sent to that address and must be used within 24 hours. Only then is the account active.
 - **One firm per domain:** a domain already used by a firm cannot create a second firm; the person is told to ask that firm's Owner for an invitation.
@@ -528,7 +527,7 @@ AMLSyncAI does **not** manually check the firms that sign up. A firm is verified
 - **Credential-stuffing and brute-force protection:** progressive delays and temporary lockout after repeated failures; breached-password check; **no user enumeration** (identical responses and timing for existing and non-existing accounts).
 - **Screening abuse:** a firm cannot use AMLSyncAI as a free lookup service — screening is only possible for a party linked to a matter; unusual volumes (e.g. more screenings than clients by a large margin) trigger an alert and review; hard daily caps per plan.
 - **Scraping and exfiltration:** limits and alerts on mass viewing, mass download and bulk export; exports are watermarked with user, firm and timestamp.
-- **Sign-up abuse:** free and disposable email domains refused; domain must match the company name and be older than 30 days; one firm per domain; repeated sign-up attempts from the same device or IP are challenged and rate-limited (see §8C.2).
+- **Sign-up abuse:** free and disposable email domains refused; domain must be older than 30 days; one firm per domain; repeated sign-up attempts from the same device or IP are challenged and rate-limited (see §8C.2).
 - **VPN and anonymising networks** are challenged, not blocked by default (clients may legitimately use them); firms can choose to block them for their staff.
 - **API:** keys scoped to a firm and to specific permissions, shown once, rotatable, expiring; optional IP allow-list (V2); signed webhooks.
 
@@ -735,7 +734,7 @@ A V1 module is **done** only when every criterion below passes in an automated o
 ### 11.14 Security
 **Firm and user verification**
 - [ ] Sign-up with a free email provider (e.g. gmail.com, outlook.com) or a disposable email domain is refused with a message asking for a company email.
-- [ ] Domain matching: "UAB Baltic Accounting" with `anna@balticaccounting.lt` passes; with `anna@randommail.com` is refused; legal-form words, spaces, hyphens, punctuation and accents are ignored in the comparison (test table of ≥ 20 name/domain pairs passes).
+- [ ] A company email whose domain differs from the company name (e.g. "Jonaitis ir partneriai" with `anna@jip.lt`) is accepted.
 - [ ] A domain without MX records, or registered less than 30 days ago, is refused.
 - [ ] The account cannot be used until the one-time link/code sent to the company email is confirmed; the link expires after 24 hours and works once.
 - [ ] A second sign-up with a domain that already has a firm is refused and told to ask the existing Owner for an invitation.
