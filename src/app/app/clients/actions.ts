@@ -17,6 +17,8 @@ import { validateSmoFallback } from "@/lib/rules/beneficial-ownership";
 import type { Prisma } from "@prisma/client";
 import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/portal";
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
+import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
+import { sendEmail } from "@/lib/server/email";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
 const STEP_UP = (path: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: path } });
@@ -396,4 +398,53 @@ export async function markRefreshedAction(fileId: string): Promise<ActionState> 
   });
   revalidatePath(`/app/clients/${fileId}`);
   return r.renewed ? { message: "CDD refreshed. Next refresh date updated." } : { error: `Not yet: ${r.reasons.join(" ")} If the risk level changed, review it and accept the client again.` };
+}
+
+// ---------------------------------------------------------------------------
+// Didit: identity checks and provider screening (paid, €3.00 per check)
+// ---------------------------------------------------------------------------
+
+export async function diditIdvAction(fileId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await withTenant(s.firm.id, async (tx) => {
+      const created = await createIdvSession(tx, { firmId: s.firm.id, userId: s.user.id }, fileId, "staff", `/app/clients/${fileId}`);
+      const f = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
+      const email = (f.party.details as { email?: string }).email;
+      if (email) {
+        await sendEmail(email, `${s.firm.name}: please verify your identity`, `${s.firm.name} asks you to verify your identity. It takes about 3 minutes on your phone with your national eID or ID document and a short selfie video. The check is run by our partner Didit in the EU.\n\n${created.url}`);
+      }
+      return { ...created, email };
+    });
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: r.email ? `Identity check sent to ${r.email} (€3.00 charged to your credit).` : `Identity check created (€3.00). Send the client this link: ${r.url}` };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: /, "Didit: ") : "The identity check couldn't be created." };
+  }
+}
+
+export async function diditRefreshAction(fileId: string, diditSessionId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await refreshDiditSession(s.firm.id, diditSessionId);
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: r.imported ? `Result imported (${r.status}): verification, extracted data, images and video saved.` : `Status: ${r.status}.` };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message : "Couldn't fetch the result." };
+  }
+}
+
+export async function diditScreenAction(fileId: string, partyId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await withTenant(s.firm.id, async (tx) => {
+      const res = await screenWithDidit(tx, { firmId: s.firm.id, userId: s.user.id }, partyId, fileId);
+      await persistRiskIfChanged(tx, s.firm.id, await loadClientFile(tx, s.firm.id, fileId));
+      return res;
+    });
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: `Screened with Didit (€3.00): ${r.hits} possible match(es).` };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message : "Screening failed." };
+  }
 }

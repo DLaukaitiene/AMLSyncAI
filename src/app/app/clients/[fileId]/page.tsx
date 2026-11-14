@@ -13,10 +13,12 @@ import {
   acceptAction, addOwnerAction, decideMatchAction, eddChecklistAction, endAction, recordExtractAction, recordVerificationAction,
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
+  diditIdvAction, diditRefreshAction, diditScreenAction,
 } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
+import { diditEnabled } from "@/lib/server/didit";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -52,10 +54,13 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
     const hasCase = (await tx.case.count({ where: { partyIds: { has: cf.party.id } } })) > 0;
     const links = await tx.portalLink.findMany({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" }, take: 5 });
     const documents = await tx.document.findMany({ where: { partyId: cf.party.id }, orderBy: { uploadedAt: "desc" } });
-    return { cf, lastRisk, approvals, hasCase, links, documents };
+    const didit = await tx.diditSession.findMany({ where: { partyId: { in: [...cf.tree.parties.keys()] } }, orderBy: { createdAt: "desc" }, take: 20 });
+    return { cf, lastRisk, approvals, hasCase, links, documents, didit };
   });
   if (!data) notFound();
-  const { cf, lastRisk, approvals, hasCase, links, documents } = data;
+  const { cf, lastRisk, approvals, hasCase, links, documents, didit } = data;
+  const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
+  const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
   const activeLink = links.find((l) => l.status === "SENT" || l.status === "OPENED");
   const r = s.user.roles;
   const edit = can(r, "client.edit") && cf.file.status === "OPEN";
@@ -170,7 +175,22 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                 <Submit variant="secondary">Record verification</Submit>
               </ActionForm>
             )}
-            <p className="text-xs text-muted">eID broker and NFC/liveness vendor integrations are not connected yet. Record the result of the check here.</p>
+            {diditEnabled() ? (
+              <div className="space-y-2 rounded border border-border p-3" data-testid="didit-idv">
+                <p className="text-sm font-medium">Remote identity check (Didit, EU)</p>
+                <p className="text-xs text-muted">National eID where available, otherwise ID document with chip read, liveness and face match. Images, video and the report are saved to this file.</p>
+                {idvSessions.map((x) => (
+                  <div key={x.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span>{x.createdAt.toISOString().slice(0, 16).replace("T", " ")} · {x.status}{x.sandbox ? " · sandbox" : ""}{x.importedAt ? " · imported" : ""}</span>
+                    {!x.importedAt && <ActionButton action={diditRefreshAction.bind(null, fileId, x.diditSessionId)}>Refresh result</ActionButton>}
+                  </div>
+                ))}
+                {mismatches?.length ? <p className="text-sm text-red-700 dark:text-red-300">ID check differs from the file: {mismatches.join("; ")}. Correct the file or ask the client.</p> : null}
+                {edit && <ActionButton action={diditIdvAction.bind(null, fileId)} variant="primary">Send identity check (€3.00)</ActionButton>}
+              </div>
+            ) : (
+              <p className="text-xs text-muted">Remote identity checks aren&apos;t set up for this installation. Record the result of the check here.</p>
+            )}
           </Card>
         ) : (
           <Card title="Register extract (Art. 22(7), 23(4))">
@@ -398,7 +418,23 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
             <ul>{decidedHits.map((x) => <li key={x.id}>{(x.matchData as { matchedName: string }).matchedName} — {x.decision === "TRUE_MATCH" ? "true match" : "false positive"}: {x.comment}</li>)}</ul>
           </details>
         )}
-        {can(r, "client.edit") && <ActionButton action={rescreenAction.bind(null, fileId)}>Screen again now</ActionButton>}
+        {can(r, "client.edit") && <ActionButton action={rescreenAction.bind(null, fileId)}>Screen again now (EU/UN lists, free)</ActionButton>}
+        {can(r, "client.edit") && diditEnabled() && (
+          <details className="rounded border border-border p-3" data-testid="didit-screen">
+            <summary className="cursor-pointer text-sm font-medium">PEP, sanctions and adverse-media screening with Didit (€3.00 per person or company)</summary>
+            <ul className="mt-2 space-y-1 text-sm">
+              {[...cf.tree.parties.values()].map((p) => {
+                const last = didit.find((x) => x.kind === "aml" && x.partyId === p.id);
+                return (
+                  <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>{p.displayName}{last ? <span className="text-muted"> · screened {last.createdAt.toISOString().slice(0, 10)}</span> : null}</span>
+                    <ActionButton action={diditScreenAction.bind(null, fileId, p.id)}>Screen (€3.00)</ActionButton>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        )}
       </Card>
 
       <Card title={`Risk: ${cf.risk.level} (score ${cf.risk.score})`}>

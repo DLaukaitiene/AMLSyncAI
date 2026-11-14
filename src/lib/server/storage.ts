@@ -4,16 +4,52 @@ import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { Socket } from "node:net";
 import path from "node:path";
 import { checkUpload, containsEicar } from "@/lib/files/validate";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import type { Tx } from "./db";
 
 /**
  * Document storage (spec §8C.5–8C.6): files are encrypted with the firm's key
  * (AES-256-GCM) before they are written, stored outside the web root, scanned
  * for malware, and only served through an authenticated route.
- * Driver: local directory (STORAGE_DIR). An EU-region object-storage driver
- * plugs in behind the same two functions.
+ * Drivers (STORAGE_DRIVER):
+ *  - "local" (default): a directory outside the web root (STORAGE_DIR)
+ *  - "s3": any S3-compatible EU bucket — e.g. Supabase Storage's S3 endpoint
+ *    (S3_ENDPOINT=https://<project>.supabase.co/storage/v1/s3, S3_REGION,
+ *    S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY). Objects are already
+ *    encrypted with the firm key before they leave the server; the bucket
+ *    must be private.
  */
 const DIR = path.resolve(process.env.STORAGE_DIR ?? ".data/files");
+const s3Enabled = () => process.env.STORAGE_DRIVER === "s3";
+let s3: S3Client | null = null;
+function s3Client() {
+  s3 ??= new S3Client({
+    endpoint: process.env.S3_ENDPOINT,
+    region: process.env.S3_REGION ?? "eu-central-1",
+    forcePathStyle: true,
+    credentials: { accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "", secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "" },
+  });
+  return s3;
+}
+const bucket = () => process.env.S3_BUCKET ?? "amlsyncai-documents";
+
+async function putBytes(key: string, data: Buffer) {
+  if (s3Enabled()) {
+    await s3Client().send(new PutObjectCommand({ Bucket: bucket(), Key: key, Body: data, ContentType: "application/octet-stream" }));
+    return;
+  }
+  const p = path.join(DIR, key);
+  await mkdir(path.dirname(p), { recursive: true });
+  await writeFile(p, data, { mode: 0o600 });
+}
+
+async function getBytes(key: string): Promise<Buffer> {
+  if (s3Enabled()) {
+    const r = await s3Client().send(new GetObjectCommand({ Bucket: bucket(), Key: key }));
+    return Buffer.from(await r.Body!.transformToByteArray());
+  }
+  return readFile(path.join(DIR, key));
+}
 
 function fileKey(firmId: string): Buffer {
   const master = process.env.MASTER_KEY ? Buffer.from(process.env.MASTER_KEY, "base64") : Buffer.alloc(32, 7);
@@ -25,13 +61,11 @@ async function writeBlob(firmId: string, key: string, bytes: Uint8Array) {
   const c = createCipheriv("aes-256-gcm", fileKey(firmId), iv);
   c.setAAD(Buffer.from(key));
   const ct = Buffer.concat([c.update(bytes), c.final()]);
-  const p = path.join(DIR, key);
-  await mkdir(path.dirname(p), { recursive: true });
-  await writeFile(p, Buffer.concat([iv, c.getAuthTag(), ct]), { mode: 0o600 });
+  await putBytes(key, Buffer.concat([iv, c.getAuthTag(), ct]));
 }
 
 export async function readBlob(firmId: string, key: string): Promise<Buffer> {
-  const buf = await readFile(path.join(DIR, key));
+  const buf = await getBytes(key);
   const d = createDecipheriv("aes-256-gcm", fileKey(firmId), buf.subarray(0, 12));
   d.setAAD(Buffer.from(key));
   d.setAuthTag(buf.subarray(12, 28));
@@ -39,6 +73,10 @@ export async function readBlob(firmId: string, key: string): Promise<Buffer> {
 }
 
 export async function deleteBlob(key: string) {
+  if (s3Enabled()) {
+    await s3Client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key })).catch(() => {});
+    return;
+  }
   await unlink(path.join(DIR, key)).catch(() => {});
 }
 
@@ -83,9 +121,9 @@ export type StoreResult = { ok: true; documentId: string; scan: string } | { ok:
 
 export async function storeDocument(
   tx: Tx,
-  d: { firmId: string; partyId: string | null; kind: string; fileName: string; bytes: Uint8Array; uploadedBy: string },
+  d: { firmId: string; partyId: string | null; kind: string; fileName: string; bytes: Uint8Array; uploadedBy: string; providerMedia?: boolean },
 ): Promise<StoreResult> {
-  const check = checkUpload(d.fileName, d.bytes);
+  const check = checkUpload(d.fileName, d.bytes, { providerMedia: d.providerMedia });
   if (!check.ok) return { ok: false, error: check.error! };
   const result = await scan(d.bytes);
   const key = `${d.firmId}/${randomUUID()}`;
@@ -108,4 +146,13 @@ export const DOCUMENT_KINDS: Record<string, string> = {
   "sow-evidence": "Source of wealth evidence",
   "power-of-attorney": "Power of attorney",
   other: "Other",
+  "idv-portrait": "ID check: document portrait",
+  "idv-document-front": "ID check: document front",
+  "idv-document-back": "ID check: document back",
+  "idv-document-video": "ID check: document capture video",
+  "idv-chip-portrait": "ID check: chip portrait (NFC)",
+  "idv-liveness-image": "ID check: liveness selfie",
+  "idv-liveness-video": "ID check: liveness video",
+  "idv-face-match-target": "ID check: face match image",
+  "idv-report": "ID check: provider report (PDF)",
 };

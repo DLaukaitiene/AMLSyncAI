@@ -23,6 +23,12 @@ describe("upload checks (§8C.5, §11.14)", () => {
     expect(checkUpload("id.JPG", bytes(0xff, 0xd8, 0xff, 0xe0))).toEqual({ ok: true, type: "image/jpeg" });
   });
 
+  it("accepts liveness videos only as provider media", () => {
+    const mp4 = bytes(0, 0, 0, 0x20, "ftypisom", 0, 0);
+    expect(checkUpload("liveness-video.mp4", mp4).ok).toBe(false);
+    expect(checkUpload("liveness-video.mp4", mp4, { providerMedia: true })).toEqual({ ok: true, type: "video/mp4" });
+  });
+
   it("detects the EICAR test signature", () => {
     expect(containsEicar(bytes("%PDF-1.4 X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"))).toBe(true);
     expect(containsEicar(bytes("%PDF-1.4 hello"))).toBe(false);

@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/app/team", label: "Team", show: true },
     { href: "/app/records", label: "Records", show: can(r, "records.purge") },
     { href: "/app/security", label: "Security log", show: can(r, "securityLog.view") },
+    { href: "/app/billing", label: "Billing", show: can(r, "approve.compliance") },
     { href: "/app/feature-requests", label: "Feature requests", show: true },
   ].filter((n) => n.show);
   return (

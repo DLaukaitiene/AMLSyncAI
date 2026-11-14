@@ -11,6 +11,7 @@ import { checkNewPassword, dummyHash, hashPassword, verifyPassword } from "./pas
 import { generateTotpSecret, verifyTotp } from "@/lib/auth/totp";
 import { defaultCountryProfile } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
+import { TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
 import type { Role, Sector } from "@prisma/client";
 
 export const EU_MEMBER_STATES = [
@@ -142,6 +143,8 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
           passwordHash: d.passwordHash, emailVerifiedAt: new Date(),
         },
       });
+      // Trial (recommendation 21): a small credit so the first real checks can be run.
+      await tx.creditEntry.create({ data: { firmId: firm.id, amountCents: TRIAL_CREDIT_CENTS, kind: "trial", description: "Welcome credit (5 checks)" } });
       await tx.countryProfileVersion.create({
         data: {
           firmId: firm.id, memberState: d.memberState, version: 1, enteredById: user.id, source: "Defaults (EU Core)",

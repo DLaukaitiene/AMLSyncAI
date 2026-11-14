@@ -95,6 +95,7 @@ enum VerificationMethod {
   EID
   IN_PERSON
   DOCUMENT_NFC_LIVENESS
+  DOCUMENT_LIVENESS // remote document + liveness without a chip read (weaker; reason recorded)
 }
 
 enum OwnershipLinkType {
@@ -192,6 +193,7 @@ model Firm {
   usesCash      Boolean  @default(false)
   crossBorderPct Int?
   plan          String   @default("starter") // starter | professional | business (§6) — sets daily screening caps
+  autoClearBelow Int?    // screening: non-sanctions hits under this match score are auto-cleared (logged); null = off
   createdAt     DateTime @default(now())
 
   offices               Office[]
@@ -472,6 +474,7 @@ model IdentityVerification {
   provider       String?
   providerRef    String?
   fallbackReason String? // required when not eID (§11.5)
+  details        Json? // provider snapshot without media URLs: extracted data, scores, warnings, timestamps
   verifiedAt     DateTime
 
   @@index([firmId])
@@ -1014,4 +1017,44 @@ model SupportGrant {
   createdAt      DateTime  @default(now())
 
   @@index([firmId])
+}
+
+// ---------------------------------------------------------------------------
+// Didit identity verification and AML screening (paid checks)
+// ---------------------------------------------------------------------------
+
+model DiditSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  firmId         String    @db.Uuid
+  partyId        String    @db.Uuid
+  cddFileId      String?   @db.Uuid
+  kind           String // idv | aml
+  diditSessionId String    @unique
+  url            String?
+  status         String    @default("Not Started")
+  sandbox        Boolean   @default(true)
+  creditEntryId  String?   @db.Uuid
+  createdVia     String // staff | portal
+  createdById    String?   @db.Uuid
+  importedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([firmId])
+  @@index([partyId])
+}
+
+/// Prepaid credit per firm (spec §6, recommendation 11): checks are charged when sent and refunded on failure or expiry.
+model CreditEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  amountCents Int // positive = top-up / refund / trial, negative = charge
+  kind        String // trial | topup | charge | refund
+  description String
+  reference   String? // e.g. Didit session id
+  clientRef   String? // client / matter reference shown on the receipt
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  @@index([firmId, createdAt])
 }

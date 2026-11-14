@@ -136,7 +136,9 @@ export async function portalContext(token: string) {
     // Only this party's own uploads — never another party's.
     const documents = await tx.document.findMany({ where: { partyId: l.partyId, uploadedBy: `portal:${l.id}` }, select: { id: true, kind: true, fileName: true, malwareScan: true } });
     const privacy = await tx.policyDocument.findFirst({ where: { kind: "privacy-notice", status: "IN_FORCE" }, orderBy: { version: "desc" } });
-    return { link: l, party: file.party, file, firmName: firm.name, eddRequired: cf.risk.eddRequired, documents, privacy: privacy?.content ?? null };
+    const idv = await tx.diditSession.findFirst({ where: { partyId: l.partyId, kind: "idv" }, orderBy: { createdAt: "desc" }, select: { status: true, url: true, createdAt: true } });
+    const verified = (await tx.identityVerification.count({ where: { partyId: l.partyId } })) > 0;
+    return { link: l, party: file.party, file, firmName: firm.name, eddRequired: cf.risk.eddRequired, documents, privacy: privacy?.content ?? null, idv, verified };
   });
 }
 

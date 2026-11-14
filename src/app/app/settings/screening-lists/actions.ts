@@ -36,3 +36,18 @@ export async function uploadListAction(_: ActionState, fd: FormData): Promise<Ac
   revalidatePath("/app/settings/screening-lists");
   return { message: `Loaded ${entries.length} entries. All active clients were re-screened: ${r.newHits} new possible match(es).` };
 }
+
+/** Auto-clear threshold for non-sanctions provider hits (competitor finding: hidden thresholds). Off by default. */
+export async function autoClearAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("countryProfile.edit");
+  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/screening-lists" } };
+  const raw = String(fd.get("threshold") ?? "").trim();
+  const value = raw === "" ? null : Number(raw);
+  if (value !== null && !(Number.isInteger(value) && value >= 1 && value <= 99)) return { error: "Enter a whole number from 1 to 99, or leave it empty to switch auto-clear off." };
+  await withTenant(s.firm.id, async (tx) => {
+    await tx.firm.update({ where: { id: s.firm.id }, data: { autoClearBelow: value } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["autoClearBelow"] });
+  });
+  revalidatePath("/app/settings/screening-lists");
+  return { message: value === null ? "Auto-clear is off: every possible match is reviewed by a person." : `Non-sanctions hits under a match score of ${value} are now cleared automatically and logged. Sanctions hits are always reviewed.` };
+}

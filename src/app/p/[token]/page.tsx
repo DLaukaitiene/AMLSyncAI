@@ -4,7 +4,9 @@ import { ActionForm, Field, Submit } from "@/components/form";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { DocView } from "@/components/doc-view";
 import type { GeneratedDoc } from "@/lib/docs/model";
-import { noChangeAction, requestCodeAction, saveAction, uploadAction, verifyCodeAction } from "./actions";
+import { noChangeAction, requestCodeAction, saveAction, startIdvAction, uploadAction, verifyCodeAction } from "./actions";
+import { diditEnabled } from "@/lib/server/didit";
+import { ActionButton } from "@/components/action-button";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const area = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
@@ -92,6 +94,24 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             <Field label="Type your full name to confirm" name="signature" autoComplete="name" />
             <Submit>Confirm nothing has changed</Submit>
           </ActionForm>
+        </section>
+      )}
+
+      {natural && diditEnabled() && (
+        <section className="space-y-2 rounded-md border border-border p-4" data-testid="idv">
+          <h2 className="font-semibold">Verify your identity</h2>
+          {ctx.verified ? (
+            <p className="text-sm">Done. Your identity has been verified.</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted">
+                About 3 minutes on your phone: use your national eID (for example Smart-ID or Mobile-ID) or your ID document with its chip, and a short
+                selfie video. It&apos;s run by our verification partner Didit in the EU.
+                {ctx.idv ? ` Last attempt: ${ctx.idv.status}.` : ""}
+              </p>
+              <ActionButton action={startIdvAction.bind(null, token)} variant="primary">{ctx.idv ? "Try again" : "Start identity check"}</ActionButton>
+            </>
+          )}
         </section>
       )}
 

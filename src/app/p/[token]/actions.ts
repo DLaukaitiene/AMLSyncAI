@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createIdvSession, DiditError } from "@/lib/server/didit";
 import type { ActionState } from "@/components/form";
 import { requestMeta } from "@/lib/server/session";
 import { confirmNoChange, portalContext, portalLegalSchema, portalNaturalSchema, saveDraft, sendPortalCode, submitPortal, verifyPortalCode } from "@/lib/server/portal";
@@ -78,4 +80,18 @@ export async function noChangeAction(token: string, _: ActionState, fd: FormData
   if (!r.ok) return { error: r.error };
   revalidatePath(`/p/${token}`);
   return { message: "Confirmed." };
+}
+
+/** Starts the Didit identity check from the portal (the firm pays; the client is never charged). */
+export async function startIdvAction(token: string): Promise<ActionState> {
+  const ctx = await portalContext(token);
+  if (!ctx || ctx.link.status === "SUBMITTED") return { error: "Your session has ended. Reload the page and request a new code." };
+  if (ctx.party.kind !== "NATURAL") return { error: "Identity checks are for people." };
+  let url: string;
+  try {
+    url = (await withTenant(ctx.link.firmId, (tx) => createIdvSession(tx, { firmId: ctx.link.firmId, userId: null }, ctx.link.cddFileId, "portal", `/p/${token}/didit`))).url;
+  } catch (e) {
+    return { error: e instanceof DiditError && /credit/.test(e.message) ? `${ctx.firmName} can't start the identity check right now. Please contact them.` : "The identity check isn't available right now. Try again later." };
+  }
+  redirect(url);
 }
