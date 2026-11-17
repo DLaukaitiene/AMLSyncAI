@@ -89,7 +89,7 @@ export async function startIdvAction(token: string): Promise<ActionState> {
   if (ctx.party.kind !== "NATURAL") return { error: "Identity checks are for people." };
   let url: string;
   try {
-    url = (await withTenant(ctx.link.firmId, (tx) => createIdvSession(tx, { firmId: ctx.link.firmId, userId: null }, ctx.link.cddFileId, "portal", `/p/${token}/didit`))).url;
+    url = (await withTenant(ctx.link.firmId, (tx) => createIdvSession(tx, { firmId: ctx.link.firmId, userId: null }, ctx.link.cddFileId, "portal", `/p/${token}/didit`), { timeoutMs: 90_000 })).url;
   } catch (e) {
     return { error: e instanceof DiditError && /credit/.test(e.message) ? `${ctx.firmName} can't start the identity check right now. Please contact them.` : "The identity check isn't available right now. Try again later." };
   }

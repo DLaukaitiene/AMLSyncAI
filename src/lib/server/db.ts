@@ -24,10 +24,10 @@ export type Tx = Prisma.TransactionClient;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Runs fn in a transaction where row-level security limits every query to one firm. */
-export async function withTenant<T>(firmId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+export async function withTenant<T>(firmId: string, fn: (tx: Tx) => Promise<T>, opts?: { timeoutMs?: number }): Promise<T> {
   if (!UUID_RE.test(firmId)) throw new Error("Invalid firm id");
   return appDb.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.firm_id', ${firmId}, true)`;
     return fn(tx);
-  });
+  }, opts?.timeoutMs ? { timeout: opts.timeoutMs, maxWait: 10_000 } : undefined);
 }

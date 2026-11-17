@@ -97,7 +97,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Over Limit" }).waitFor();
   await p.getByText(/haven't been screened yet/).first().waitFor();
-  await submit(p, "Screen again now", "Today's screening limit for your plan was reached");
+  await submit(p, "Screen again now (EU/UN lists, free)", "Today's screening limit for your plan was reached");
   if (!sql(`SELECT count(*) FROM "SecurityEvent" WHERE "firmId" = '${firmId}' AND kind = 'screening-daily-cap'`).match(/^[1-9]/)) throw new Error("no security event");
   log("daily screening cap: party left unscreened, acceptance blocked, security event + AMLSyncAI alert");
 

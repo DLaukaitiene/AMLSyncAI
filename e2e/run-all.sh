@@ -4,7 +4,7 @@
 #   npx tsx scripts/load-list.mts amlsync e2e/fixtures/test-sanctions.csv "TEST sanctions list" 2026-11-13
 set -euo pipefail
 cd "$(dirname "$0")/.."
-reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "Firm","User","Session","EmailToken","DevEmail","RateLimitBucket","SecurityEvent","Invitation","FeatureRequest","SupportGrant" CASCADE' >/dev/null 2>&1; }
+reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "Firm","User","Session","EmailToken","DevEmail","RateLimitBucket","SecurityEvent","Invitation","FeatureRequest","SupportGrant","DiditSession","CreditEntry" CASCADE' >/dev/null 2>&1; }
 LOG=$(mktemp)
 exec > >(tee "$LOG") 2>&1
 code() { npx tsx scripts/create-signup-code.mts 1 1 e2e; }

@@ -29,7 +29,7 @@ export class DiditError extends Error {
   }
 }
 
-async function didit<T>(method: "GET" | "POST", path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
+async function didit<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
   const res = await fetch(`${BASE()}${path}`, {
     method,
     headers: { "x-api-key": process.env.DIDIT_API_KEY ?? "", "content-type": "application/json", accept: "application/json", ...extraHeaders },
@@ -40,7 +40,22 @@ async function didit<T>(method: "GET" | "POST", path: string, body?: unknown, ex
     const text = (await res.text()).slice(0, 300);
     throw new DiditError(`Didit ${method} ${path}: ${res.status} ${text}`, res.status);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Deletes sessions (data, images, video) at Didit at the end of the retention period. Best effort: a session already gone counts as deleted. */
+export async function deleteDiditSessions(sessionIds: string[]): Promise<string[]> {
+  const failed: string[] = [];
+  if (!diditEnabled()) return sessionIds.length ? sessionIds : [];
+  for (const id of sessionIds) {
+    try {
+      await didit("DELETE", `/v3/session/${encodeURIComponent(id)}/delete/`);
+    } catch (e) {
+      if (!(e instanceof DiditError && e.status === 404)) failed.push(id);
+    }
+  }
+  return failed;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,25 +136,57 @@ const NO_RESULT = new Set(["Expired", "Abandoned"]);
  * video into our storage, Didit's PDF report, and AML hits for review.
  */
 export async function refreshDiditSession(firmId: string, diditSessionId: string): Promise<{ status: string; imported: boolean }> {
+  // Network calls happen outside database transactions (downloads can take minutes).
+  const s0 = await withTenant(firmId, (tx) => tx.diditSession.findUnique({ where: { diditSessionId } }));
+  if (!s0) throw new DiditError("Unknown check.");
+  const decision = await didit<Record<string, unknown>>("GET", `/v3/session/${encodeURIComponent(diditSessionId)}/decision/`);
+  const status = String(decision.status ?? s0.status);
+  const willImport = TERMINAL.has(status) && !s0.importedAt;
+  const m = mapDecision(decision);
+  const files = willImport ? await downloadMedia(firmId, m, diditSessionId) : [];
   return withTenant(firmId, async (tx) => {
-    const s = await tx.diditSession.findUnique({ where: { diditSessionId } });
-    if (!s) throw new DiditError("Unknown check.");
-    const decision = await didit<Record<string, unknown>>("GET", `/v3/session/${encodeURIComponent(diditSessionId)}/decision/`);
-    const status = String(decision.status ?? s.status);
+    const s = await tx.diditSession.findUniqueOrThrow({ where: { diditSessionId } });
     await tx.diditSession.update({ where: { id: s.id }, data: { status } });
     if (NO_RESULT.has(status) && s.creditEntryId) await refund(tx, firmId, s.creditEntryId, `check ${status.toLowerCase()} without a result`);
-    if (!TERMINAL.has(status) || s.importedAt) return { status, imported: false };
-    await importDecision(tx, firmId, s, mapDecision(decision), diditSessionId);
+    if (!willImport || s.importedAt) return { status, imported: false }; // a concurrent webhook got there first
+    await importDecision(tx, firmId, s, m, diditSessionId, files);
     await tx.diditSession.update({ where: { id: s.id }, data: { importedAt: new Date() } });
     return { status, imported: true };
-  });
+  }, { timeoutMs: 120_000 });
 }
 
-async function importDecision(tx: Tx, firmId: string, s: { id: string; partyId: string; cddFileId: string | null; kind: string }, m: MappedDecision, diditSessionId: string) {
+type Downloaded = { kind: string; fileName: string; bytes: Uint8Array };
+
+/** Media: presigned URLs expire, so pull everything now (time-stamped copies, AMLA CDD RTS), plus Didit's PDF report. */
+async function downloadMedia(firmId: string, m: MappedDecision, diditSessionId: string): Promise<Downloaded[]> {
+  const out: Downloaded[] = [];
+  for (const item of m.media) {
+    try {
+      const r = await fetch(item.url, { signal: AbortSignal.timeout(120_000) });
+      if (!r.ok) throw new Error(String(r.status));
+      out.push({ kind: item.kind, fileName: item.fileName, bytes: new Uint8Array(await r.arrayBuffer()) });
+    } catch (e) {
+      await securityEvent({ firmId, kind: "idv-media-download-failed", details: { session: diditSessionId, kind: item.kind, error: String((e as Error).message).slice(0, 120) } });
+    }
+  }
+  try {
+    const r = await fetch(`${BASE()}/v3/session/${encodeURIComponent(diditSessionId)}/generate-pdf/`, { headers: { "x-api-key": process.env.DIDIT_API_KEY ?? "" }, signal: AbortSignal.timeout(60_000) });
+    if (r.ok) out.push({ kind: "idv-report", fileName: "didit-report.pdf", bytes: new Uint8Array(await r.arrayBuffer()) });
+  } catch {
+    /* optional */
+  }
+  return out;
+}
+
+async function importDecision(tx: Tx, firmId: string, s: { id: string; partyId: string; cddFileId: string | null; kind: string }, m: MappedDecision, diditSessionId: string, files: Downloaded[]) {
   const party = await tx.party.findUniqueOrThrow({ where: { id: s.partyId } });
   const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { autoClearBelow: true } });
   const now = new Date();
 
+  if (!m.verification && s.kind === "idv" && s.cddFileId) {
+    // Approved/declined without any ID data (e.g. a status set by hand in the provider console): a person must look.
+    await upsertTask(tx, { firmId, kind: "idv-review", objectType: "CddFile", objectId: s.cddFileId, dueOn: toIsoDate(now), article: "Art. 22" });
+  }
   if (m.verification && s.kind === "idv") {
     const v = m.verification;
     const passed = v.status === "Approved";
@@ -185,23 +232,9 @@ async function importDecision(tx: Tx, firmId: string, s: { id: string; partyId: 
     }
   }
 
-  // Media: presigned URLs expire, so pull everything now (time-stamped copies, AMLA CDD RTS).
-  for (const item of m.media) {
-    try {
-      const r = await fetch(item.url, { signal: AbortSignal.timeout(120_000) });
-      if (!r.ok) throw new Error(String(r.status));
-      const bytes = new Uint8Array(await r.arrayBuffer());
-      await storeDocument(tx, { firmId, partyId: s.partyId, kind: item.kind, fileName: item.fileName, bytes, uploadedBy: `didit:${diditSessionId}`, providerMedia: true });
-    } catch (e) {
-      await securityEvent({ firmId, kind: "idv-media-download-failed", details: { session: diditSessionId, kind: item.kind, error: String((e as Error).message).slice(0, 120) } });
-    }
-  }
-  // Didit's own report as a PDF (best effort).
-  try {
-    const r = await fetch(`${BASE()}/v3/session/${encodeURIComponent(diditSessionId)}/generate-pdf/`, { headers: { "x-api-key": process.env.DIDIT_API_KEY ?? "" }, signal: AbortSignal.timeout(60_000) });
-    if (r.ok) await storeDocument(tx, { firmId, partyId: s.partyId, kind: "idv-report", fileName: "didit-report.pdf", bytes: new Uint8Array(await r.arrayBuffer()), uploadedBy: `didit:${diditSessionId}`, providerMedia: true });
-  } catch {
-    /* optional */
+  for (const f of files) {
+    const r = await storeDocument(tx, { firmId, partyId: s.partyId, kind: f.kind, fileName: f.fileName, bytes: f.bytes, uploadedBy: `didit:${diditSessionId}`, providerMedia: true });
+    if (!r.ok) await securityEvent({ firmId, kind: "idv-media-rejected", details: { session: diditSessionId, kind: f.kind, error: r.error.slice(0, 120) } });
   }
 
   await importAml(tx, firmId, s.partyId, m, firm.autoClearBelow, diditSessionId);

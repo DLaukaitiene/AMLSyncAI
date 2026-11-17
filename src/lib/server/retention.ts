@@ -2,6 +2,8 @@ import "server-only";
 import { withTenant, type Tx } from "./db";
 import { audit } from "./audit";
 import { deleteBlob } from "./storage";
+import { deleteDiditSessions } from "./didit";
+import { upsertTask } from "./cdd";
 import { currentProfile } from "./country-profile";
 import { retentionEnds } from "@/lib/rules/deadlines";
 import { addYears, toIsoDate, type IsoDate } from "@/lib/rules/dates";
@@ -50,6 +52,7 @@ export async function partiesDueForDeletion(tx: Tx, today: IsoDate = toIsoDate(n
 /** Deletes the parties and everything about them. Irrecoverable from the app. */
 export async function purgeParties(firmId: string, userId: string, partyIds: string[], today: IsoDate = toIsoDate(new Date())) {
   const blobKeys: string[] = [];
+  const diditIds: string[] = [];
   const n = await withTenant(firmId, async (tx) => {
     const due = new Set((await partiesDueForDeletion(tx, today)).map((p) => p.partyId));
     const ids = partyIds.filter((id) => due.has(id));
@@ -83,6 +86,9 @@ export async function purgeParties(firmId: string, userId: string, partyIds: str
     blobKeys.push(...docs.map((d) => d.storageKey));
     await tx.document.deleteMany({ where: { partyId: { in: ids } } });
     await tx.portalLink.deleteMany({ where: { partyId: { in: ids } } });
+    // Identity-check sessions are also deleted at the provider (their copy of images, video and data).
+    diditIds.push(...(await tx.diditSession.findMany({ where: { partyId: { in: ids } }, select: { diditSessionId: true } })).map((d) => d.diditSessionId));
+    await tx.diditSession.deleteMany({ where: { partyId: { in: ids } } });
     await tx.party.deleteMany({ where: { id: { in: ids } } }); // cascades: links, matter roles, CDD files, risk, screening, extracts, IDV
 
     // Matters left with no parties are deleted too.
@@ -99,6 +105,16 @@ export async function purgeParties(firmId: string, userId: string, partyIds: str
   });
   // Files are removed after the database transaction has committed.
   for (const k of blobKeys) await deleteBlob(k);
+  const failed = await deleteDiditSessions(diditIds);
+  if (failed.length) {
+    // Retried by a person: the task links only the provider's session id (no client data remains here).
+    await withTenant(firmId, async (tx) => {
+      for (const id of failed) {
+        await upsertTask(tx, { firmId, kind: "provider-purge", objectType: "DiditSession", objectId: id, dueOn: today, article: "Art. 77" });
+        await audit(tx, { firmId, userId, action: "purge-provider-failed", objectType: "DiditSession", objectId: id });
+      }
+    });
+  }
   return n;
 }
 
