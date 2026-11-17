@@ -6,8 +6,9 @@ import { encryptField } from "./crypto";
 import { storeDocument } from "./storage";
 import { loadClientFile, persistRiskIfChanged, upsertTask } from "./cdd";
 import { appUrl } from "./email";
-import { autoClear, CHECK_PRICE_CENTS, formatEur, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
+import { autoClear, CHECK_PRICE_CENTS, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
 import { toIsoDate } from "@/lib/rules/dates";
+import { assertCanSpend, SpendError } from "./invoicing";
 
 /**
  * Didit integration (identity verification + AML screening, EU processing).
@@ -59,7 +60,7 @@ export async function deleteDiditSessions(sessionIds: string[]): Promise<string[
 }
 
 // ---------------------------------------------------------------------------
-// Credit balance (prepaid; per-check receipts)
+// Usage ledger (postpaid: billed on the monthly invoice; per-check statements)
 // ---------------------------------------------------------------------------
 
 export async function balanceCents(tx: Tx): Promise<number> {
@@ -67,8 +68,11 @@ export async function balanceCents(tx: Tx): Promise<number> {
 }
 
 async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string): Promise<string> {
-  if ((await balanceCents(tx)) < CHECK_PRICE_CENTS) {
-    throw new DiditError(`Not enough credit: each check costs ${formatEur(CHECK_PRICE_CENTS)}. Top up in Billing.`);
+  try {
+    await assertCanSpend(tx, firmId, CHECK_PRICE_CENTS);
+  } catch (e) {
+    if (e instanceof SpendError) throw new DiditError(e.message);
+    throw e;
   }
   const e = await tx.creditEntry.create({ data: { firmId, amountCents: -CHECK_PRICE_CENTS, kind: "charge", description, clientRef, createdById: userId } });
   return e.id;

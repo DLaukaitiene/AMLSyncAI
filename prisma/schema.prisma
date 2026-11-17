@@ -194,6 +194,15 @@ model Firm {
   crossBorderPct Int?
   plan          String   @default("starter") // starter | professional | business (§6) — sets daily screening caps
   autoClearBelow Int?    // screening: non-sanctions hits under this match score are auto-cleared (logged); null = off
+  // Billing (postpaid, monthly invoice by bank transfer)
+  billingName     String?
+  billingAddress  String?
+  billingCountry  String?  @db.Char(2) // defaults to homeState
+  billingCompanyCode String?
+  vatId           String?
+  billingEmail    String?
+  monthlyFeeCents Int      @default(0) // set by AMLSyncAI per firm until plan prices are final
+  spendLimitCents Int      @default(30000) // paid checks per calendar month (net); raised on request
   createdAt     DateTime @default(now())
 
   offices               Office[]
@@ -1054,7 +1063,35 @@ model CreditEntry {
   reference   String? // e.g. Didit session id
   clientRef   String? // client / matter reference shown on the receipt
   createdById String?  @db.Uuid
+  invoiceId   String?  @db.Uuid // set once the entry is on an invoice
   createdAt   DateTime @default(now())
 
   @@index([firmId, createdAt])
+  @@index([firmId, invoiceId])
+}
+
+/// Monthly VAT invoice (Lithuanian PVM sąskaita faktūra): continuous numbering, snapshots of seller and buyer.
+model Invoice {
+  id          String    @id @default(uuid()) @db.Uuid
+  firmId      String    @db.Uuid
+  seq         Int       @unique
+  number      String    @unique
+  period      String // YYYY-MM
+  issuedOn    String // YYYY-MM-DD
+  dueOn       String
+  seller      Json
+  buyer       Json
+  lines       Json
+  netCents    Int
+  vatRateBp   Int
+  vatCents    Int
+  totalCents  Int
+  vatNote     String?
+  status      String    @default("issued") // issued | paid | void
+  paidOn      String?
+  paymentRef  String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([firmId, period])
+  @@index([firmId])
 }
