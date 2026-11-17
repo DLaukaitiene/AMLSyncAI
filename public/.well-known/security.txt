@@ -1,5 +1,5 @@
-Contact: mailto:security@amlsyncai.eu
+Contact: mailto:security@amlsync.com
 Expires: 2027-11-13T00:00:00.000Z
 Preferred-Languages: en, lt
-Policy: https://amlsyncai.eu/security
-Canonical: https://amlsyncai.eu/.well-known/security.txt
+Policy: https://amlsync.com/security
+Canonical: https://amlsync.com/.well-known/security.txt
