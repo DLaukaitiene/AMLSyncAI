@@ -8,7 +8,7 @@ reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "Firm","User","Session","EmailTok
 LOG=$(mktemp)
 exec > >(tee "$LOG") 2>&1
 code() { npx tsx scripts/create-signup-code.mts 1 1 e2e; }
-for suite in auth portal cases firm governance backbook monitoring billing; do
+for suite in auth portal cases firm governance backbook monitoring billing scope; do
   reset; echo "== $suite"; CODE=$(code) node "e2e/$suite-flow.cjs" | grep -E "✘|errors" || true
 done
 reset; echo "== cdd"; CODE1=$(code) CODE2=$(code) node e2e/cdd-flow.cjs | grep -E "✘|errors" || true

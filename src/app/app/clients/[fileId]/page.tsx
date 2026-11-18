@@ -15,6 +15,7 @@ import {
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
   kybAddPersonAction,
+  setScopeAction,
   kybRefreshAction,
 } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
@@ -23,6 +24,7 @@ import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
 import { CHECK_PRICE_CENTS, formatEur, KYB_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
+import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -587,6 +589,39 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </div>
         </Card>
       )}
+
+      <Card title="Scope of due diligence" id="scope">
+        {cf.file.scope === "identification-only" ? (
+          <p className="text-sm">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Identification only</span>{" "}
+            {SCOPE_REASONS[cf.file.scopeReason ?? ""]?.label ?? "Outside AMLR scope"}{cf.file.scopeNote ? `: ${cf.file.scopeNote}` : ""}. Identification and sanctions screening still apply; a matter that is an AMLR service can&apos;t complete until you switch to full due diligence.
+          </p>
+        ) : (
+          <p className="text-sm text-muted">Full due diligence (AMLR).{decided ? "" : " If this client only receives services outside AMLR scope, a Compliance Officer can record them as identification only."}</p>
+        )}
+        {cf.file.scope === "identification-only" && can(r, "client.edit") && (
+          <ActionForm action={setScopeAction.bind(null, fileId)}>
+            <input type="hidden" name="scope" value="full" />
+            <Submit variant="secondary">Switch to full due diligence</Submit>
+          </ActionForm>
+        )}
+        {cf.file.scope !== "identification-only" && !decided && can(r, "gate.override") && (
+          <details className="rounded border border-border p-3">
+            <summary className="cursor-pointer text-sm font-medium">Record as identification only (outside AMLR scope)</summary>
+            <ActionForm action={setScopeAction.bind(null, fileId)} className="mt-3 space-y-3">
+              <input type="hidden" name="scope" value="identification-only" />
+              <Field label="Why the service is outside AMLR scope" name="scopeReason" required>
+                <select name="scopeReason" defaultValue="" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Reason">
+                  <option value="" disabled>Choose…</option>
+                  {Object.entries(SCOPE_REASONS).filter(([k]) => k !== "firm-default").map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Details" name="scopeNote" hint="Required for “Other”. Recorded in the file." />
+              <Submit variant="secondary">Record as identification only</Submit>
+            </ActionForm>
+          </details>
+        )}
+      </Card>
 
       {!decided && can(r, "client.accept") && (
         <Card title="Decision">

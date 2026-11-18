@@ -5,6 +5,7 @@
  * written reason, and the override is logged by the caller.
  */
 import type { Sector } from "./cdd-triggers";
+import { AMLR_MATTER_TYPES, keepInIdentificationOnly } from "./cdd-scope";
 
 export type PartyRole =
   | "client"
@@ -50,6 +51,10 @@ export interface CddFileState {
   sddDelayedVerification?: boolean;
   /** Parties in the structure not screened yet (no list loaded, or the daily cap was reached). */
   unscreenedParties?: number;
+  /** "identification-only": service outside AMLR scope (rules/cdd-scope). */
+  scope?: "full" | "identification-only";
+  /** Client identified: person = name + date of birth or nationality; entity = name + registration number. */
+  clientIdentified?: boolean;
   /** Other people/entities in the structure whose required check (by role) is not done yet. */
   missingChecks?: { name: string; label: string }[];
   /** EU sectoral sanctions that prohibit the service or sale (e.g. Reg. 833/2014 Art. 5n). */
@@ -83,6 +88,11 @@ export function openCddItems(f: CddFileState): GateItem[] {
   if (f.eddRequired && !f.seniorApprovalRecorded) items.push({ id: "senior-approval", message: "Senior management approval is required.", article: "Art. 34(4)" });
   if (f.isPep && !f.pepApprovalRecorded) items.push({ id: "pep-approval", message: "Senior management approval is required to establish or continue a PEP relationship.", article: "Art. 42(1)" });
   if (f.openDiscrepancy) items.push({ id: "discrepancy", message: "Resolve the register discrepancy or file the report.", article: "Art. 24" });
+  if (f.scope === "identification-only") {
+    const kept = items.filter((i) => keepInIdentificationOnly(i.id));
+    if (f.clientIdentified === false) kept.push({ id: "identification", message: "Identify the client: name and date of birth or nationality (person), or name and registration number (company).", article: "Art. 22(1)" });
+    return kept;
+  }
   return items;
 }
 
@@ -135,6 +145,9 @@ export function openMatterItems(m: MatterState): GateItem[] {
     }
   }
   for (const f of m.files) {
+    if (f.scope === "identification-only" && AMLR_MATTER_TYPES.includes(m.type)) {
+      items.push({ id: `${f.partyId}:out-of-scope-matter`, message: `${f.role}: the client is recorded as outside AMLR scope, but this matter is an AMLR service. Switch the client to full due diligence.`, article: "Art. 3, 19" });
+    }
     for (const i of openCddItems(f)) items.push({ ...i, id: `${f.partyId}:${i.id}`, message: `${f.role}: ${i.message}` });
   }
   if (m.transactionHold) items.push({ id: "hold", message: "Transaction on hold pending FIU (3 working days).", article: "Art. 71", absolute: true });

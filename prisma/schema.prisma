@@ -195,6 +195,7 @@ model Firm {
   usesCash      Boolean  @default(false)
   crossBorderPct Int?
   sectorOther   String?  // description when the sector is OTHER
+  defaultCddScope String @default("full") // scope for new client files: full | identification-only
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
@@ -473,6 +474,11 @@ model CddFile {
   decisionReason String?
   source        String    @default("new") // new | back-book
   remediation   Json? // back-book: { gaps, priority, importedAt, lastCddDate }
+  scope         String    @default("full") // full | identification-only (service outside AMLR scope)
+  scopeReason   String?   // reason code (rules/cdd-scope)
+  scopeNote     String?
+  scopeSetById  String?   @db.Uuid
+  scopeSetAt    DateTime?
   createdAt     DateTime  @default(now())
 
   riskAssessments ClientRiskAssessment[]

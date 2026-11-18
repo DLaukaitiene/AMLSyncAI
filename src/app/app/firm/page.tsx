@@ -5,6 +5,7 @@ import { can } from "@/lib/auth/permissions";
 import { SECTORS } from "@/lib/server/auth/flows";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { saveFirmProfileAction } from "./actions";
+import { setDefaultScopeAction } from "../clients/actions";
 
 const CLIENT_TYPES = ["Individuals", "Companies", "Trusts and arrangements", "Non-profit organisations", "Non-EU clients"];
 
@@ -31,6 +32,21 @@ export default async function FirmPage() {
         <li className="flex justify-between px-4 py-2"><a className="text-accent underline" href="/api/supervisor-file/firm">Download the firm supervisor file</a><span className="text-muted">PDF + ZIP</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/policies">Policies and procedures</Link><span className="text-muted">{policy ? `policy v${policy.version}` : "no policy in force"}{procedure ? ` · procedures v${procedure.version}` : ""}</span></li>
       </ul>
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">Due diligence for new clients</h2>
+        <p className="text-sm text-muted">If most of your clients only receive services outside AMLR scope, new client files can start as identification only (identification and sanctions screening). Switch a client to full due diligence as soon as an AMLR service starts.</p>
+        <ActionForm action={setDefaultScopeAction}>
+          <fieldset disabled={!can(s.user.roles, "gate.override")} className="space-y-3">
+            <Field label="New client files start with" name="defaultCddScope">
+              <select name="defaultCddScope" defaultValue={firm.defaultCddScope} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Default scope">
+                <option value="full">Full due diligence (AMLR)</option>
+                <option value="identification-only">Identification only (services outside AMLR scope)</option>
+              </select>
+            </Field>
+            <Submit variant="secondary">Save default</Submit>
+          </fieldset>
+        </ActionForm>
+      </section>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Firm profile</h2>
         <ActionForm action={saveFirmProfileAction}>

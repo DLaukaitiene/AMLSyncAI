@@ -32,3 +32,16 @@ describe("who needs which check", () => {
     expect(checkSatisfied("screen-only", ev)).toBe(true);
   });
 });
+
+describe("identification-only scope", () => {
+  it("keeps identification, sanctions and screening; drops verification, BO, purpose and EDD", async () => {
+    const { openCddItems, openMatterItems } = await import("./gates");
+    const base = { partyId: "c", role: "client" as const, identityVerified: false, boResolved: false, purposeRecorded: false, riskAssessed: true, eddRequired: true, openScreeningMatches: 1, trueSanctionsMatch: false, missingChecks: [{ name: "X", label: "Identity check" }] };
+    const full = openCddItems(base).map((i) => i.id);
+    expect(full).toEqual(expect.arrayContaining(["identity", "beneficial-owners", "purpose", "edd", "screening", "people-checks"]));
+    const idOnly = openCddItems({ ...base, scope: "identification-only", clientIdentified: false }).map((i) => i.id);
+    expect(idOnly.sort()).toEqual(["identification", "screening"]);
+    const m = openMatterItems({ sector: "estate-agent", type: "property-sale", files: [{ ...base, scope: "identification-only", clientIdentified: true, openScreeningMatches: 0, role: "buyer" }], transactionHold: false });
+    expect(m.some((i) => i.id.endsWith("out-of-scope-matter"))).toBe(true);
+  });
+});

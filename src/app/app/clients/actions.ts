@@ -18,6 +18,7 @@ import type { Prisma } from "@prisma/client";
 import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/portal";
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
+import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 import { addPersonFromRegister, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
@@ -73,7 +74,10 @@ export async function createClientAction(_: ActionState, fd: FormData): Promise<
         taxIdEnc: taxId ? encryptField(s.firm.id, taxId) : null,
       },
     });
-    const file = await tx.cddFile.create({ data: { firmId: s.firm.id, partyId: party.id, role: "CLIENT", purpose: purpose || null } });
+    const firmDefault = (await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { defaultCddScope: true } })).defaultCddScope;
+    const file = await tx.cddFile.create({
+      data: { firmId: s.firm.id, partyId: party.id, role: "CLIENT", purpose: purpose || null, ...(firmDefault === "identification-only" ? { scope: "identification-only", scopeReason: "firm-default", scopeSetById: s.user.id, scopeSetAt: new Date() } : {}) },
+    });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Party", objectId: party.id, fields: Object.keys(parsed.data) });
     await runScreening(tx, s.firm.id, [party.id]);
     await refresh(tx, s.firm.id, file.id);
@@ -500,4 +504,46 @@ export async function kybAddPersonAction(fileId: string, extractId: string, inde
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+// ---------------------------------------------------------------------------
+// CDD scope: full / identification only (service outside AMLR scope)
+// ---------------------------------------------------------------------------
+
+export async function setScopeAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const scope = String(fd.get("scope") ?? "full") === "identification-only" ? "identification-only" : "full";
+  // Narrowing due diligence is a Compliance Officer decision; widening it back is open to staff.
+  const s = await requireUser(scope === "full" ? "client.edit" : "gate.override");
+  const reason = String(fd.get("scopeReason") ?? "");
+  const note = String(fd.get("scopeNote") ?? "").trim().slice(0, 1000);
+  if (scope === "identification-only") {
+    if (!SCOPE_REASONS[reason] || reason === "firm-default") return { error: "Choose why the service is outside AMLR scope.", fieldErrors: { scopeReason: ["Required."] } };
+    if (reason === "other" && note.length < 10) return { error: "Describe why the service is outside AMLR scope.", fieldErrors: { scopeNote: ["Describe it."] } };
+  }
+  let reopened = false;
+  await withTenant(s.firm.id, async (tx) => {
+    const cur = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
+    // An accepted identification-only client moving to full due diligence: the file reopens until full CDD is done.
+    reopened = scope === "full" && cur.scope === "identification-only" && ["COMPLETE", "SDD", "EDD"].includes(cur.status);
+    await tx.cddFile.update({
+      where: { id: fileId },
+      data: scope === "full"
+        ? { scope: "full", scopeReason: null, scopeNote: null, scopeSetById: s.user.id, scopeSetAt: new Date(), ...(reopened ? { status: "OPEN", decidedAt: null } : {}) }
+        : { scope, scopeReason: reason, scopeNote: note || null, scopeSetById: s.user.id, scopeSetAt: new Date() },
+    });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "CddFile", objectId: fileId, fields: reopened ? ["scope", "status"] : ["scope"] });
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: scope === "full" ? (reopened ? "Full due diligence applies: the file is open again until it is complete." : "Full due diligence applies to this client.") : "Recorded as identification only. Identification and sanctions screening still apply." };
+}
+
+export async function setDefaultScopeAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("gate.override");
+  const scope = String(fd.get("defaultCddScope") ?? "full") === "identification-only" ? "identification-only" : "full";
+  await withTenant(s.firm.id, async (tx) => {
+    await tx.firm.update({ where: { id: s.firm.id }, data: { defaultCddScope: scope } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["defaultCddScope"] });
+  });
+  revalidatePath("/app/firm");
+  return { message: scope === "full" ? "New clients get full due diligence." : "New clients start as identification only (outside AMLR scope). Switch a client to full due diligence when an AMLR service starts." };
 }
