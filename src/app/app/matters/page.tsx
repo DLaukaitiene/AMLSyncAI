@@ -1,3 +1,5 @@
+import { Briefcase } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
@@ -18,7 +20,7 @@ export default async function MattersPage() {
         <h1 className="text-2xl font-semibold">Matters</h1>
         {can(s.user.roles, "client.edit") && <Link href="/app/matters/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">New matter</Link>}
       </div>
-      {matters.length === 0 ? <p className="text-sm text-muted">No matters yet. A matter is an engagement, deal, sale, letting or transaction.</p> : (
+      {matters.length === 0 ? <EmptyState icon={Briefcase} title="No matters yet" text="A matter is an engagement, a property sale, a letting, a sale of goods or a transaction. Each party in it gets its own due diligence, and payments are checked against cash limits." action={{ href: "/app/matters/new", label: "Open a matter" }} /> : (
         <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {matters.map((m) => (
             <li key={m.id} className="flex flex-wrap justify-between gap-2 px-4 py-2">

@@ -1,3 +1,5 @@
+import { FileText } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
@@ -20,7 +22,7 @@ export default async function ReportsPage() {
         Suspicious transaction reports, threshold and cash reports, register discrepancy reports and sanctions notices. Export the file and upload
         it through the channel in your Country Profile, then record the receipt.
       </p>
-      {reports.length === 0 && <p className="text-sm">No reports.</p>}
+      {reports.length === 0 && <EmptyState icon={FileText} title="No reports" text="Suspicious transaction reports and threshold reports to your FIU appear here once a case or a payment needs one." />}
       {reports.map((r) => (
         <div key={r.id} className="space-y-1">
           {(r.caseId || r.matterId) && (
