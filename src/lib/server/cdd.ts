@@ -129,6 +129,7 @@ export async function runScreening(tx: Tx, firmId: string, partyIds: string[], p
       entity: p.kind !== "NATURAL",
       birthDate: (d.birthDate as string | undefined) ?? undefined,
       countries: partyCountries(p.kind, d),
+      otherNames: Array.isArray(d.otherNames) ? (d.otherNames as string[]) : [],
     };
     for (const list of lists) {
       const matches = screenSubject(

@@ -13,6 +13,8 @@ const country = z.string().transform((v, ctx) => {
   }
   return c;
 });
+/** Up to 5 other names, comma- or line-separated. */
+const otherNames = z.union([z.string(), z.array(z.string())]).transform((v) => (Array.isArray(v) ? v : v.split(/[,;\n]+/)).map((x) => x.trim()).filter(Boolean).slice(0, 5));
 const countries = z.union([z.string(), z.array(z.string())]).transform((v) => normalizeCountries(v));
 const optDate = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD").optional().or(z.literal("").transform(() => undefined));
 const optText = z.string().trim().max(500).optional().or(z.literal("").transform(() => undefined));
@@ -22,6 +24,7 @@ export const naturalPersonSchema = z.object({
   lastName: z.string().trim().min(1, "Enter the surname").max(200),
   birthDate: optDate,
   placeOfBirth: optText,
+  otherNames: otherNames.default([]),
   nationalities: countries.default([]), // all nationalities (verify one)
   residenceCountry: z.literal("").transform(() => undefined).or(country.optional()),
   address: optText,
@@ -37,6 +40,7 @@ export const naturalPersonSchema = z.object({
 export const legalEntitySchema = z.object({
   name: z.string().trim().min(1, "Enter the legal name").max(300),
   legalForm: optText,
+  otherNames: otherNames.default([]),
   registrationNumber: optText,
   lei: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{20}$/, "An LEI has 20 characters").optional().or(z.literal("").transform(() => undefined)),
   registeredOffice: optText,

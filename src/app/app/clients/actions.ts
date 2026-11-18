@@ -32,7 +32,7 @@ function readParty(fd: FormData, prefix = "") {
     return {
       kind,
       parsed: naturalPersonSchema.safeParse({
-        firstNames: get("firstNames"), lastName: get("lastName"), birthDate: get("birthDate"), placeOfBirth: get("placeOfBirth"),
+        firstNames: get("firstNames"), lastName: get("lastName"), birthDate: get("birthDate"), placeOfBirth: get("placeOfBirth"), otherNames: get("otherNames"),
         nationalities: get("nationalities"), residenceCountry: get("residenceCountry"), address: get("address"),
         occupation: get("occupation"), email: get("email"), phone: get("phone"), isPep: o[prefix + "isPep"] === "on",
         pepFunction: get("pepFunction"), pepLeftOfficeOn: get("pepLeftOfficeOn"), isPepFamilyOrAssociate: o[prefix + "isPepFamilyOrAssociate"] === "on",
@@ -42,7 +42,7 @@ function readParty(fd: FormData, prefix = "") {
   return {
     kind,
     parsed: legalEntitySchema.safeParse({
-      name: get("name"), legalForm: get("legalForm"), registrationNumber: get("registrationNumber"), lei: get("lei"),
+      name: get("name"), legalForm: get("legalForm"), otherNames: get("otherNames"), registrationNumber: get("registrationNumber"), lei: get("lei"),
       registeredOffice: get("registeredOffice"), principalPlaceOfBusiness: get("principalPlaceOfBusiness"), countryOfCreation: get("countryOfCreation"),
       natureOfBusiness: get("natureOfBusiness"), bearerShares: o[prefix + "bearerShares"] === "on", nomineeArrangements: o[prefix + "nomineeArrangements"] === "on",
     }),

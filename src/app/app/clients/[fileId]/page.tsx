@@ -26,7 +26,7 @@ import { KybSearch } from "./kyb-panel";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
-  firstNames: "First names", lastName: "Surname", birthDate: "Date of birth", placeOfBirth: "Place of birth", nationalities: "Nationalities",
+  firstNames: "First names", lastName: "Surname", birthDate: "Date of birth", placeOfBirth: "Place of birth", otherNames: "Other names", nationalities: "Nationalities",
   residenceCountry: "Residence", address: "Address", occupation: "Occupation", email: "Email", phone: "Phone", pepFunction: "Public function",
   pepLeftOfficeOn: "Left office", name: "Legal name", legalForm: "Legal form", registrationNumber: "Registration no.", lei: "LEI",
   registeredOffice: "Registered office", principalPlaceOfBusiness: "Principal place of business", countryOfCreation: "Country of creation",

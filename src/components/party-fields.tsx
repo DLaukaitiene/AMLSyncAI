@@ -25,6 +25,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false }:
           <Field label="First names (all)" name={n("firstNames")} required />
           <Field label="Surname" name={n("lastName")} required />
           <Field label="Date of birth" name={n("birthDate")} type="date" />
+          <Field label="Other names" name={n("otherNames")} hint="Maiden or previous names, other spellings — up to 5, separated by commas. All are screened." />
           {!compact && <Field label="Place of birth" name={n("placeOfBirth")} />}
           <CountryField label="Nationalities" name={n("nationalities")} multiple hint="Add all of them. Not listed? Type the name and press Add country." />
           <CountryField label="Country of residence" name={n("residenceCountry")} />
@@ -53,6 +54,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false }:
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Legal name" name={n("name")} required />
           <Field label="Legal form" name={n("legalForm")} />
+          <Field label="Other names" name={n("otherNames")} hint="Trading or previous names — up to 5, separated by commas. All are screened." />
           <Field label="Registration number" name={n("registrationNumber")} />
           <CountryField label="Country of creation" name={n("countryOfCreation")} />
           {!compact && (
