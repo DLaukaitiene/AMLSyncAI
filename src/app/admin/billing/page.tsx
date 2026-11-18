@@ -8,6 +8,7 @@ import { StepUpLink } from "@/components/step-up";
 import { securityEvent } from "@/lib/server/audit";
 import { issueMonthlyInvoices } from "@/lib/server/invoicing";
 import { formatEur } from "@/lib/didit/map";
+import { PLANS, planOf } from "@/lib/billing/plans";
 
 async function guard(): Promise<{ email: string } | ActionState> {
   const s = await requireUser();
@@ -23,13 +24,26 @@ async function setTerms(_: ActionState, fd: FormData): Promise<ActionState> {
   const g = await guard(); if (isErr(g)) return g;
   const firm = await firmByDomain(fd);
   if (!firm) return { error: "No firm uses that domain." };
-  const fee = Number(fd.get("fee")), limit = Number(fd.get("limit")), plan = String(fd.get("plan") ?? firm.plan);
-  if (!(fee >= 0 && fee <= 10_000) || !(limit >= 0 && limit <= 100_000)) return { error: "Fee €0–10,000, limit €0–100,000." };
-  if (!["starter", "professional", "business"].includes(plan)) return { error: "Plan must be starter, professional or business." };
-  await adminDb.firm.update({ where: { id: firm.id }, data: { monthlyFeeCents: Math.round(fee * 100), spendLimitCents: Math.round(limit * 100), plan } });
-  await securityEvent({ firmId: firm.id, kind: "billing-terms", details: { by: g.email, fee, limit, plan } });
+  const num = (k: string) => (String(fd.get(k) ?? "").trim() === "" ? null : Number(fd.get(k)));
+  const plan = String(fd.get("plan") ?? firm.plan).trim().toLowerCase();
+  const fee = num("fee"), limit = num("limit"), perMinute = num("perMinute"), perDay = num("perDay"), perMonth = num("perMonth");
+  if (!(plan in PLANS)) return { error: `Plan must be one of: ${Object.keys(PLANS).join(", ")}.` };
+  if (fee !== null && !(fee >= 0 && fee <= 10_000)) return { error: "Custom fee: €0–10,000, or empty for the list price." };
+  if (limit !== null && !(limit >= 0 && limit <= 100_000)) return { error: "Paid-check limit: €0–100,000." };
+  for (const [v, max] of [[perMinute, 1000], [perDay, 100_000], [perMonth, 1_000_000]] as const) if (v !== null && !(Number.isInteger(v) && v >= 0 && v <= max)) return { error: "Screening limits must be whole numbers." };
+  await adminDb.firm.update({
+    where: { id: firm.id },
+    data: {
+      plan, customFeeCents: fee === null ? null : Math.round(fee * 100),
+      ...(limit !== null ? { spendLimitCents: Math.round(limit * 100) } : {}),
+      ...(perMinute !== null ? { screenLimitMinute: perMinute } : {}),
+      ...(perDay !== null ? { screenLimitDay: perDay } : {}),
+      ...(perMonth !== null ? { screenLimitMonth: perMonth } : {}),
+    },
+  });
+  await securityEvent({ firmId: firm.id, kind: "billing-terms", details: { by: g.email, plan, fee, limit, perMinute, perDay, perMonth } });
   revalidatePath("/admin/billing");
-  return { message: `${firm.name}: ${plan}, fee €${fee.toFixed(2)}/month, limit €${limit.toFixed(2)}/month.` };
+  return { message: `${firm.name} updated.` };
 }
 
 async function addCredit(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -74,7 +88,7 @@ export default async function BillingAdmin() {
   const s = await requireUser();
   if (!isPlatformAdmin(s.user.email)) redirect("/app");
   const [firms, invoices] = await Promise.all([
-    adminDb.firm.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, emailDomain: true, plan: true, monthlyFeeCents: true, spendLimitCents: true } }),
+    adminDb.firm.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, emailDomain: true, plan: true, customFeeCents: true, spendLimitCents: true, trialEndsOn: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } }),
     adminDb.invoice.findMany({ orderBy: { seq: "desc" }, take: 200 }),
   ]);
   const firmName = new Map(firms.map((f) => [f.id, f.name]));
@@ -109,12 +123,16 @@ export default async function BillingAdmin() {
       </section>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Firm terms</h2>
-        <ul className="text-sm">{firms.map((f) => <li key={f.id}>{f.name} ({f.emailDomain}) · {f.plan} · fee {formatEur(f.monthlyFeeCents)}/month · limit {formatEur(f.spendLimitCents)}/month</li>)}</ul>
+        <ul className="text-sm">{firms.map((f) => <li key={f.id}>{f.name} ({f.emailDomain}) · {planOf(f.plan).name}{f.trialEndsOn ? ` (trial until ${f.trialEndsOn})` : ""} · fee {f.customFeeCents !== null ? `${formatEur(f.customFeeCents)} (custom)` : planOf(f.plan).monthlyCents !== null ? formatEur(planOf(f.plan).monthlyCents!) : "not set"}/month · paid checks up to {formatEur(f.spendLimitCents)}/month · screenings {f.screenLimitMinute}/min, {f.screenLimitDay}/day, {f.screenLimitMonth}/month</li>)}</ul>
+        <p className="text-sm text-muted">Leave a field empty to keep it. Raise screening limits within 1 business day of a request.</p>
         <ActionForm action={setTerms} className="grid gap-3 sm:grid-cols-4">
           <Field label="Firm email domain" name="domain" required />
-          <Field label="Plan" name="plan" defaultValue="starter" required />
-          <Field label="Monthly fee (EUR, excl. VAT)" name="fee" type="number" defaultValue={0} required />
-          <Field label="Paid-check limit per month (EUR)" name="limit" type="number" defaultValue={300} required />
+          <Field label="Plan (solo, starter, custom)" name="plan" defaultValue="starter" required />
+          <Field label="Custom monthly fee (EUR, excl. VAT)" name="fee" type="number" hint="Empty = list price" />
+          <Field label="Paid-check limit per month (EUR)" name="limit" type="number" />
+          <Field label="Screenings per minute" name="perMinute" type="number" />
+          <Field label="Screenings per day" name="perDay" type="number" />
+          <Field label="Screenings per month" name="perMonth" type="number" />
           <div className="sm:col-span-4"><Submit variant="secondary">Save terms</Submit><StepUpLink /></div>
         </ActionForm>
       </section>

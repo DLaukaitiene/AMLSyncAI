@@ -40,3 +40,19 @@ describe("numbering and periods", () => {
   it("formats a continuous series", () => expect(invoiceNumber(2026, 42)).toBe("AMS-2026-00042"));
   it("previous month across a year boundary", () => expect(previousMonth(new Date("2027-01-01T03:00:00Z"))).toEqual({ from: "2026-12-01", toExclusive: "2027-01-01", label: "December 2026" }));
 });
+
+import { monthlyFeeFor, planOf } from "./plans";
+describe("plans and trial", () => {
+  it("Solo €49 and Starter €149; unknown plans fall back to Starter", () => {
+    expect(planOf("solo").monthlyCents).toBe(4900);
+    expect(planOf("starter").monthlyCents).toBe(14900);
+    expect(planOf("custom").monthlyCents).toBeNull();
+  });
+  it("no fee during the 14-day trial, a share by days in the month it ends", () => {
+    expect(monthlyFeeFor("solo", null, "2026-12-01", "2026-11-01", "2026-12-01")).toBe(0);
+    expect(monthlyFeeFor("solo", null, "2026-11-16", "2026-11-01", "2026-12-01")).toBe(Math.round((4900 * 15) / 30));
+    expect(monthlyFeeFor("solo", null, "2026-10-01", "2026-11-01", "2026-12-01")).toBe(4900);
+    expect(monthlyFeeFor("custom", 39900, null, "2026-11-01", "2026-12-01")).toBe(39900);
+    expect(monthlyFeeFor("custom", null, null, "2026-11-01", "2026-12-01")).toBe(0);
+  });
+});

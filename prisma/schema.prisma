@@ -192,7 +192,12 @@ model Firm {
   clientTypes   String[]
   usesCash      Boolean  @default(false)
   crossBorderPct Int?
-  plan          String   @default("starter") // starter | professional | business (§6) — sets daily screening caps
+  plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
+  trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
+  // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
+  screenLimitMinute Int  @default(5)
+  screenLimitDay    Int  @default(30)
+  screenLimitMonth  Int  @default(100)
   autoClearBelow Int?    // screening: non-sanctions hits under this match score are auto-cleared (logged); null = off
   // Billing (postpaid, monthly invoice by bank transfer)
   billingName     String?
@@ -201,7 +206,7 @@ model Firm {
   billingCompanyCode String?
   vatId           String?
   billingEmail    String?
-  monthlyFeeCents Int      @default(0) // set by AMLSyncAI per firm until plan prices are final
+  customFeeCents  Int?     // overrides the plan's list price (custom plans, discounts)
   spendLimitCents Int      @default(30000) // paid checks per calendar month (net); raised on request
   createdAt     DateTime @default(now())
 
@@ -1068,6 +1073,17 @@ model CreditEntry {
 
   @@index([firmId, createdAt])
   @@index([firmId, invoiceId])
+}
+
+/// One row per screening a person started (not automatic re-screening): basis for the screening limits.
+model ScreeningEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  firmId    String   @db.Uuid
+  partyId   String   @db.Uuid
+  source    String // lists | didit
+  createdAt DateTime @default(now())
+
+  @@index([firmId, createdAt])
 }
 
 /// Monthly VAT invoice (Lithuanian PVM sąskaita faktūra): continuous numbering, snapshots of seller and buyer.

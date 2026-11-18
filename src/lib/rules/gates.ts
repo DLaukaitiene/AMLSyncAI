@@ -71,7 +71,7 @@ export function openCddItems(f: CddFileState): GateItem[] {
   if (f.boResolved === false) items.push({ id: "beneficial-owners", message: "Identify the beneficial owners or record the senior managing officials.", article: "Art. 20(1)(b), 22(2)" });
   if (!f.purposeRecorded) items.push({ id: "purpose", message: "Record the purpose and intended nature of the relationship.", article: "Art. 25" });
   if (!f.riskAssessed) items.push({ id: "risk", message: "Complete the client risk assessment.", article: "Art. 20(2)" });
-  if (f.unscreenedParties) items.push({ id: "unscreened", message: `${f.unscreenedParties} person(s) or companies in the structure haven't been screened yet. Use "Screen again now" (if no lists are loaded or today's limit was reached, try later or contact AMLSyncAI).`, article: "Art. 20(1)(d)" });
+  if (f.unscreenedParties) items.push({ id: "unscreened", message: `${f.unscreenedParties} person(s) or companies in the structure haven't been screened yet. Use "Screen again now". If your screening limit was reached, contact us at contact@amlsync.com and we will adjust it within 1 business day.`, article: "Art. 20(1)(d)" });
   if (f.openScreeningMatches > 0) items.push({ id: "screening", message: `Resolve ${f.openScreeningMatches} possible screening match(es) as true match or false positive.`, article: "Art. 20(1)(d)" });
   if (f.eddRequired && !f.eddChecklistComplete) items.push({ id: "edd", message: "Complete the EDD checklist.", article: "Art. 34(4)" });
   if (f.eddRequired && !f.seniorApprovalRecorded) items.push({ id: "senior-approval", message: "Senior management approval is required.", article: "Art. 34(4)" });

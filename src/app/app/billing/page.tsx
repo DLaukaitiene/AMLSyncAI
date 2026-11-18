@@ -3,6 +3,7 @@ import { withTenant } from "@/lib/server/db";
 import { CHECK_PRICE_CENTS, formatEur } from "@/lib/didit/map";
 import { buildInvoice, vatTreatment } from "@/lib/billing/invoice";
 import { customerOf } from "@/lib/server/invoicing";
+import { CONTACT_EMAIL, monthlyFeeFor, planOf } from "@/lib/billing/plans";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { saveBillingDetails } from "./actions";
 
@@ -15,12 +16,23 @@ export default async function BillingPage() {
     firm: await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } }),
   }));
   const customer = customerOf(firm);
-  const draft = buildInvoice(firm.monthlyFeeCents, firm.plan, open, customer);
+  const now = new Date();
+  const monthFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 10);
+  const monthTo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
+  const plan = planOf(firm.plan);
+  const draft = buildInvoice(monthlyFeeFor(firm.plan, firm.customFeeCents, firm.trialEndsOn, monthFrom, monthTo), plan.name, open, customer);
   const vat = vatTreatment(customer);
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="max-w-4xl space-y-6">
       <h1 className="text-2xl font-semibold">Billing</h1>
+      <div className="rounded-md border border-border p-4 text-sm">
+        <span className="font-medium">{plan.name} plan</span>
+        {plan.monthlyCents !== null && <> · {formatEur(firm.customFeeCents ?? plan.monthlyCents)} per month excl. VAT</>}
+        {plan.users !== null && <> · up to {plan.users} users</>}
+        {firm.trialEndsOn && firm.trialEndsOn > now.toISOString().slice(0, 10) && <> · <strong>free trial until {firm.trialEndsOn}</strong></>}
+        <span className="block text-xs text-muted">To change plan, or for more users: {CONTACT_EMAIL}. Screening limits: {firm.screenLimitMinute} per minute, {firm.screenLimitDay} per day, {firm.screenLimitMonth} per month — contact us to raise them (within 1 business day).</span>
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-md border border-border p-4"><span className="block text-sm text-muted">Next invoice so far (excl. VAT)</span><span className="text-2xl font-semibold" data-testid="next-invoice">{formatEur(draft.netCents)}</span><span className="block text-xs text-muted">{draft.carryCents > 0 ? `${formatEur(draft.carryCents)} credit left` : "Invoiced on the 1st of each month"}</span></div>
         <div className="rounded-md border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{formatEur(CHECK_PRICE_CENTS)}</span><span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>

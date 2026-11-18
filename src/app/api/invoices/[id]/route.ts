@@ -10,7 +10,7 @@ import type { InvoiceLine } from "@/lib/billing/invoice";
 const countryName = (c?: string) => { try { return c ? new Intl.DisplayNames(["en"], { type: "region" }).of(c) ?? c : ""; } catch { return c ?? ""; } };
 const eur = (c: number) => (c < 0 ? "−" : "") + formatEur(Math.abs(c));
 
-type Party = { name: string; address?: string | null; country?: string; vatId?: string | null; companyCode?: string | null; iban?: string | null; bank?: string | null };
+type Party = { name: string; address?: string | null; country?: string; vatId?: string | null; companyCode?: string | null; iban?: string | null; bic?: string | null; bank?: string | null };
 
 /** VAT invoice PDF (PVM sąskaita faktūra) for the firm's own billing users, or AMLSyncAI admins. */
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -46,7 +46,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       },
       {
         id: "pay", heading: "Payment",
-        blocks: [{ kv: [["Pay by", inv.dueOn], ["Bank transfer to", seller.iban ? `${seller.iban}${seller.bank ? ` (${seller.bank})` : ""}` : "bank details to be confirmed"], ["Payment reference", inv.number]] }],
+        blocks: [{ kv: [["Pay by", inv.dueOn], ["Account holder", seller.name.toUpperCase()], ["IBAN", seller.iban ?? "—"], ["BIC / SWIFT", seller.bic ?? "—"], ...(seller.bank ? [["Bank", seller.bank] as [string, string]] : []), ["Payment reference", inv.number]] }],
       },
     ],
   });

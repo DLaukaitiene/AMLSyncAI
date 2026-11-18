@@ -9,7 +9,7 @@ async function lastMail(page, to) { await page.goto(BASE + "/dev/mailbox"); cons
 const log = (...a) => console.log("✔", ...a);
 
 /** Signs up a firm and returns a page signed in as its Owner/Compliance Officer. */
-async function signupFirm(browser, { code, company, email, sector, state = "LT" }) {
+async function signupFirm(browser, { code, company, email, sector, state = "LT" }, opts = {}) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const p = await ctx.newPage();
   await p.goto(BASE + "/signup");
@@ -32,6 +32,10 @@ async function signupFirm(browser, { code, company, email, sector, state = "LT" 
   await p.getByTestId("recovery-codes").waitFor();
   await p.getByRole("link", { name: /continue/ }).click();
   await p.getByRole("heading", { name: "Dashboard" }).waitFor();
+  // Test firms get high screening limits; the monitoring suite tests the real defaults.
+  if (process.env.DATABASE_URL && !opts.realLimits) {
+    require("child_process").execSync(`psql -q "${process.env.DATABASE_URL}"`, { input: `UPDATE "Firm" SET "screenLimitMinute" = 100000, "screenLimitDay" = 100000, "screenLimitMonth" = 100000 WHERE "emailDomain" = '${email.split("@")[1]}'` });
+  }
   return { p, ctx, secret };
 }
 

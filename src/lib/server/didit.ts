@@ -9,6 +9,7 @@ import { appUrl } from "./email";
 import { autoClear, CHECK_PRICE_CENTS, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
 import { toIsoDate } from "@/lib/rules/dates";
 import { assertCanSpend, SpendError } from "./invoicing";
+import { takeScreeningSlots } from "./screening-limits";
 
 /**
  * Didit integration (identity verification + AML screening, EU processing).
@@ -277,6 +278,8 @@ export async function screenWithDidit(tx: Tx, ctx: { firmId: string; userId: str
   if (!diditEnabled()) throw new DiditError("Provider screening is not set up for this installation.");
   const p = await tx.party.findUniqueOrThrow({ where: { id: partyId } });
   const d = (p.details ?? {}) as Record<string, unknown>;
+  const slot = await takeScreeningSlots(tx, ctx.firmId, [partyId], "didit");
+  if (slot.message) throw new DiditError(slot.message);
   const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Screening: PEP, sanctions, adverse media", p.displayName);
   type AmlResp = { request_id: string; aml?: Record<string, unknown> } & Record<string, unknown>;
   let r: AmlResp;

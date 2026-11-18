@@ -7,8 +7,11 @@ export const SELLER = {
   name: "Integral Services, MB",
   companyCode: "306139764",
   vatId: "LT100017008718",
-  address: "Polocko g. 2-29, Vilnius",
+  address: "Polocko g. 2-29, LT-01204 Vilnius",
   country: "LT",
+  iban: "LT29 3250 0850 3229 4553",
+  bic: "REVOLT21",
+  bank: "Revolut Bank UAB",
 } as const;
 
 /** Lithuanian standard VAT rate, in basis points. */

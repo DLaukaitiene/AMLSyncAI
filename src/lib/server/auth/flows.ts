@@ -12,6 +12,7 @@ import { generateTotpSecret, verifyTotp } from "@/lib/auth/totp";
 import { defaultCountryProfile } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
+import { CONTACT_EMAIL, planOf, TRIAL_DAYS } from "@/lib/billing/plans";
 import type { Role, Sector } from "@prisma/client";
 
 export const EU_MEMBER_STATES = [
@@ -52,6 +53,7 @@ export const signupSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
   memberState: z.enum(EU_MEMBER_STATES, { errorMap: () => ({ message: "Choose the member state" }) }),
   sector: z.enum(SECTOR_VALUES, { errorMap: () => ({ message: "Choose your sector" }) }),
+  plan: z.enum(["solo", "starter"], { errorMap: () => ({ message: "Choose a plan" }) }).default("starter"),
   password: z.string(),
   signupCode: z.string().trim().optional(),
 });
@@ -90,6 +92,7 @@ export async function startSignup(input: z.infer<typeof signupSchema>, ip: strin
         name: input.name,
         memberState: input.memberState,
         sector: input.sector,
+        plan: input.plan,
         passwordHash: await hashPassword(input.password),
         codeId,
         checks: domainCheck.checks,
@@ -113,7 +116,7 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
     return { ok: false, error: "This link is invalid or has expired. Sign up again to get a new one." };
   }
   const d = t.data as {
-    companyName: string; name: string; memberState: string; sector: string; passwordHash: string; codeId: string | null;
+    companyName: string; name: string; memberState: string; sector: string; plan?: string; passwordHash: string; codeId: string | null;
     checks: { freeOrDisposable: boolean; hasMx?: boolean; domainAgeDays?: number | null };
   };
   const domain = emailDomain(t.email)!;
@@ -127,7 +130,10 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
         if (c.count !== 1) throw new Error("code");
       }
       const firm = await tx.firm.create({
-        data: { name: d.companyName, emailDomain: domain, homeState: d.memberState, sectors: [d.sector as Sector] },
+        data: {
+          name: d.companyName, emailDomain: domain, homeState: d.memberState, sectors: [d.sector as Sector],
+          plan: d.plan ?? "starter", trialEndsOn: new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString().slice(0, 10),
+        },
       });
       await tx.office.create({ data: { firmId: firm.id, name: "Head office", memberState: d.memberState, isHome: true } });
       await tx.emailDomainVerification.create({
@@ -318,6 +324,12 @@ export async function createInvitation(
   const external = input.role === "EXTERNAL_REVIEWER";
   const check = checkInviteEmail(input.email, firm.emailDomain, input.allowExternal || external);
   if (!check.allowed) return fail(check.message!, { email: [check.message!] });
+  const seats = planOf(firm.plan).users;
+  if (seats !== null && !external) {
+    const used = (await adminDb.user.count({ where: { firmId, deactivatedAt: null, external: false } }))
+      + (await adminDb.invitation.count({ where: { firmId, external: false, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() }, NOT: { email: input.email } } }));
+    if (used >= seats) return fail(`Your ${planOf(firm.plan).name} plan includes ${seats} users. For more users, contact ${CONTACT_EMAIL}. External reviewers don't count.`);
+  }
   if (await adminDb.user.findUnique({ where: { email: input.email } })) {
     return fail("This person already has an AMLSyncAI account.", { email: ["Already a user."] });
   }

@@ -19,8 +19,21 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   await submit(p, "Save invoice details", "Billing details saved");
   log("invoice details saved");
 
+  // Seats: Solo includes 2 users (the Owner + 1)
+  sql(`UPDATE "Firm" SET plan = 'solo' WHERE id = '${firmId}'`);
+  const invite = async (name, email) => {
+    await p.goto(BASE + "/app/team");
+    await p.getByLabel("Name *").fill(name); await p.getByLabel("Email *").fill(email);
+    await p.getByRole("button", { name: "Send invitation", exact: true }).click();
+  };
+  await invite("Antra", "antra@saskaita.lt");
+  await p.getByText("Invitation sent").first().waitFor();
+  await invite("Trečia", "trecia@saskaita.lt");
+  await p.getByText(/Your Solo plan includes 2 users\. For more users, contact contact@amlsync\.com/).first().waitFor();
+  log("Solo plan: second user invited, third refused with contact-sales message");
+
   // 7 checks last month, 1 refunded; €49 monthly fee; €15 welcome credit from signup.
-  sql(`UPDATE "Firm" SET "monthlyFeeCents" = 4900 WHERE id = '${firmId}';
+  sql(`UPDATE "Firm" SET plan = 'solo', "trialEndsOn" = NULL WHERE id = '${firmId}';
        UPDATE "CreditEntry" SET "createdAt" = date_trunc('month', now()) - interval '10 days' WHERE "firmId" = '${firmId}';
        INSERT INTO "CreditEntry" (id, "firmId", "amountCents", kind, description, "clientRef", "createdAt")
          SELECT gen_random_uuid(), '${firmId}', -300, 'charge', 'Identity check (document / eID, chip, liveness, face match)', 'Client ' || g, date_trunc('month', now()) - interval '5 days' FROM generate_series(1, 7) g;

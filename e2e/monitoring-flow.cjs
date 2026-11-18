@@ -88,18 +88,26 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   if (!/Review needed: value €250,000 is more than twice/.test(msg)) throw new Error("no review: " + msg);
   log("new matter far above the client's profile → review:", msg);
 
-  // Daily screening cap (starter plan: 1,000 parties a day)
+  // Screening limits (defaults: 5 per minute, 30 per day, 100 per month)
   const firmId = sql(`SELECT id FROM "Firm" WHERE name = 'Stebėsena UAB'`);
-  sql(`INSERT INTO "Party" (id, "firmId", kind, "displayName", details) SELECT gen_random_uuid(), '${firmId}', 'NATURAL', 'Filler ' || g, '{}' FROM generate_series(1, 1000) g`);
-  sql(`INSERT INTO "ScreeningResult" (id, "firmId", "partyId", "listKind", "listName", "listVersion", "matchData", decision, "screenedAt") SELECT gen_random_uuid(), '${firmId}', id, 'SANCTIONS', 'TEST', 'x', '{}', 'NO_MATCH', now() FROM "Party" WHERE "displayName" LIKE 'Filler %' AND "firmId" = '${firmId}'`);
+  sql(`UPDATE "Firm" SET "screenLimitMinute" = 5, "screenLimitDay" = 30, "screenLimitMonth" = 100 WHERE id = '${firmId}'`);
+  sql(`DELETE FROM "ScreeningEvent" WHERE "firmId" = '${firmId}'`);
+  sql(`INSERT INTO "ScreeningEvent" (id, "firmId", "partyId", source, "createdAt") SELECT gen_random_uuid(), '${firmId}', gen_random_uuid(), 'lists', now() - interval '5 minutes' FROM generate_series(1, 30)`);
   await p.goto(BASE + "/app/clients/new");
   await p.getByLabel("First names (all) *").fill("Over"); await p.getByLabel("Surname *").fill("Limit");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Over Limit" }).waitFor();
   await p.getByText(/haven't been screened yet/).first().waitFor();
-  await submit(p, "Screen again now (EU/UN lists, free)", "Today's screening limit for your plan was reached");
-  if (!sql(`SELECT count(*) FROM "SecurityEvent" WHERE "firmId" = '${firmId}' AND kind = 'screening-daily-cap'`).match(/^[1-9]/)) throw new Error("no security event");
-  log("daily screening cap: party left unscreened, acceptance blocked, security event + AMLSyncAI alert");
+  await p.getByText(/contact us at contact@amlsync.com/).first().waitFor();
+  await submit(p, "Screen again now (EU/UN lists, free)", "You've reached your screening limit (30 per day)");
+  if (!sql(`SELECT count(*) FROM "SecurityEvent" WHERE "firmId" = '${firmId}' AND kind = 'screening-limit-day'`).match(/^[1-9]/)) throw new Error("no security event");
+  const alerts = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject LIKE '%daily screening limit%'`);
+  if (alerts !== "1") throw new Error("expected one alert email to AMLSyncAI, got " + alerts);
+  log("30-per-day limit: party left unscreened, acceptance blocked, client told to contact us, one alert to AMLSyncAI");
+  sql(`DELETE FROM "ScreeningEvent" WHERE "firmId" = '${firmId}'`);
+  await p.getByRole("button", { name: "Screen again now (EU/UN lists, free)", exact: true }).click();
+  await p.getByText(/Screened against/).first().waitFor();
+  log("after the limit is raised / window passes, screening runs");
 
   console.log("page errors:", errors);
   await b.close();

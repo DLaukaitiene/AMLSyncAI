@@ -4,6 +4,7 @@ import { appUrl, sendEmail } from "./email";
 import { securityEvent } from "./audit";
 import { buildInvoice, invoiceNumber, OVERDUE_PAUSE_DAYS, PAYMENT_TERMS_DAYS, previousMonth, SELLER, type Customer } from "@/lib/billing/invoice";
 import { formatEur } from "@/lib/didit/map";
+import { monthlyFeeFor, planOf } from "@/lib/billing/plans";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (isoDate: string, n: number) => iso(new Date(Date.parse(isoDate + "T00:00:00Z") + n * 86_400_000));
@@ -12,10 +13,6 @@ export function customerOf(f: { name: string; homeState: string; billingName: st
   return { name: f.billingName || f.name, address: f.billingAddress, country: f.billingCountry || f.homeState, vatId: f.vatId, companyCode: f.billingCompanyCode };
 }
 
-/** Bank transfer details printed on invoices (set in the server environment). */
-export function paymentDetails(): { iban: string | null; bank: string | null } {
-  return { iban: process.env.SELLER_IBAN || null, bank: process.env.SELLER_BANK || null };
-}
 
 /**
  * Paid checks are allowed unless an invoice is overdue by more than
@@ -49,7 +46,7 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
       if (await tx.invoice.findUnique({ where: { firmId_period: { firmId: f.id, period: label } } })) return false;
       const entries = await tx.creditEntry.findMany({ where: { firmId: f.id, invoiceId: null, createdAt: { lt: new Date(period.toExclusive + "T00:00:00Z") } }, orderBy: { createdAt: "asc" } });
       const customer = customerOf(f);
-      const draft = buildInvoice(f.monthlyFeeCents, f.plan, entries, customer);
+      const draft = buildInvoice(monthlyFeeFor(f.plan, f.customFeeCents, f.trialEndsOn, period.from, period.toExclusive), planOf(f.plan).name, entries, customer);
       if (draft.netBeforeCreditCents <= 0) return false; // nothing to bill; entries roll forward
       // Continuous numbering across all firms: serialise on an advisory lock.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(424242)`;
@@ -58,7 +55,7 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
       const inv = await tx.invoice.create({
         data: {
           firmId: f.id, seq, number: invoiceNumber(today.getUTCFullYear(), seq), period: label, issuedOn, dueOn: addDays(issuedOn, PAYMENT_TERMS_DAYS),
-          seller: { ...SELLER, ...paymentDetails() }, buyer: { ...customer }, lines: draft.lines as unknown as object,
+          seller: { ...SELLER }, buyer: { ...customer }, lines: draft.lines as unknown as object,
           netCents: draft.netCents, vatRateBp: draft.rateBp, vatCents: draft.vatCents, totalCents: draft.totalCents, vatNote: draft.vatNote,
         },
       });

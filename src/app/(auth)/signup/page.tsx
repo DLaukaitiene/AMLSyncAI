@@ -1,3 +1,4 @@
+import { CONTACT_EMAIL, PLANS, SELF_SERVE_PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PowChallenge } from "@/components/pow-challenge";
@@ -9,7 +10,9 @@ export const metadata: Metadata = { title: "Sign up · AMLSyncAI" };
 
 const NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+  const wanted = (await searchParams).plan;
+  const defaultPlan = wanted === "solo" || wanted === "starter" ? wanted : "starter";
   const invite = signupMode() === "invite";
   return (
     <div className="space-y-6">
@@ -35,6 +38,13 @@ export default function SignupPage() {
             <option value="" disabled>Choose…</option>
             {SECTORS.map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Plan" name="plan" required hint={`${TRIAL_DAYS}-day free trial, then billed monthly by invoice. For more users or an API: ${CONTACT_EMAIL}.`}>
+          <select name="plan" defaultValue={defaultPlan} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Plan">
+            {SELF_SERVE_PLANS.map((id) => (
+              <option key={id} value={id}>{PLANS[id].name}: €{(PLANS[id].monthlyCents! / 100).toFixed(0)} per month, up to {PLANS[id].users} users</option>
             ))}
           </select>
         </Field>
