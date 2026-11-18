@@ -14,15 +14,25 @@ import {
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
+  kybAddPersonAction,
+  kybRetrieveAction,
+  setScopeAction,
+  declareLookThroughAction,
+  reopenLookThroughAction,
+  kybRefreshAction,
 } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
+import { CHECK_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
+import { KybSearch } from "./kyb-panel";
+import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
-  firstNames: "First names", lastName: "Surname", birthDate: "Date of birth", placeOfBirth: "Place of birth", nationalities: "Nationalities",
+  firstNames: "First names", lastName: "Surname", birthDate: "Date of birth", placeOfBirth: "Place of birth", otherNames: "Other names", nationalities: "Nationalities",
   residenceCountry: "Residence", address: "Address", occupation: "Occupation", email: "Email", phone: "Phone", pepFunction: "Public function",
   pepLeftOfficeOn: "Left office", name: "Legal name", legalForm: "Legal form", registrationNumber: "Registration no.", lei: "LEI",
   registeredOffice: "Registered office", principalPlaceOfBusiness: "Principal place of business", countryOfCreation: "Country of creation",
@@ -30,9 +40,15 @@ const LABELS: Record<string, string> = {
   taxResidence: "Tax residence", actingForWhom: "Acting for", signatoryRole: "Signatory role",
 };
 
+const ROLE_TEXT: Record<string, string> = {
+  client: "client", "beneficial-owner": "beneficial owner", "intermediate-owner": "owning company", "minority-owner": "shareholder below threshold",
+  controller: "controls by other means", "senior-managing-official": "senior managing official", "trust-settlor": "settlor", trustee: "trustee",
+  "trust-protector": "protector", "trust-beneficiary": "beneficiary", nominee: "nominee", unknown: "role not known",
+};
+
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section id={id} className="space-y-3 rounded-md border border-border p-4">
+    <section id={id} className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
       <h2 className="font-semibold">{title}</h2>
       {children}
     </section>
@@ -60,6 +76,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
   if (!data) notFound();
   const { cf, lastRisk, approvals, hasCase, links, documents, didit } = data;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
+  const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
   const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
   const activeLink = links.find((l) => l.status === "SENT" || l.status === "OPENED");
   const r = s.user.roles;
@@ -195,13 +212,63 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         ) : (
           <Card title="Register extract (Art. 22(7), 23(4))">
             {cf.extracts.length ? (
-              <ul className="text-sm">
-                {cf.extracts.map((x) => (
-                  <li key={x.id}>{x.register} · {String((x.data as { extractDate?: string }).extractDate ?? "")}{(x.data as { notes?: string }).notes ? ` · ${(x.data as { notes?: string }).notes}` : ""}</li>
-                ))}
+              <ul className="space-y-3 text-sm">
+                {cf.extracts.map((x) => {
+                  const xd = x.data as { level?: string; kybResponseId?: string | null; extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
+                  return (
+                    <li key={x.id} className="space-y-2">
+                      <p>
+                        <span className="font-medium">{x.register}</span> · {String(xd.extractDate ?? "")}
+                        {xd.registryStatus && <> · status <span className={/^(active|registered|live)$/i.test(xd.registryStatus) ? "" : "font-semibold text-red-700 dark:text-red-300"}>{xd.registryStatus}</span></>}
+                        {xd.sandbox && " · sandbox"}
+                        {xd.notes ? ` · ${xd.notes}` : ""}
+                      </p>
+                      {xd.provider === "Didit" && xd.level === "lite" && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                          <span>Company and status check — ownership not included.</span>
+                          {edit && xd.kybResponseId && <ActionButton action={kybRetrieveAction.bind(null, fileId, xd.kybResponseId, "full")}>{`Get full ownership (${formatEur(KYB_FULL_PRICE_CENTS)})`}</ActionButton>}
+                        </div>
+                      )}
+                      {xd.provider === "Didit" && xd.level !== "lite" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
+                      {xd.people?.length ? (
+                        <ul className="divide-y divide-border rounded-lg border border-border" data-testid="register-people">
+                          {xd.people.map((p, i) => {
+                            const canAdd = !p.addedPartyId && ((p.ownershipPct ?? 0) > 0 || (p.roles.includes("ubo") && p.entityType === "person"));
+                            return (
+                              <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                                <span>
+                                  {p.name}
+                                  <span className="text-muted"> · {[p.entityType === "company" ? "company" : null, ...p.roles.filter((r) => r !== "officer").map((r) => (r === "ubo" ? "beneficial owner" : r)), p.designation, p.ownershipPct !== null ? `${p.ownershipPct}% direct` : null, p.effectivePct !== null && p.effectivePct !== p.ownershipPct ? `${p.effectivePct}% effective` : null, p.active ? null : "former"].filter(Boolean).join(" · ")}</span>
+                                </span>
+                                {p.addedPartyId ? <span className="text-xs text-muted">In the structure</span> : canAdd && edit ? <ActionButton action={kybAddPersonAction.bind(null, fileId, x.id, i)}>Add to ownership</ActionButton> : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
-              <p className="text-sm text-muted">No register extract yet. Get the company and BO register extract and compare it with what the client declared.</p>
+              <p className="text-sm text-muted">No register extract yet. Check the company register below, or record an extract you obtained yourself.</p>
+            )}
+            {kybSessions.filter((k) => !k.importedAt).map((k) => (
+              <div key={k.id} className="flex items-center justify-between gap-2 text-sm">
+                <span>Register check of {k.createdAt.toISOString().slice(0, 10)} · {k.status}</span>
+                <ActionButton action={kybRefreshAction.bind(null, fileId, k.diditSessionId)}>Refresh</ActionButton>
+              </div>
+            ))}
+            {edit && diditEnabled() && (
+              <KybSearch
+                fileId={fileId}
+                name={String((cf.party.details as { name?: string }).name ?? cf.party.displayName)}
+                registrationNumber={String((cf.party.details as { registrationNumber?: string }).registrationNumber ?? "")}
+                country={String((cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState)}
+                litePrice={formatEur(KYB_LITE_PRICE_CENTS)}
+                fullPrice={formatEur(KYB_FULL_PRICE_CENTS)}
+                ownersRecorded={cf.tree.links.some((l) => l.ownedId === cf.party.id)}
+              />
             )}
             {edit && (
               <ActionForm action={recordExtractAction.bind(null, fileId)}>
@@ -222,7 +289,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                 </ActionForm>
               </details>
             )}
-            <p className="text-xs text-muted">BRIS and KYB aggregator lookups are not connected yet.</p>
+            
           </Card>
         )}
       </div>
@@ -320,10 +387,51 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
             {cf.bo.candidates.filter((c) => !c.isBeneficialOwner).length > 0 && (
               <p className="text-xs text-muted">Below threshold: {cf.bo.candidates.filter((c) => !c.isBeneficialOwner).map((c) => `${c.name} ${c.effectivePct}%`).join(", ")}</p>
             )}
-            {cf.bo.unresolvedOwners.length > 0 && (
-              <p className="text-sm text-red-700 dark:text-red-300">
-                Find the owners of: {cf.bo.unresolvedOwners.map((id) => cf.tree.parties.get(id)?.displayName).join(", ")}
-              </p>
+            {cf.branches && cf.branches.branches.length > 0 && (
+              <div className="space-y-2" data-testid="ownership-branches">
+                <p className="text-sm font-medium">
+                  Ownership still to trace{cf.branches.openCount ? ` — ${cf.branches.openCount} open branch(es), ${cf.branches.openPct}% of the client` : " — all branches closed"}
+                </p>
+                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+                  {cf.branches.branches.map((b) => {
+                    const name = cf.tree.parties.get(b.entityId)?.displayName ?? "?";
+                    return (
+                      <li key={`${b.entityId}-${b.gap}`} className="space-y-2 px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span>
+                            <span className="font-medium">{name}</span>
+                            <span className="text-muted"> · {b.gap === "no-owners" ? "no owners recorded" : `${b.unaccountedPct}% of its shares not accounted for`} · {b.effectivePct}% of the client</span>
+                          </span>
+                          {b.status === "open" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Open</span>}
+                          {b.status === "below-threshold" && <span className="text-xs text-muted">Closed: open branches together are below {cf.bo!.thresholdPct}%</span>}
+                          {b.status === "declared" && (
+                            <span className="flex items-center gap-2 text-xs text-muted">
+                              Closed: {LOOK_THROUGH_REASONS[b.reason ?? ""] ?? b.reason}
+                              {edit && <ActionButton action={reopenLookThroughAction.bind(null, fileId, b.entityId)}>Reopen</ActionButton>}
+                            </span>
+                          )}
+                        </div>
+                        {b.status === "open" && edit && (
+                          <details className="rounded border border-border p-2">
+                            <summary className="cursor-pointer text-xs font-medium">No further look-through needed</summary>
+                            <ActionForm action={declareLookThroughAction.bind(null, fileId, b.entityId)} className="mt-2 space-y-2">
+                              <Field label="Reason" name="reason" required>
+                                <select name="reason" defaultValue="" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Reason">
+                                  <option value="" disabled>Choose…</option>
+                                  {Object.entries(LOOK_THROUGH_REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                </select>
+                              </Field>
+                              <Field label="Basis / steps taken" name="note" hint="Source (register, client declaration, stock exchange) or the steps you took." />
+                              <Submit variant="secondary">Close branch</Submit>
+                            </ActionForm>
+                          </details>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {cf.branches.openCount > 0 && <p className="text-xs text-muted">Add the owners of an open branch below, or record why no further look-through is needed.</p>}
+              </div>
             )}
             {cf.sanctions.sanctionedOwnershipPct > 0 && (
               <p className="text-sm">Sanctioned ownership through the structure: {cf.sanctions.sanctionedOwnershipPct}%{cf.sanctions.affected ? " — client is sanctions-affected" : ""}</p>
@@ -377,6 +485,27 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </Card>
       )}
 
+      <Card title="Checks per person (Art. 20, 22, 58)" id="checks">
+        <p className="text-xs text-muted">What each person or company in the structure needs, from their role. Several roles: the strictest applies. Unknown role: the strictest check.</p>
+        <ul className="divide-y divide-border rounded-lg border border-border text-sm" data-testid="checks-per-person">
+          {cf.checks.map((c) => (
+            <li key={c.partyId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <span>
+                <span className="font-medium">{c.name}</span>
+                <span className="text-muted"> · {c.roles.map((r) => ROLE_TEXT[r] ?? r).join(", ")}</span>
+                <span className="block text-xs text-muted" title={`${c.required.why} (${c.required.article})`}>{c.required.label}{c.evidence.screened ? " · screened" : " · not screened yet"}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                {c.done ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900 dark:bg-green-900/40 dark:text-green-200">Done</span> : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Needed</span>}
+                {!c.done && edit && diditEnabled() && c.kind === "NATURAL" && c.partyId !== cf.party.id && (c.required.level === "full" || c.required.level === "reasonable") && (
+                  <ActionButton action={diditIdvAction.bind(null, fileId, c.partyId)}>{`Send identity check (${formatEur(CHECK_PRICE_CENTS)})`}</ActionButton>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
       <Card title="Screening (sanctions, PEP)">
         <p className="text-xs text-muted">
           Every person and company in the structure is screened. Screening can&apos;t be reduced for low-risk clients. The PEP/RCA data provider is
@@ -410,7 +539,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
               {x.decision === "NO_MATCH" ? "no match" : x.decision.toLowerCase().replace("_", " ")}
             </li>
           ))}
-          {latestChecks.size === 0 && <li className="text-muted">No screening lists are loaded. Ask AMLSyncAI to load the EU and UN lists, or upload your national list.</li>}
+          {latestChecks.size === 0 && <li className="text-muted">No screening lists are loaded. Ask AMLSync to load the EU and UN lists, or upload your national list.</li>}
         </ul>
         {decidedHits.length > 0 && (
           <details className="text-sm">
@@ -513,6 +642,39 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </div>
         </Card>
       )}
+
+      <Card title="Scope of due diligence" id="scope">
+        {cf.file.scope === "identification-only" ? (
+          <p className="text-sm">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Identification only</span>{" "}
+            {SCOPE_REASONS[cf.file.scopeReason ?? ""]?.label ?? "Outside AMLR scope"}{cf.file.scopeNote ? `: ${cf.file.scopeNote}` : ""}. Identification and sanctions screening still apply; a matter that is an AMLR service can&apos;t complete until you switch to full due diligence.
+          </p>
+        ) : (
+          <p className="text-sm text-muted">Full due diligence (AMLR).{decided ? "" : " If this client only receives services outside AMLR scope, a Compliance Officer can record them as identification only."}</p>
+        )}
+        {cf.file.scope === "identification-only" && can(r, "client.edit") && (
+          <ActionForm action={setScopeAction.bind(null, fileId)}>
+            <input type="hidden" name="scope" value="full" />
+            <Submit variant="secondary">Switch to full due diligence</Submit>
+          </ActionForm>
+        )}
+        {cf.file.scope !== "identification-only" && !decided && can(r, "gate.override") && (
+          <details className="rounded border border-border p-3">
+            <summary className="cursor-pointer text-sm font-medium">Record as identification only (outside AMLR scope)</summary>
+            <ActionForm action={setScopeAction.bind(null, fileId)} className="mt-3 space-y-3">
+              <input type="hidden" name="scope" value="identification-only" />
+              <Field label="Why the service is outside AMLR scope" name="scopeReason" required>
+                <select name="scopeReason" defaultValue="" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Reason">
+                  <option value="" disabled>Choose…</option>
+                  {Object.entries(SCOPE_REASONS).filter(([k]) => k !== "firm-default").map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Details" name="scopeNote" hint="Required for “Other”. Recorded in the file." />
+              <Submit variant="secondary">Record as identification only</Submit>
+            </ActionForm>
+          </details>
+        )}
+      </Card>
 
       {!decided && can(r, "client.accept") && (
         <Card title="Decision">

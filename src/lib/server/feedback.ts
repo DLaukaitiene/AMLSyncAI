@@ -10,7 +10,7 @@ import { MAX_REQUESTS_PER_DAY, similarRequests, spamReason, statusChangeProblem,
 /**
  * Feature requests (spec §4.10, §11.13). Shared across firms, so this module
  * uses the owner connection and selects fields explicitly: other firms never
- * see a firm's name, and the AMLSyncAI team never sees client data (requests
+ * see a firm's name, and the AMLSync team never sees client data (requests
  * hold no links to tenant records).
  */
 
@@ -97,7 +97,7 @@ export async function getRequest(s: CurrentSession | null, id: string, asTeam = 
     mine: !!s && userId === s.user.id,
     voted: Array.isArray(votes) && votes.length > 0,
     // Firm names are never shown; other firms appear only as "Another firm".
-    comments: comments.map((c) => ({ id: c.id, text: c.text, createdAt: c.createdAt, hidden: c.hidden, author: c.fromTeam ? "AMLSyncAI team" : s && c.firmId === s.firm.id ? "Your firm" : "Another firm" })),
+    comments: comments.map((c) => ({ id: c.id, text: c.text, createdAt: c.createdAt, hidden: c.hidden, author: c.fromTeam ? "AMLSync team" : s && c.firmId === s.firm.id ? "Your firm" : "Another firm" })),
     ownFirm: !!s && firmId === s.firm.id,
   };
 }
@@ -126,7 +126,7 @@ export async function comment(s: CurrentSession, id: string, text: string, confi
 }
 
 // ---------------------------------------------------------------------------
-// AMLSyncAI triage
+// AMLSync App triage
 // ---------------------------------------------------------------------------
 
 export async function triageList(filter: { module?: string; status?: string; regulatory?: boolean }) {

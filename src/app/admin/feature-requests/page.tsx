@@ -7,7 +7,7 @@ import { ActionButton } from "@/components/action-button";
 import { StepUpLink } from "@/components/step-up";
 import { hideAction, mergeAction, statusAction } from "@/app/app/feature-requests/actions";
 
-/** AMLSyncAI internal triage. Shows request text only — never firm names or client data. */
+/** AMLSync App internal triage. Shows request text only — never firm names or client data. */
 export default async function TriagePage({ searchParams }: { searchParams: Promise<{ module?: string; status?: string; regulatory?: string }> }) {
   await requireAdmin("features.triage");
   const sp = await searchParams;
@@ -24,7 +24,7 @@ export default async function TriagePage({ searchParams }: { searchParams: Promi
       </form>
       <ul className="space-y-3">
         {rows.map((r) => (
-          <li key={r.id} className={`space-y-2 rounded-md border border-border p-3 text-sm ${r.hidden ? "opacity-60" : ""}`} data-testid="triage-row">
+          <li key={r.id} className={`space-y-2 rounded-xl border border-border p-3 text-sm ${r.hidden ? "opacity-60" : ""}`} data-testid="triage-row">
             <div className="flex flex-wrap justify-between gap-2">
               <span>{r.regulatory && <strong className="mr-2 rounded border border-red-500 px-1 text-xs">regulatory</strong>}<Link className="text-accent underline" href={`/app/feature-requests/${r.id}`}>{r.title}</Link></span>
               <span className="text-muted">{r.module} · {r.firm.homeState} · {r.firm.sectors.join(", ")} · {r.importance} · {r._count.votes} vote(s) · {STATUS_LABELS[r.status as Status]}</span>

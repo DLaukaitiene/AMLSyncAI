@@ -22,7 +22,7 @@ export default async function SupportPage() {
         <Submit>Request access</Submit>
         <StepUpLink />
       </ActionForm>
-      <ul className="divide-y divide-border rounded-md border border-border text-sm">
+      <ul className="divide-y divide-border rounded-xl border border-border text-sm">
         {grants.map((g) => {
           const active = g.status === "approved" && g.expiresAt && g.expiresAt > now;
           return (

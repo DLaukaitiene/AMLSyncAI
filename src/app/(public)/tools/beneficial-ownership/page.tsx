@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { BoCalculator } from "./calculator";
 
-export const metadata: Metadata = { title: "Beneficial ownership calculator · AMLSyncAI" };
+export const metadata: Metadata = { title: "Beneficial ownership calculator · AMLSync App" };
 
 export default function Page() {
   return (

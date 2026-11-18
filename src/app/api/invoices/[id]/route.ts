@@ -12,7 +12,7 @@ const eur = (c: number) => (c < 0 ? "−" : "") + formatEur(Math.abs(c));
 
 type Party = { name: string; address?: string | null; country?: string; vatId?: string | null; companyCode?: string | null; iban?: string | null; bic?: string | null; bank?: string | null };
 
-/** VAT invoice PDF (PVM sąskaita faktūra) for the firm's own billing users, or AMLSyncAI admins. */
+/** VAT invoice PDF (PVM sąskaita faktūra) for the firm's own billing users, or AMLSync admins. */
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const s = await getSession();

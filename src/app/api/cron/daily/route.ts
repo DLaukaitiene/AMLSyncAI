@@ -4,6 +4,7 @@ import { safeEqual } from "@/lib/server/crypto";
 import { rescreenFirm } from "@/lib/server/screening-lists";
 import { sendPortalReminders, startDueRefreshes } from "@/lib/server/portal";
 import { issueMonthlyInvoices } from "@/lib/server/invoicing";
+import { refreshCompanyCheck } from "@/lib/server/kyb";
 
 export const maxDuration = 300;
 
@@ -40,5 +41,12 @@ export async function GET(req: Request) {
   });
   await run("portalReminders", () => sendPortalReminders());
   await run("invoices", () => issueMonthlyInvoices());
+  await run("companyChecks", async () => {
+    // Register checks whose ownership data arrived after the first request.
+    const pending = await adminDb.diditSession.findMany({ where: { kind: "kyb", importedAt: null }, select: { firmId: true, diditSessionId: true } });
+    let imported = 0;
+    for (const k of pending) if ((await refreshCompanyCheck(k.firmId, k.diditSessionId).catch(() => ({ imported: false }))).imported) imported++;
+    return { pending: pending.length, imported };
+  });
   return NextResponse.json(out);
 }

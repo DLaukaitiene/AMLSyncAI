@@ -1,0 +1,54 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+// Company register check (live Didit sandbox; not run in CI). CODE=… node e2e/kyb-flow.cjs
+const { chromium } = require("playwright");
+const { execSync } = require("child_process");
+const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
+const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q }).toString().trim();
+
+(async () => {
+  const b = await chromium.launch();
+  const errors = [];
+  const { p } = await signupFirm(b, { code: process.env.CODE, company: "Registro Testas UAB", email: "owner@kyb-test.lt", sector: "ACCOUNTANT" });
+  p.on("pageerror", (e) => errors.push(e.message));
+  await p.goto(BASE + "/app/clients/new");
+  await p.getByLabel("Company / legal entity").check();
+  await p.getByLabel("Legal name *").fill("Sandbox Holdings Ltd");
+  await p.getByLabel("Country of creation").fill("United Kingdom");
+  await p.getByRole("button", { name: "Create client" }).click();
+  await p.getByRole("heading", { name: "Sandbox Holdings Ltd" }).waitFor();
+  const kyb = p.getByTestId("kyb-search");
+  await kyb.getByRole("button", { name: "Search register" }).click();
+  await kyb.getByText(/compan(y|ies) found/).waitFor();
+  log("register search returned candidates");
+  await submit(p, "Company and status (€5.00)", "Company and status imported (€5.00)");
+  await p.getByText("Company register (GB) via Didit").first().waitFor();
+  await p.getByText("Company and status check — ownership not included.").waitFor();
+  log("level 1 — company and status (€5.00): register extract recorded, no ownership");
+  await p.getByRole("button", { name: "Get full ownership (€12.00)" }).click();
+  await p.getByTestId("register-people").waitFor();
+  log("level 2 — full ownership (€12.00) from the same search: owners listed");
+  const d = JSON.parse(sql(`SELECT details::text FROM "Party" WHERE "displayName" = 'Sandbox Holdings Ltd'`));
+  if (d.registrationNumber !== "SANDBOX-0001" || d.legalForm !== "Private Limited Company") throw new Error("✘ blanks not filled: " + JSON.stringify(d));
+  log("blank fields filled from the register (registration number, legal form, address)");
+  const row = p.getByTestId("register-people").locator("li", { hasText: "Sam Sandbox" });
+  await row.getByRole("button", { name: "Add to ownership" }).click();
+  await p.getByTestId("register-people").locator("li", { hasText: "Sam Sandbox" }).getByText("In the structure").waitFor();
+  const row2 = p.getByTestId("register-people").locator("li", { hasText: "Jordan Sandbox" });
+  await row2.getByRole("button", { name: "Add to ownership" }).click();
+  await p.getByTestId("register-people").locator("li", { hasText: "Jordan Sandbox" }).getByText("In the structure").waitFor();
+  const links = sql(`SELECT string_agg(type || ':' || coalesce(pct::float::text,'-'), ',' ORDER BY type) FROM "OwnershipLink" WHERE source = 'REGISTER'`);
+  if (links !== "SHAREHOLDING:40,CONTROL:-") throw new Error("✘ links " + links);
+  log("owners added after confirmation: Sam 40% shareholding, Jordan as beneficial owner (indirect 60%)");
+  const officer = p.getByTestId("register-people").locator("li", { hasText: "Alex Sandbox" });
+  if (await officer.getByRole("button", { name: "Add to ownership" }).count()) throw new Error("✘ director offered as owner");
+  log("director listed for information, not offered as an owner");
+  await p.goto(p.url());
+  const bo = await p.locator("main").innerText();
+  if (!/Sam Sandbox/.test(bo) || !/Jordan Sandbox/.test(bo)) throw new Error("✘ owners not on the file");
+  log("both owners now appear in the client's ownership structure");
+  const charged = sql(`SELECT string_agg((-"amountCents")::text, ',' ORDER BY "createdAt") FROM "CreditEntry" WHERE kind = 'charge' AND description LIKE 'Company register%'`);
+  if (charged !== "500,1200") throw new Error("✘ charges " + charged);
+  log("charged €5.00 for company and status, then €12.00 for full ownership");
+  console.log("page errors:", errors);
+  await b.close();
+})().catch((e) => { console.log("✘", e.message); process.exit(1); });

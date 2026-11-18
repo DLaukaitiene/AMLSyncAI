@@ -4,7 +4,7 @@ import { currentProfile } from "@/lib/server/country-profile";
 import { setupChecklist } from "@/lib/rules/country-profile";
 import { EU_CORE } from "@/lib/rules/eu-core";
 import { can } from "@/lib/auth/permissions";
-import { ActionForm, Field, Submit } from "@/components/form";
+import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { addOfficeAction, saveProfileAction } from "./actions";
 import Link from "next/link";
@@ -15,7 +15,7 @@ const STATUS_LABEL = { filled: "Filled", default: "Default", "required-missing":
 
 function Section({ title, children, note }: { title: string; children: React.ReactNode; note?: string }) {
   return (
-    <fieldset className="space-y-4 rounded-md border border-border p-4">
+    <fieldset className="space-y-4 rounded-xl border border-border p-4">
       <legend className="px-1 font-semibold">{title}</legend>
       {note && <p className="text-sm text-muted">{note}</p>}
       {children}
@@ -51,7 +51,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
         </nav>
         <p className="max-w-3xl text-sm text-muted">
-          AMLSyncAI applies the general EU rules (EU Core {EU_CORE.version}). Here your firm enters its national details. Values can only fill in
+          AMLSync App applies the general EU rules (EU Core {EU_CORE.version}). Here your firm enters its national details. Values can only fill in
           or tighten the EU rules, never relax them. Every change creates a new version, needs a Compliance Officer and is logged. Earlier
           decisions keep the version that applied at the time. Current version: <strong>{cur.version}</strong>.
         </p>
@@ -59,7 +59,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Setup checklist</h2>
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {checklist.map((c) => (
             <li key={c.parameter} className="flex justify-between gap-4 px-4 py-2">
               <span>{c.label}</span>
@@ -176,7 +176,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           <p className="text-sm text-muted">Branches or activity in another member state use that state&apos;s Country Profile for their matters (Art. 8) [verify scope with counsel].</p>
           <ActionForm action={addOfficeAction} className="grid gap-3 sm:grid-cols-3">
             <Field label="Office name" name="name" required />
-            <Field label="Member state" name="memberState" required hint="2-letter code, e.g. PL" />
+            <CountryField label="Country of the office" name="memberState" required euFirst hint="EU countries are listed first." />
             <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit><StepUpLink /></div>
           </ActionForm>
         </section>
@@ -184,7 +184,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Version history</h2>
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {versions.map((v) => (
             <li key={v.version} className="flex justify-between px-4 py-2">
               <span>Version {v.version}{v.source ? ` · ${v.source}` : ""}</span>

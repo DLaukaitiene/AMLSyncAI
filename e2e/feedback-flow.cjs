@@ -9,7 +9,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const errors = [];
   const { p: a } = await signupFirm(b, { code: process.env.CODE1, company: "Alfa Apskaita UAB", email: "anna@alfa.lt", sector: "ACCOUNTANT" });
   const { p: bb } = await signupFirm(b, { code: process.env.CODE2, company: "Beta Namai UAB", email: "bob@beta.lt", sector: "ESTATE_AGENT" });
-  const { p: t } = await signupFirm(b, { code: process.env.CODE3, company: "AMLSyncAI Team", email: "triage@amlsyncai-team.lt", sector: "OTHER" });
+  const { p: t } = await signupFirm(b, { code: process.env.CODE3, company: "AMLSync Team", email: "triage@amlsyncai-team.lt", sector: "OTHER" });
   for (const x of [a, bb, t]) x.on("pageerror", (e) => errors.push(e.message));
 
   // "Suggest a feature" on every screen, module pre-filled

@@ -6,6 +6,7 @@
  */
 import { EU_CORE_VERSION } from "./eu-core";
 import type { CountryProfile } from "./country-profile";
+import { isKnownCountry } from "@/lib/geo/countries";
 
 export const RISK_RULESET_VERSION = `${EU_CORE_VERSION}+risk.1`;
 
@@ -72,6 +73,12 @@ export function scoreClientRisk(input: RiskInput, profile?: CountryProfile, coun
   const cm = input.countries.filter((c) => input.countermeasureCountries?.has(c));
   if (cm.length) {
     f.push({ id: "countermeasure-country", label: `Link to country under EU countermeasures: ${cm.join(", ")}`, points: 5, forcesHigh: true, article: "Art. 35" });
+  }
+
+  // A country typed by hand ("Other") can't be checked against the EU lists: a person must assess it.
+  const unknown = input.countries.filter((c) => !isKnownCountry(c));
+  if (unknown.length) {
+    f.push({ id: "unrecognised-country", label: `Country not on the standard list: ${unknown.join(", ")}. Check it against the EU high-risk and countermeasure lists`, points: 3, article: "Art. 29, 35" });
   }
 
   if (input.isPep) f.push({ id: "pep", label: "Politically exposed person", points: 5, forcesHigh: true, article: "Art. 42" });

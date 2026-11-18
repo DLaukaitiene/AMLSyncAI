@@ -28,7 +28,7 @@ export async function assertCanSpend(tx: Tx, firmId: string, cents: number, toda
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
   const spent = -((await tx.creditEntry.aggregate({ where: { kind: { in: ["charge", "refund"] }, createdAt: { gte: monthStart } }, _sum: { amountCents: true } }))._sum.amountCents ?? 0);
   if (spent + cents > firm.spendLimitCents) {
-    throw new SpendError(`This month's limit for paid checks (${formatEur(firm.spendLimitCents)}) is reached. Contact AMLSyncAI to raise it.`);
+    throw new SpendError(`This month's limit for paid checks (${formatEur(firm.spendLimitCents)}) is reached. Contact AMLSync to raise it.`);
   }
 }
 
@@ -82,7 +82,7 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
     if (!done) { skipped++; continue; }
     issued++;
     const to = f.billingEmail || (await adminDb.user.findFirst({ where: { firmId: f.id, roles: { has: "OWNER" }, deactivatedAt: null }, orderBy: { createdAt: "asc" } }))?.email;
-    if (to) await sendEmail(to, `AMLSyncAI invoice ${done.number} (${period.label})`, `Your invoice ${done.number} for ${period.label} is ready: ${formatEur(done.totalCents)} incl. VAT, due on ${done.dueOn}.\n\nDownload it in AMLSyncAI under Billing: ${appUrl("/app/billing")}\n\n${SELLER.name}`);
+    if (to) await sendEmail(to, `AMLSync invoice ${done.number} (${period.label})`, `Your invoice ${done.number} for ${period.label} is ready: ${formatEur(done.totalCents)} incl. VAT, due on ${done.dueOn}.\n\nDownload it in AMLSync App under Billing: ${appUrl("/app/billing")}\n\n${SELLER.name}`);
     await securityEvent({ firmId: f.id, kind: "invoice-issued", details: { number: done.number, total: done.totalCents } });
   }
   return { issued, skipped };

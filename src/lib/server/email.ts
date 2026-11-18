@@ -19,7 +19,7 @@ export async function sendEmail(to: string, subject: string, text: string): Prom
   if (!url) throw new EmailDeliveryError("SMTP_URL is not set");
   try {
     await nodemailer.createTransport(url).sendMail({
-      from: process.env.EMAIL_FROM ?? "AMLSyncAI <no-reply@amlsync.com>",
+      from: process.env.EMAIL_FROM ?? "AMLSync App <no-reply@amlsync.com>",
       to,
       subject,
       text,

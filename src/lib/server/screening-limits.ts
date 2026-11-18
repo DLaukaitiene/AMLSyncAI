@@ -34,7 +34,7 @@ export async function takeScreeningSlots(tx: Tx, firmId: string, partyIds: strin
   return { allowed: ok, notScreened: partyIds.length - ok.length, message: limitedBy ? limitMessage(limitedBy, limits) : null };
 }
 
-/** Logs the event and emails AMLSyncAI (once per firm, limit and day). The minute limit only logs. */
+/** Logs the event and emails AMLSync App (once per firm, limit and day). The minute limit only logs. */
 async function limitReached(firmId: string, firmName: string, kind: LimitKind, limits: { perMinute: number; perDay: number; perMonth: number }, used: { lastMinute: number; today: number; thisMonth: number }) {
   await securityEvent({ firmId, kind: `screening-limit-${kind}`, details: { ...limits, ...used } });
   if (kind === "minute") return;
@@ -42,7 +42,7 @@ async function limitReached(firmId: string, firmName: string, kind: LimitKind, l
   if (!(await hit(`screening-limit-alert:${firmId}:${kind}:${day}`, { limit: 1, windowSec: 86_400 }))) return;
   await sendEmail(
     OPS_ALERT_EMAIL,
-    `AMLSyncAI: ${firmName} reached its ${kind === "day" ? "daily" : "monthly"} screening limit`,
+    `AMLSync App: ${firmName} reached its ${kind === "day" ? "daily" : "monthly"} screening limit`,
     `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/admin/billing")} (firm id ${firmId}).`,
   );
 }

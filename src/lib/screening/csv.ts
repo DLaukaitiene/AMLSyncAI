@@ -1,7 +1,7 @@
 /**
  * Screening list import.
  *
- * AMLSyncAI list format (firm uploads, spec §3A.3 rule 6), comma- or
+ * AMLSync App list format (firm uploads, spec §3A.3 rule 6), comma- or
  * semicolon-separated with a header row:
  *   type,name,aliases,birth_dates,countries,reference
  *   person,Ivan Sidorov,"Ivan Sidorow|I. Sidorov",1965-04-12,RU,EU-123

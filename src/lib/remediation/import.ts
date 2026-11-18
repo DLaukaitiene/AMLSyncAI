@@ -8,6 +8,7 @@
  * type = person | company. nationalities and documents are "|"-separated;
  * documents may contain: id, address, extract, bo, sof.
  */
+import { normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
 import { parseCsv } from "@/lib/screening/csv";
 
 export interface BackBookRow {
@@ -35,7 +36,6 @@ export interface RowError {
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const ISO2 = /^[A-Z]{2}$/;
 const KNOWN_DOCS = ["id", "address", "extract", "bo", "sof"];
 
 export function parseBackBook(text: string, maxRows = 50_000): { rows: BackBookRow[]; errors: RowError[] } {
@@ -65,12 +65,10 @@ export function parseBackBook(text: string, maxRows = 50_000): { rows: BackBookR
     for (const [label, v] of [["birth_date", birthDate], ["last_cdd_date", lastCdd]] as const) {
       if (v && !DATE.test(v)) return errors.push({ line, message: `${label} must be YYYY-MM-DD.` });
     }
-    const nationalities = col(r, "nationalities").split(/[|,\s]+/).map((x) => x.toUpperCase()).filter(Boolean);
-    const residence = col(r, "residence_country").toUpperCase();
-    const country = col(r, "country").toUpperCase();
-    for (const c of [...nationalities, residence, country].filter(Boolean)) {
-      if (!ISO2.test(c)) return errors.push({ line, message: `"${c}" is not a 2-letter country code.` });
-    }
+    const nationalities = normalizeCountries(col(r, "nationalities"));
+    // Any country: codes or names; unknown names are kept as written and flagged in the risk assessment.
+    const residence = normalizeCountry(col(r, "residence_country")) ?? "";
+    const country = normalizeCountry(col(r, "country")) ?? "";
     const email = col(r, "email");
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return errors.push({ line, message: "Invalid email." });
     rows.push({

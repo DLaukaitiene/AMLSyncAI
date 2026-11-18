@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
-import { ActionForm, Field, Submit } from "@/components/form";
+import { ActionForm, Field, SelectWithOther, Submit } from "@/components/form";
 import { createMatterAction } from "../actions";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
@@ -16,16 +16,21 @@ export default async function NewMatterPage() {
       <h1 className="text-2xl font-semibold">New matter</h1>
       <ActionForm action={createMatterAction}>
         <Field label="Title" name="title" required hint="e.g. Sale of Gedimino pr. 1-5, Vilnius" />
-        <Field label="Type" name="type" required>
-          <select name="type" className={sel} aria-label="Type" defaultValue={firm.sectors.includes("ESTATE_AGENT") ? "PROPERTY_SALE" : firm.sectors.includes("HVG_TRADER") ? "GOODS_SALE" : "ENGAGEMENT"}>
-            <option value="ENGAGEMENT">Engagement (accountants, lawyers, TCSPs)</option>
-            <option value="PROPERTY_SALE">Property sale — buyer and seller both need CDD</option>
-            <option value="LETTING">Letting (rent ≥ €10,000/month) — landlord and tenant</option>
-            <option value="GOODS_SALE">Sale of goods — customer and supplier need CDD</option>
-            <option value="COMPANY_FORMATION">Company formation / transfer of ownership</option>
-            <option value="TRANSACTION">Occasional transaction</option>
-          </select>
-        </Field>
+        <SelectWithOther
+          label="Type"
+          name="type"
+          required
+          defaultValue={firm.sectors.includes("ESTATE_AGENT") ? "PROPERTY_SALE" : firm.sectors.includes("HVG_TRADER") ? "GOODS_SALE" : "ENGAGEMENT"}
+          options={[
+            ["ENGAGEMENT", "Engagement (accountants, lawyers, TCSPs)"],
+            ["PROPERTY_SALE", "Property sale — buyer and seller both need CDD"],
+            ["LETTING", "Letting (rent ≥ €10,000/month) — landlord and tenant"],
+            ["GOODS_SALE", "Sale of goods — customer and supplier need CDD"],
+            ["COMPANY_FORMATION", "Company formation / transfer of ownership"],
+            ["TRANSACTION", "Occasional transaction"],
+          ]}
+          otherLabel="Other (describe) — the client needs CDD"
+        />
         {offices.length > 0 && (
           <Field label="Office" name="officeId">
             <select name="officeId" className={sel} aria-label="Office" defaultValue="">
@@ -45,17 +50,20 @@ export default async function NewMatterPage() {
           <Field label="Price (EUR)" name="price" type="number" />
           <Field label="Financing" name="financing" hint="e.g. mortgage, own funds" />
           <Field label="Item" name="item" hint="High-value goods" />
-          <Field label="Goods category" name="goodsCategory">
-            <select name="goodsCategory" className={sel} aria-label="Goods category" defaultValue="">
-              <option value="">—</option>
-              <option value="jewellery-watches">Jewellery and watches</option>
-              <option value="precious-metals-stones">Precious metals and stones</option>
-              <option value="motor-vehicle">Motor vehicle</option>
-              <option value="aircraft">Aircraft</option>
-              <option value="watercraft">Watercraft</option>
-              <option value="art">Art and cultural goods</option>
-            </select>
-          </Field>
+          <SelectWithOther
+            label="Goods category"
+            name="goodsCategory"
+            placeholder="—"
+            otherValue="other"
+            options={[
+              ["jewellery-watches", "Jewellery and watches"],
+              ["precious-metals-stones", "Precious metals and stones"],
+              ["motor-vehicle", "Motor vehicle"],
+              ["aircraft", "Aircraft"],
+              ["watercraft", "Watercraft"],
+              ["art", "Art and cultural goods"],
+            ]}
+          />
         </div>
         <Submit>Create matter</Submit>
       </ActionForm>

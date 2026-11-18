@@ -13,7 +13,7 @@ export default async function DevMailbox({ searchParams }: { searchParams: Promi
     <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
       <h1 className="text-2xl font-semibold">Dev mailbox</h1>
       {mails.map((m) => (
-        <article key={m.id} className="rounded-md border border-border p-4 text-sm" data-to={m.to}>
+        <article key={m.id} className="rounded-xl border border-border p-4 text-sm" data-to={m.to}>
           <p className="text-muted">To {m.to} · {m.createdAt.toISOString()}</p>
           <h2 className="font-semibold">{m.subject}</h2>
           <pre className="whitespace-pre-wrap font-sans">{m.text}</pre>

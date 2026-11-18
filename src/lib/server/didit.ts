@@ -31,7 +31,7 @@ export class DiditError extends Error {
   }
 }
 
-async function didit<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
+export async function didit<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
   const res = await fetch(`${BASE()}${path}`, {
     method,
     headers: { "x-api-key": process.env.DIDIT_API_KEY ?? "", "content-type": "application/json", accept: "application/json", ...extraHeaders },
@@ -68,18 +68,18 @@ export async function balanceCents(tx: Tx): Promise<number> {
   return (await tx.creditEntry.aggregate({ _sum: { amountCents: true } }))._sum.amountCents ?? 0;
 }
 
-async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string): Promise<string> {
+export async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string, cents = CHECK_PRICE_CENTS): Promise<string> {
   try {
-    await assertCanSpend(tx, firmId, CHECK_PRICE_CENTS);
+    await assertCanSpend(tx, firmId, cents);
   } catch (e) {
     if (e instanceof SpendError) throw new DiditError(e.message);
     throw e;
   }
-  const e = await tx.creditEntry.create({ data: { firmId, amountCents: -CHECK_PRICE_CENTS, kind: "charge", description, clientRef, createdById: userId } });
+  const e = await tx.creditEntry.create({ data: { firmId, amountCents: -cents, kind: "charge", description, clientRef, createdById: userId } });
   return e.id;
 }
 
-async function refund(tx: Tx, firmId: string, chargeId: string, why: string) {
+export async function refund(tx: Tx, firmId: string, chargeId: string, why: string) {
   if (await tx.creditEntry.count({ where: { kind: "refund", reference: chargeId } })) return; // once only
   const c = await tx.creditEntry.findUnique({ where: { id: chargeId } });
   if (!c) return;
@@ -96,17 +96,24 @@ export async function createIdvSession(
   cddFileId: string,
   via: "staff" | "portal",
   callbackPath: string,
+  personId?: string, // someone else in the client's structure (owner, trustee…); default: the client
 ): Promise<{ url: string; id: string }> {
   if (!diditEnabled()) throw new DiditError("Identity checks are not set up for this installation.");
   const file = await tx.cddFile.findUniqueOrThrow({ where: { id: cddFileId }, include: { party: true } });
-  if (file.party.kind !== "NATURAL") throw new DiditError("Identity checks are for people. For a company, check its representatives and owners.");
-  const d = file.party.details as Record<string, unknown>;
-  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Identity check (document / eID, chip, liveness, face match)", file.party.displayName);
+  let person = file.party;
+  if (personId && personId !== file.partyId) {
+    const cf = await loadClientFile(tx, ctx.firmId, cddFileId);
+    if (!cf.tree.parties.has(personId)) throw new DiditError("This person is not in the client's structure.");
+    person = await tx.party.findUniqueOrThrow({ where: { id: personId } });
+  }
+  if (person.kind !== "NATURAL") throw new DiditError("Identity checks are for people. For a company, check its representatives and owners.");
+  const d = person.details as Record<string, unknown>;
+  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Identity check (document / eID, chip, liveness, face match)", person.displayName);
   let created: { session_id: string; url: string; status: string };
   try {
     created = await didit("POST", "/v3/session/", {
       workflow_id: process.env.DIDIT_WORKFLOW_ID,
-      vendor_data: file.partyId, // our party id, never personal data
+      vendor_data: person.id, // our party id, never personal data
       callback: appUrl(callbackPath),
       callback_method: "both",
       language: "en",
@@ -123,7 +130,7 @@ export async function createIdvSession(
   }
   const row = await tx.diditSession.create({
     data: {
-      firmId: ctx.firmId, partyId: file.partyId, cddFileId, kind: "idv", diditSessionId: created.session_id, url: created.url, status: created.status,
+      firmId: ctx.firmId, partyId: person.id, cddFileId, kind: "idv", diditSessionId: created.session_id, url: created.url, status: created.status,
       sandbox: isSandboxKey(), creditEntryId: chargeId, createdVia: via, createdById: ctx.userId,
     },
   });

@@ -4,7 +4,7 @@
  */
 
 export const CONTACT_EMAIL = "contact@amlsync.com";
-/** AMLSyncAI operations: limit alerts and other notices that need a person. */
+/** AMLSync operations: limit alerts and other notices that need a person. */
 export const OPS_ALERT_EMAIL = "deimena@amlsync.com";
 
 export type PlanId = "solo" | "starter" | "custom";
@@ -33,7 +33,7 @@ export function planOf(id: string): Plan {
 /**
  * Subscription fee for one calendar month, after the free trial: full fee for
  * months that start after the trial, a share by days for the month the trial
- * ends in, nothing before. `customFeeCents` (set by AMLSyncAI) overrides the list price.
+ * ends in, nothing before. `customFeeCents` (set by AMLSync App) overrides the list price.
  */
 export function monthlyFeeFor(plan: string, customFeeCents: number | null, trialEndsOn: string | null, periodFrom: string, periodToExclusive: string): number {
   const fee = customFeeCents ?? planOf(plan).monthlyCents ?? 0;

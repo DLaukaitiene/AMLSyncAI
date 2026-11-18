@@ -98,6 +98,8 @@ export interface ScreeningSubject {
   entity: boolean;
   birthDate?: string; // YYYY-MM-DD or YYYY
   countries?: string[];
+  /** Other names to screen too: maiden/previous names, trading names (max 5). */
+  otherNames?: string[];
 }
 
 export interface ListEntry {
@@ -119,21 +121,26 @@ export interface MatchCandidate {
 export const MATCH_THRESHOLD = 0.88;
 
 export function screenSubject(subject: ScreeningSubject, entries: ListEntry[], threshold = MATCH_THRESHOLD): MatchCandidate[] {
-  const sn = normalizeName(subject.name, subject.entity);
+  // The main name plus up to 5 other names (maiden, previous, trading names).
+  const ours = [subject.name, ...(subject.otherNames ?? []).slice(0, 5)].filter((n) => n && n.trim()).map((n) => ({ raw: n, norm: normalizeName(n, subject.entity) }));
   const out: MatchCandidate[] = [];
   for (const e of entries) {
     if ((e.entityType === "entity") !== subject.entity) continue;
     let best = 0;
     let bestName = "";
-    for (const n of e.names) {
-      const s = nameSimilarity(sn, normalizeName(n, subject.entity));
-      if (s > best) {
-        best = s;
-        bestName = n;
+    let viaAlias: string | null = null;
+    for (const o of ours) {
+      for (const n of e.names) {
+        const s = nameSimilarity(o.norm, normalizeName(n, subject.entity));
+        if (s > best) {
+          best = s;
+          bestName = n;
+          viaAlias = o.raw === subject.name ? null : o.raw;
+        }
       }
     }
     if (best < threshold) continue;
-    const reasons = [`Name similarity ${(best * 100).toFixed(0)}% with "${bestName}"`];
+    const reasons = [`Name similarity ${(best * 100).toFixed(0)}% with "${bestName}"${viaAlias ? ` (via other name "${viaAlias}")` : ""}`];
     let dobMismatch = false;
     if (subject.birthDate && e.birthDates.length) {
       const year = subject.birthDate.slice(0, 4);

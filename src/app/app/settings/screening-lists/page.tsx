@@ -14,7 +14,7 @@ export default async function ScreeningListsPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <h1 className="text-2xl font-semibold">Screening lists</h1>
-      <ul className="divide-y divide-border rounded-md border border-border text-sm">
+      <ul className="divide-y divide-border rounded-xl border border-border text-sm">
         {lists.map((l) => (
           <li key={l.id} className="flex justify-between px-4 py-2">
             <span>{l.name} <span className="text-muted">· {l.kind.toLowerCase()} · {l.firmId ? "your firm" : "official"}</span></span>

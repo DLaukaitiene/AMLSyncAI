@@ -21,7 +21,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Clients</h1>
         {can(s.user.roles, "client.edit") && (
-          <Link href="/app/clients/new" className="rounded bg-accent px-4 py-2 text-sm font-medium text-white dark:text-black">New client</Link>
+          <Link href="/app/clients/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">New client</Link>
         )}
       </div>
       <form className="flex gap-2" role="search">

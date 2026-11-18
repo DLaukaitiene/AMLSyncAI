@@ -43,7 +43,7 @@ export async function commentAction(id: string, _: ActionState, fd: FormData): P
   return { message: "Comment added." };
 }
 
-// ---- AMLSyncAI team ----------------------------------------------------------
+// ---- AMLSync team ----------------------------------------------------------
 
 async function requireTeam() {
   const s = await requireUser();

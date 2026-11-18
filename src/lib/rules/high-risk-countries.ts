@@ -3,7 +3,7 @@
  * Regulation (EU) 2016/1675 as amended) and countries subject to
  * countermeasures (Art. 35 / FATF "call for action").
  *
- * Part of the EU Core: maintained by AMLSyncAI and versioned. [verify] against
+ * Part of the EU Core: maintained by AMLSync App and versioned. [verify] against
  * the latest Commission delegated act before each release — the list changes
  * several times a year and AMLA takes over the identification under AMLR.
  */

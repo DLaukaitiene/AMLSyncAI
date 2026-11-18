@@ -29,7 +29,7 @@ export function EnrollForm() {
                 <li key={c}>{c}</li>
               ))}
             </ul>
-            <Link href="/app" className="inline-block rounded bg-accent px-4 py-2 text-sm font-medium text-white dark:text-black">
+            <Link href="/app" className="inline-block rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">
               I&apos;ve saved them, continue
             </Link>
           </div>

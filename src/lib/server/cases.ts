@@ -52,7 +52,7 @@ function withLog(content: CaseContent, e: Omit<CaseLogEntry, "at">): CaseContent
 async function notifyOfficers(tx: Tx, firmId: string, subject: string) {
   // The email says only that something needs review — never the content (no tipping-off risk).
   const officers = await tx.user.findMany({ where: { roles: { has: "COMPLIANCE_OFFICER" }, deactivatedAt: null } });
-  for (const o of officers) await sendEmail(o.email, subject, `Sign in to AMLSyncAI to review it:\n${appUrl("/app/cases")}`);
+  for (const o of officers) await sendEmail(o.email, subject, `Sign in to AMLSync App to review it:\n${appUrl("/app/cases")}`);
 }
 
 async function createReport(tx: Tx, firmId: string, type: ReportType, content: Record<string, unknown>, ref: { caseId?: string; matterId?: string }) {

@@ -8,7 +8,7 @@ import { currentProfile } from "./country-profile";
 import { setupChecklist } from "@/lib/rules/country-profile";
 
 /**
- * Just-in-time support access (spec §8C.7, §11.14). AMLSyncAI staff have no
+ * Just-in-time support access (spec §8C.7, §11.14). AMLSync staff have no
  * standing access to firm data. Access is requested with a reason, approved
  * by the firm, limited in time (max 8 h) and to a read-only summary without
  * cases, reports or documents, and every view is in the firm's security log.
@@ -26,7 +26,7 @@ export async function requestSupportAccess(requesterEmail: string, emailDomain: 
   await adminAudit({ adminEmail: requesterEmail, action: "support.access-requested", targetType: "Firm", targetId: firm.id, reason: reason.trim(), details: { grant: g.id, hours: h } });
   const approvers = await adminDb.user.findMany({ where: { firmId: firm.id, roles: { hasSome: ["OWNER", "COMPLIANCE_OFFICER"] }, deactivatedAt: null } });
   for (const a of approvers) {
-    await sendEmail(a.email, "AMLSyncAI support asks for access to your firm", `${requesterEmail} asks for read-only access for ${h} hour(s).\nReason: ${reason}\n\nApprove or deny it in the security log: ${appUrl("/app/security")}\nNothing is visible to AMLSyncAI until you approve.`);
+    await sendEmail(a.email, "AMLSync support asks for access to your firm", `${requesterEmail} asks for read-only access for ${h} hour(s).\nReason: ${reason}\n\nApprove or deny it in the security log: ${appUrl("/app/security")}\nNothing is visible to AMLSync App until you approve.`);
   }
   return g.id;
 }

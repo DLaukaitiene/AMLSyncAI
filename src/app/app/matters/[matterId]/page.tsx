@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { openMatterItems, requiredRoles } from "@/lib/rules/gates";
-import { ActionForm, Field, Submit } from "@/components/form";
+import { ActionForm, Field, SelectWithOther, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { PartyFields } from "@/components/party-fields";
 import { addPartyAction, addTransactionAction, completeMatterAction, matterState } from "../actions";
@@ -36,13 +36,13 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm text-muted">Matter · {m.type.toLowerCase().replace("_", " ")} · {m.status.toLowerCase().replace("_", " ")}</p>
+        <p className="text-sm text-muted">Matter · {m.type === "OTHER" ? String((m.details as { typeOther?: string }).typeOther ?? "other") : m.type.toLowerCase().replace("_", " ")} · {m.status.toLowerCase().replace("_", " ")}</p>
         <h1 className="text-2xl font-semibold">{m.title}</h1>
         <p className="text-sm text-muted">{Object.entries(det).filter(([k]) => k !== "transferApprovedAt").map(([k, v]) => `${k}: ${v}`).join(" · ")}</p>
         {m.status === "ON_HOLD" && <p className="text-sm text-red-700 dark:text-red-300">On hold: a sanctions match or a pending suspicion report blocks this matter.</p>}
       </div>
 
-      <section className="space-y-2 rounded-md border border-border p-4">
+      <section className="space-y-2 rounded-xl border border-border p-4">
         <h2 className="font-semibold">Parties</h2>
         <p className="text-xs text-muted">Required here: {requiredRoles(st.sector, st.type).join(", ")} (AMLR Art. 19(6)).</p>
         <ul className="divide-y divide-border text-sm">
@@ -50,7 +50,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
             const f = files.find((x) => x.partyId === p.partyId && x.role === p.role);
             return (
               <li key={p.id} className="flex justify-between py-1">
-                <span>{p.party.displayName} <span className="text-muted">· {p.role.toLowerCase()}</span></span>
+                <span>{p.party.displayName} <span className="text-muted">· {p.role === "OTHER" ? p.roleOther ?? "other" : p.role.toLowerCase()}</span></span>
                 {f && <Link className="text-accent underline" href={`/app/clients/${f.id}`}>{STATUS[f.status]}</Link>}
               </li>
             );
@@ -60,11 +60,13 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
           <details className="rounded border border-border p-3">
             <summary className="cursor-pointer text-sm font-medium">Add a party</summary>
             <ActionForm action={addPartyAction.bind(null, matterId)} className="mt-3 space-y-4">
-              <Field label="Role" name="role">
-                <select name="role" className={sel} aria-label="Role">
-                  {["CLIENT", "BUYER", "SELLER", "LANDLORD", "TENANT", "SUPPLIER", "REPRESENTATIVE", "BENEFICIARY"].map((r) => <option key={r} value={r}>{r.toLowerCase()}</option>)}
-                </select>
-              </Field>
+              <SelectWithOther
+                label="Role"
+                name="role"
+                defaultValue="CLIENT"
+                options={[["CLIENT", "Client"], ["BUYER", "Buyer"], ["SELLER", "Seller"], ["LANDLORD", "Landlord"], ["TENANT", "Tenant"], ["SUPPLIER", "Supplier"], ["REPRESENTATIVE", "Representative"], ["BENEFICIARY", "Beneficiary"]]}
+                otherLabel="Other (describe) — gets its own CDD file"
+              />
               <Field label="Existing party" name="existingPartyId" hint="Or leave empty and enter a new one below.">
                 <select name="existingPartyId" className={sel} aria-label="Existing party" defaultValue="">
                   <option value="">— New party —</option>
@@ -78,7 +80,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
         )}
       </section>
 
-      <section className="space-y-2 rounded-md border border-border p-4">
+      <section className="space-y-2 rounded-xl border border-border p-4">
         <h2 className="font-semibold">Payments and transactions</h2>
         {m.transactions.length ? (
           <ul className="text-sm">
@@ -94,9 +96,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
             </Field>
             <Field label="Date" name="date" type="date" />
             <Field label="Amount (EUR)" name="amountEUR" type="number" inputMode="decimal" />
-            <Field label="Method" name="method">
-              <select name="method" className={sel} aria-label="Method"><option value="bank-transfer">Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="crypto">Crypto-assets</option><option value="other">Other</option></select>
-            </Field>
+            <SelectWithOther label="Method" name="method" defaultValue="bank-transfer" otherValue="other" options={[["bank-transfer", "Bank transfer"], ["cash", "Cash"], ["card", "Card"], ["crypto", "Crypto-assets"]]} />
             <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="occasional" defaultChecked /> Occasional transaction (no ongoing business relationship)</label>
             <div className="sm:col-span-2"><Submit variant="secondary">Record</Submit></div>
           </ActionForm>
@@ -107,7 +107,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
       {can(s.user.roles, "case.raise") && <RaiseSuspicion action={raiseSuspicionAction.bind(null, { partyIds: m.parties.map((p) => p.partyId), matterIds: [matterId] })} />}
 
       {m.status !== "COMPLETED" && (
-        <section className="space-y-3 rounded-md border border-border p-4">
+        <section className="space-y-3 rounded-xl border border-border p-4">
           <h2 className="font-semibold">{items.length ? "Open before completion" : "Ready"}</h2>
           {items.length > 0 && (
             <ul className="list-disc pl-5 text-sm">{items.map((i) => <li key={i.id}>{i.message} <span className="text-muted">({i.article})</span></li>)}</ul>

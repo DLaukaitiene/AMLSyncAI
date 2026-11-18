@@ -47,7 +47,7 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   const inv = sql(`SELECT number || '|' || "netCents" || '|' || "vatCents" || '|' || "totalCents" FROM "Invoice" WHERE "firmId" = '${firmId}'`);
   if (!/^AMS-\d{4}-\d{5}\|5200\|1092\|6292$/.test(inv)) throw new Error("✘ wrong invoice totals " + inv);
   log("invoice totals: fee + 7 checks − refund − welcome credit = €52.00 + VAT €10.92 = €62.92 " + inv.split("|")[0]);
-  const mail = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'owner@saskaita.lt' AND subject LIKE 'AMLSyncAI invoice%'`);
+  const mail = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'owner@saskaita.lt' AND subject LIKE 'AMLSync invoice%'`);
   if (mail !== "1") throw new Error("✘ invoice email not sent");
   log("invoice email sent to the Owner");
 

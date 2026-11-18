@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/manrope";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AMLSyncAI",
+  title: "AMLSync App",
   description: "AML compliance for EU non-financial obliged entities under AMLR (EU) 2024/1624.",
 };
 

@@ -129,7 +129,7 @@ export function BoCalculator() {
       {result.bo && (
         <section className="space-y-2" aria-live="polite">
           <h2 className="font-semibold">Result for {CLIENT}</h2>
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
             {result.bo.candidates.map((c) => (
               <li key={c.personId} className="px-4 py-2">
                 <div className="flex justify-between">

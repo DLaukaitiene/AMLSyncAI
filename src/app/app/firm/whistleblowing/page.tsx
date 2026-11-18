@@ -44,7 +44,7 @@ export default async function WhistleblowingPage() {
           <h2 className="text-lg font-semibold">Received reports</h2>
           {data.reports.length === 0 && <p className="text-sm text-muted">None.</p>}
           {data.reports.map((r) => (
-            <div key={r.id} className="space-y-2 rounded-md border border-border p-4 text-sm">
+            <div key={r.id} className="space-y-2 rounded-xl border border-border p-4 text-sm">
               <p className="text-muted">{r.createdAt.toISOString().slice(0, 10)} · {r.reporterId ? data.names.get(r.reporterId) : "anonymous"} · {r.status}</p>
               <p className="whitespace-pre-wrap">{r.text}</p>
               {r.status === "received" && <ActionButton action={whistleStatusAction.bind(null, r.id, "acknowledged")}>Acknowledge</ActionButton>}

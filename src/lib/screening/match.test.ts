@@ -37,3 +37,14 @@ describe("screening name matching", () => {
     expect(same[0].reasons).toEqual(expect.arrayContaining(["Same date of birth", "Shared country: RU"]));
   });
 });
+
+describe("other names", () => {
+  it("screens maiden / previous names too and says which name matched", async () => {
+    const { screenSubject } = await import("./match");
+    const entries = [{ id: "e1", entityType: "person" as const, names: ["Olga Petrova"], birthDates: [], countries: [] }];
+    expect(screenSubject({ name: "Olga Jonaitienė", entity: false }, entries)).toHaveLength(0);
+    const hits = screenSubject({ name: "Olga Jonaitienė", entity: false, otherNames: ["Olga Petrova"] }, entries);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].reasons[0]).toMatch(/via other name "Olga Petrova"/);
+  });
+});

@@ -68,7 +68,7 @@ export function verifyTotp(secret: string, code: string, at: number = Date.now()
   return null;
 }
 
-export function otpauthUri(secret: string, account: string, issuer = "AMLSyncAI"): string {
+export function otpauthUri(secret: string, account: string, issuer = "AMLSync App"): string {
   const label = encodeURIComponent(`${issuer}:${account}`);
   return `otpauth://totp/${label}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
 }

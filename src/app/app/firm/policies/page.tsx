@@ -27,7 +27,7 @@ export default async function PoliciesPage() {
       {edit && <ActionButton action={generatePoliciesAction} variant="primary">{drafts.length ? "Regenerate drafts" : "Generate new version"}</ActionButton>}
 
       {inForce.map((d) => (
-        <section key={d.id} className="space-y-3 rounded-md border border-border p-4">
+        <section key={d.id} className="space-y-3 rounded-xl border border-border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-semibold">In force: {d.doc.title} v{d.version}</h2>
             <a className="text-sm text-accent underline" href={`/api/docs/policy/${d.id}`}>Download PDF</a>

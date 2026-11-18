@@ -13,10 +13,11 @@ async function signupFirm(browser, { code, company, email, sector, state = "LT" 
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const p = await ctx.newPage();
   await p.goto(BASE + "/signup");
-  await p.getByLabel("Sign-up code *", { exact: true }).fill(code);
+  await p.getByLabel("Invitation code *", { exact: true }).fill(code);
   await p.getByLabel("Company name *", { exact: true }).fill(company);
-  await p.locator("select[name=memberState]").selectOption(state);
+  await p.getByLabel("Country where your firm is established").fill(state);
   await p.locator("select[name=sector]").selectOption(sector);
+  if (sector === "OTHER") await p.locator("input[name=sectorOther]").fill("Compliance software provider");
   await p.getByLabel("Your name *", { exact: true }).fill("Owner of " + company);
   await p.getByLabel("Company email *", { exact: true }).fill(email);
   await p.getByLabel("Password *", { exact: true }).fill("correct horse battery staple");

@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
 import { cookies } from "next/headers";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
@@ -147,18 +148,27 @@ export async function portalContext(token: string) {
 // ---------------------------------------------------------------------------
 
 const t = (max = 500) => z.string().trim().max(max).optional().default("");
-const iso2list = z.string().trim().toUpperCase().regex(/^([A-Z]{2}([,\s]+[A-Z]{2})*)?$/, "Use 2-letter country codes, e.g. LT, PL").optional().default("");
+/** Any countries (codes or names, "Other" kept as typed), normalised to a comma-separated list. */
+const countryList = z.string().trim().max(500).optional().default("").transform((v) => normalizeCountries(v).join(", "));
+const oneCountry = (msg: string) => z.string().trim().max(60).transform((v, ctx) => {
+  const c = normalizeCountry(v);
+  if (!c || c.length < 2) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: msg });
+    return z.NEVER;
+  }
+  return c;
+});
 
 export const portalNaturalSchema = z.object({
   firstNames: z.string().trim().min(1, "Required").max(200),
   lastName: z.string().trim().min(1, "Required").max(200),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter your date of birth"),
   placeOfBirth: z.string().trim().min(1, "Required").max(200),
-  nationalities: iso2list.refine((v) => v.length > 0, "Enter at least one nationality"),
-  residenceCountry: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, "2-letter code"),
+  nationalities: countryList.refine((v) => v.length > 0, "Enter at least one nationality"),
+  residenceCountry: oneCountry("Enter your country of residence"),
   address: z.string().trim().min(5, "Enter your residential address").max(500),
   occupation: t(200),
-  taxResidence: iso2list,
+  taxResidence: countryList,
   purpose: z.string().trim().min(5, "Describe what you need the service for").max(1000),
   sourceOfFunds: z.string().trim().min(5, "Describe where the money for this comes from").max(2000),
   sourceOfWealth: t(2000),
@@ -169,12 +179,12 @@ export const portalNaturalSchema = z.object({
   actingForWhom: t(500),
 });
 
-const ownerLine = /^(.+?);\s*(\d{4}-\d{2}-\d{2})?;\s*([A-Za-z]{2})?;\s*(\d+(?:\.\d+)?)\s*%?$/;
+const ownerLine = /^(.+?);\s*(\d{4}-\d{2}-\d{2})?;\s*([^;]{0,60});\s*(\d+(?:\.\d+)?)\s*%?$/;
 
 export const portalLegalSchema = z.object({
   name: z.string().trim().min(1, "Required").max(300),
   registrationNumber: z.string().trim().min(1, "Required").max(100),
-  countryOfCreation: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, "2-letter code"),
+  countryOfCreation: oneCountry("Enter the country where the company was created"),
   registeredOffice: z.string().trim().min(5, "Required").max(500),
   natureOfBusiness: z.string().trim().min(3, "Required").max(500),
   purpose: z.string().trim().min(5, "Describe what you need the service for").max(1000),
@@ -201,7 +211,7 @@ export function parseOwners(text: string) {
     .map((l) => {
       const m = ownerLine.exec(l)!;
       const [first, ...rest] = m[1].trim().split(/\s+/);
-      return { name: m[1].trim(), firstNames: rest.length ? first : m[1].trim(), lastName: rest.join(" ") || "-", birthDate: m[2], nationality: m[3]?.toUpperCase(), pct: Number(m[4]) };
+      return { name: m[1].trim(), firstNames: rest.length ? first : m[1].trim(), lastName: rest.join(" ") || "-", birthDate: m[2], nationality: normalizeCountry(m[3]) ?? undefined, pct: Number(m[4]) };
     });
 }
 
@@ -233,8 +243,8 @@ export async function submitPortal(
       const d = data as z.infer<typeof portalNaturalSchema>;
       const details = {
         ...prev, firstNames: d.firstNames, lastName: d.lastName, birthDate: d.birthDate, placeOfBirth: d.placeOfBirth,
-        nationalities: d.nationalities.split(/[,\s]+/).filter(Boolean), residenceCountry: d.residenceCountry, address: d.address, occupation: d.occupation || undefined,
-        taxResidence: d.taxResidence.split(/[,\s]+/).filter(Boolean), sourceOfFunds: d.sourceOfFunds, sourceOfWealth: d.sourceOfWealth || undefined,
+        nationalities: normalizeCountries(d.nationalities), residenceCountry: d.residenceCountry, address: d.address, occupation: d.occupation || undefined,
+        taxResidence: normalizeCountries(d.taxResidence), sourceOfFunds: d.sourceOfFunds, sourceOfWealth: d.sourceOfWealth || undefined,
         isPep: d.isPep === "yes", pepFunction: d.pepFunction || undefined, isPepFamilyOrAssociate: d.isPepFamilyOrAssociate === "yes",
         actingForOther: d.actingForOther === "yes", actingForWhom: d.actingForWhom || undefined, portalDeclaration: signed,
       };

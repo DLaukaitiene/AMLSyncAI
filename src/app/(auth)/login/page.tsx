@@ -4,7 +4,7 @@ import { PowChallenge } from "@/components/pow-challenge";
 import { ActionForm, Field, Honeypot, Submit } from "@/components/form";
 import { loginAction } from "../actions";
 
-export const metadata: Metadata = { title: "Sign in · AMLSyncAI" };
+export const metadata: Metadata = { title: "Sign in · AMLSync App" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string; recovery?: string }> }) {
   const { reset, recovery } = await searchParams;

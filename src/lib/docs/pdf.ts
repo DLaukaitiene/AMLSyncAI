@@ -14,7 +14,7 @@ export async function renderPdf(doc: GeneratedDoc, opts: { watermark?: string } 
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   pdf.setTitle(doc.title);
-  pdf.setProducer("AMLSyncAI");
+  pdf.setProducer("AMLSync App");
   const regular = await pdf.embedFont(await readFile(path.join(FONT_DIR, "DejaVuSans.ttf")), { subset: true });
   const bold = await pdf.embedFont(await readFile(path.join(FONT_DIR, "DejaVuSans-Bold.ttf")), { subset: true });
 

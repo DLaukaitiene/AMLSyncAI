@@ -1,15 +1,18 @@
 import Link from "next/link";
+import { Logo } from "./logo";
 
+/** Public header in the amlsync.com style: navy bar, white links, cyan pill button. */
 export function PublicHeader() {
   return (
-    <header className="border-b border-border">
-      <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
-        <Link href="/" className="font-semibold">AMLSyncAI</Link>
-        <Link href="/tools/beneficial-ownership" className="text-muted hover:text-foreground">BO calculator</Link>
-        <Link href="/pricing" className="text-muted hover:text-foreground">Pricing</Link>
-        <span className="ml-auto flex gap-4">
-          <Link href="/login" className="text-muted hover:text-foreground">Sign in</Link>
-          <Link href="/signup" className="text-accent">Sign up</Link>
+    <header className="sticky top-0 z-20 border-b border-white/5 bg-navy/95 backdrop-blur">
+      <nav aria-label="Main" className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm sm:px-6">
+        <Logo href="/" />
+        <Link href="/pricing" className="text-white/80 hover:text-white">Pricing</Link>
+        <Link href="/tools/beneficial-ownership" className="text-white/80 hover:text-white">BO calculator</Link>
+        <Link href="/security" className="hidden text-white/80 hover:text-white sm:inline">Security</Link>
+        <span className="ml-auto flex items-center gap-4">
+          <Link href="/login" className="text-white/80 hover:text-white">Sign in</Link>
+          <Link href="/signup" className="rounded-full bg-brand px-4 py-2 font-semibold text-brand-ink hover:brightness-105">Start free trial</Link>
         </span>
       </nav>
     </header>

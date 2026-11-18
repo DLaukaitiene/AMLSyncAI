@@ -18,6 +18,10 @@ import type { Prisma } from "@prisma/client";
 import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/portal";
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
+import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
+import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
+import { addPersonFromRegister, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
@@ -31,8 +35,8 @@ function readParty(fd: FormData, prefix = "") {
     return {
       kind,
       parsed: naturalPersonSchema.safeParse({
-        firstNames: get("firstNames"), lastName: get("lastName"), birthDate: get("birthDate"), placeOfBirth: get("placeOfBirth"),
-        nationalities: get("nationalities").split(/[,\s]+/).filter(Boolean), residenceCountry: get("residenceCountry"), address: get("address"),
+        firstNames: get("firstNames"), lastName: get("lastName"), birthDate: get("birthDate"), placeOfBirth: get("placeOfBirth"), otherNames: get("otherNames"),
+        nationalities: get("nationalities"), residenceCountry: get("residenceCountry"), address: get("address"),
         occupation: get("occupation"), email: get("email"), phone: get("phone"), isPep: o[prefix + "isPep"] === "on",
         pepFunction: get("pepFunction"), pepLeftOfficeOn: get("pepLeftOfficeOn"), isPepFamilyOrAssociate: o[prefix + "isPepFamilyOrAssociate"] === "on",
       }),
@@ -41,7 +45,7 @@ function readParty(fd: FormData, prefix = "") {
   return {
     kind,
     parsed: legalEntitySchema.safeParse({
-      name: get("name"), legalForm: get("legalForm"), registrationNumber: get("registrationNumber"), lei: get("lei"),
+      name: get("name"), legalForm: get("legalForm"), otherNames: get("otherNames"), registrationNumber: get("registrationNumber"), lei: get("lei"),
       registeredOffice: get("registeredOffice"), principalPlaceOfBusiness: get("principalPlaceOfBusiness"), countryOfCreation: get("countryOfCreation"),
       natureOfBusiness: get("natureOfBusiness"), bearerShares: o[prefix + "bearerShares"] === "on", nomineeArrangements: o[prefix + "nomineeArrangements"] === "on",
     }),
@@ -72,7 +76,10 @@ export async function createClientAction(_: ActionState, fd: FormData): Promise<
         taxIdEnc: taxId ? encryptField(s.firm.id, taxId) : null,
       },
     });
-    const file = await tx.cddFile.create({ data: { firmId: s.firm.id, partyId: party.id, role: "CLIENT", purpose: purpose || null } });
+    const firmDefault = (await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { defaultCddScope: true } })).defaultCddScope;
+    const file = await tx.cddFile.create({
+      data: { firmId: s.firm.id, partyId: party.id, role: "CLIENT", purpose: purpose || null, ...(firmDefault === "identification-only" ? { scope: "identification-only", scopeReason: "firm-default", scopeSetById: s.user.id, scopeSetAt: new Date() } : {}) },
+    });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Party", objectId: party.id, fields: Object.keys(parsed.data) });
     await runScreening(tx, s.firm.id, [party.id]);
     await refresh(tx, s.firm.id, file.id);
@@ -404,13 +411,14 @@ export async function markRefreshedAction(fileId: string): Promise<ActionState> 
 // Didit: identity checks and provider screening (paid, €3.00 per check)
 // ---------------------------------------------------------------------------
 
-export async function diditIdvAction(fileId: string): Promise<ActionState> {
+export async function diditIdvAction(fileId: string, personId?: string): Promise<ActionState> {
   const s = await requireUser("client.edit");
   try {
     const r = await withTenant(s.firm.id, async (tx) => {
-      const created = await createIdvSession(tx, { firmId: s.firm.id, userId: s.user.id }, fileId, "staff", `/app/clients/${fileId}`);
+      const created = await createIdvSession(tx, { firmId: s.firm.id, userId: s.user.id }, fileId, "staff", `/app/clients/${fileId}`, personId);
       const f = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
-      const email = (f.party.details as { email?: string }).email;
+      const who = personId ? await tx.party.findUniqueOrThrow({ where: { id: personId } }) : f.party;
+      const email = (who.details as { email?: string }).email;
       if (email) {
         await sendEmail(email, `${s.firm.name}: please verify your identity`, `${s.firm.name} asks you to verify your identity. It takes about 3 minutes on your phone with your national eID or ID document and a short selfie video. The check is run by our partner Didit in the EU.\n\n${created.url}`);
       }
@@ -448,4 +456,139 @@ export async function diditScreenAction(fileId: string, partyId: string): Promis
   } catch (e) {
     return { error: e instanceof DiditError ? e.message : "Screening failed." };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Company register check (Didit KYB registry)
+// ---------------------------------------------------------------------------
+
+export async function kybSearchAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const candidates = await searchCompanyRegister(s.firm.id, {
+      country: String(fd.get("country") ?? ""), name: String(fd.get("name") ?? ""), registrationNumber: String(fd.get("registrationNumber") ?? ""),
+    });
+    if (!candidates.length) return { error: "No company found. Check the name, number and country, or record the register extract by hand below." };
+    return { message: `${candidates.length} compan${candidates.length === 1 ? "y" : "ies"} found. Choose the right one.`, data: { candidates, fileId } };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register search failed: ") : "The register search failed." };
+  }
+}
+
+export async function kybRetrieveAction(fileId: string, kybResponseId: string, level: "lite" | "full" = "full"): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await retrieveCompany({ firmId: s.firm.id, userId: s.user.id }, fileId, kybResponseId, level);
+    revalidatePath(`/app/clients/${fileId}`);
+    const price = formatEur(level === "full" ? KYB_FULL_PRICE_CENTS : KYB_LITE_PRICE_CENTS);
+    if (r.status !== "imported") return { message: "The register is preparing the ownership data. Use “Refresh” in a few minutes." };
+    return { message: level === "full" ? `Register data imported (${price}). Review the owners below and add them to the structure.` : `Company and status imported (${price}).` };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register check failed: ") : "The register check failed." };
+  }
+}
+
+export async function kybRefreshAction(fileId: string, requestId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await refreshCompanyCheck(s.firm.id, requestId);
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: r.imported ? "Register data imported." : "Still being prepared by the register. Try again in a few minutes." };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message : "Couldn't refresh the register check." };
+  }
+}
+
+export async function kybAddPersonAction(fileId: string, extractId: string, index: number): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const name = await addPersonFromRegister({ firmId: s.firm.id, userId: s.user.id }, fileId, extractId, index);
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: `${name} added to the ownership structure and screened.` };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CDD scope: full / identification only (service outside AMLR scope)
+// ---------------------------------------------------------------------------
+
+export async function setScopeAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const scope = String(fd.get("scope") ?? "full") === "identification-only" ? "identification-only" : "full";
+  // Narrowing due diligence is a Compliance Officer decision; widening it back is open to staff.
+  const s = await requireUser(scope === "full" ? "client.edit" : "gate.override");
+  const reason = String(fd.get("scopeReason") ?? "");
+  const note = String(fd.get("scopeNote") ?? "").trim().slice(0, 1000);
+  if (scope === "identification-only") {
+    if (!SCOPE_REASONS[reason] || reason === "firm-default") return { error: "Choose why the service is outside AMLR scope.", fieldErrors: { scopeReason: ["Required."] } };
+    if (reason === "other" && note.length < 10) return { error: "Describe why the service is outside AMLR scope.", fieldErrors: { scopeNote: ["Describe it."] } };
+  }
+  let reopened = false;
+  await withTenant(s.firm.id, async (tx) => {
+    const cur = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
+    // An accepted identification-only client moving to full due diligence: the file reopens until full CDD is done.
+    reopened = scope === "full" && cur.scope === "identification-only" && ["COMPLETE", "SDD", "EDD"].includes(cur.status);
+    await tx.cddFile.update({
+      where: { id: fileId },
+      data: scope === "full"
+        ? { scope: "full", scopeReason: null, scopeNote: null, scopeSetById: s.user.id, scopeSetAt: new Date(), ...(reopened ? { status: "OPEN", decidedAt: null } : {}) }
+        : { scope, scopeReason: reason, scopeNote: note || null, scopeSetById: s.user.id, scopeSetAt: new Date() },
+    });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "CddFile", objectId: fileId, fields: reopened ? ["scope", "status"] : ["scope"] });
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: scope === "full" ? (reopened ? "Full due diligence applies: the file is open again until it is complete." : "Full due diligence applies to this client.") : "Recorded as identification only. Identification and sanctions screening still apply." };
+}
+
+export async function setDefaultScopeAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("gate.override");
+  const scope = String(fd.get("defaultCddScope") ?? "full") === "identification-only" ? "identification-only" : "full";
+  await withTenant(s.firm.id, async (tx) => {
+    await tx.firm.update({ where: { id: s.firm.id }, data: { defaultCddScope: scope } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["defaultCddScope"] });
+  });
+  revalidatePath("/app/firm");
+  return { message: scope === "full" ? "New clients get full due diligence." : "New clients start as identification only (outside AMLR scope). Switch a client to full due diligence when an AMLR service starts." };
+}
+
+// ---------------------------------------------------------------------------
+// Ownership tracing per branch: "no further look-through" declarations
+// ---------------------------------------------------------------------------
+
+export async function declareLookThroughAction(fileId: string, entityId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  const reason = String(fd.get("reason") ?? "");
+  const note = String(fd.get("note") ?? "").trim().slice(0, 1000);
+  if (!LOOK_THROUGH_REASONS[reason]) return { error: "Choose why no further look-through is needed.", fieldErrors: { reason: ["Required."] } };
+  if ((reason === "steps-exhausted" || reason === "dispersed") && note.length < 10) return { error: "Describe the basis (source or steps taken).", fieldErrors: { note: ["Describe it."] } };
+  try {
+    await withTenant(s.firm.id, async (tx) => {
+      const cf = await loadClientFile(tx, s.firm.id, fileId);
+      if (!cf.tree.parties.has(entityId)) throw new Error("Not in this client's structure.");
+      const p = await tx.party.findUniqueOrThrow({ where: { id: entityId } });
+      const d = (p.details ?? {}) as Record<string, unknown>;
+      await tx.party.update({ where: { id: entityId }, data: { details: { ...d, lookThrough: { reason, note: note || null, byUserId: s.user.id, at: new Date().toISOString() } } as Prisma.InputJsonValue } });
+      await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Party", objectId: entityId, fields: ["lookThrough"] });
+      await refresh(tx, s.firm.id, fileId);
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Branch closed. The reason is recorded in the file." };
+}
+
+export async function reopenLookThroughAction(fileId: string, entityId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  await withTenant(s.firm.id, async (tx) => {
+    const p = await tx.party.findUniqueOrThrow({ where: { id: entityId } });
+    const rest = { ...((p.details ?? {}) as Record<string, unknown>) };
+    delete rest.lookThrough;
+    await tx.party.update({ where: { id: entityId }, data: { details: rest as Prisma.InputJsonValue } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Party", objectId: entityId, fields: ["lookThrough"] });
+    await refresh(tx, s.firm.id, fileId);
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Branch reopened." };
 }

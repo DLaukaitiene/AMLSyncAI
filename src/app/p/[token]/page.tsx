@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { linkLanding, portalContext } from "@/lib/server/portal";
-import { ActionForm, Field, Submit } from "@/components/form";
+import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { DocView } from "@/components/doc-view";
 import type { GeneratedDoc } from "@/lib/docs/model";
@@ -98,7 +98,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
       )}
 
       {natural && diditEnabled() && (
-        <section className="space-y-2 rounded-md border border-border p-4" data-testid="idv">
+        <section className="space-y-2 rounded-xl border border-border p-4" data-testid="idv">
           <h2 className="font-semibold">Verify your identity</h2>
           {ctx.verified ? (
             <p className="text-sm">Done. Your identity has been verified.</p>
@@ -143,13 +143,13 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
               <Field label="Surname" name="lastName" required defaultValue={v("lastName")} autoComplete="family-name" />
               <Field label="Date of birth" name="birthDate" type="date" required defaultValue={v("birthDate")} />
               <Field label="Place of birth" name="placeOfBirth" required defaultValue={v("placeOfBirth")} />
-              <Field label="Nationalities" name="nationalities" required defaultValue={v("nationalities")} hint="All of them, e.g. LT, PL" />
-              <Field label="Country of residence" name="residenceCountry" required defaultValue={v("residenceCountry")} hint="2-letter code, e.g. LT" />
+              <CountryField label="Nationalities" name="nationalities" required multiple defaultValue={v("nationalities")} hint="Add all of them. Not listed? Type the name and press Add country." />
+              <CountryField label="Country of residence" name="residenceCountry" required defaultValue={v("residenceCountry")} />
             </div>
             <Field label="Residential address" name="address" required defaultValue={v("address")} autoComplete="street-address" />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Occupation" name="occupation" defaultValue={v("occupation")} />
-              <Field label="Tax residence" name="taxResidence" defaultValue={v("taxResidence")} hint="Countries where you pay tax" />
+              <CountryField label="Tax residence" name="taxResidence" multiple defaultValue={v("taxResidence")} hint="Countries where you pay tax. Not listed? Type the name and press Add country." />
             </div>
             <YesNo name="isPep" label="Do you hold, or have you held in the last 12 months, a prominent public function (e.g. minister, MP, judge, ambassador, senior officer of a state-owned company)? *" value={yn("isPep")} />
             <Field label="If yes, which function?" name="pepFunction" defaultValue={v("pepFunction")} />
@@ -163,12 +163,12 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Legal name" name="name" required defaultValue={v("name")} />
               <Field label="Registration number" name="registrationNumber" required defaultValue={v("registrationNumber")} />
-              <Field label="Country of registration" name="countryOfCreation" required defaultValue={v("countryOfCreation")} hint="2-letter code" />
+              <CountryField label="Country of registration" name="countryOfCreation" required defaultValue={v("countryOfCreation")} />
               <Field label="Your role in the company" name="signatoryRole" required defaultValue={v("signatoryRole")} />
             </div>
             <Field label="Registered office" name="registeredOffice" required defaultValue={v("registeredOffice")} />
             <Field label="What the company does" name="natureOfBusiness" required defaultValue={v("natureOfBusiness")} />
-            <Field label="Owners with 25% or more (one per line: name; date of birth; nationality; %)" name="owners" hint="e.g. Jonas Jonaitis; 1980-05-01; LT; 60">
+            <Field label="Owners with 25% or more (one per line: name; date of birth; nationality; %)" name="owners" hint="e.g. Jonas Jonaitis; 1980-05-01; Lithuania; 60 — any country name or code">
               <textarea name="owners" rows={4} className={area} aria-label="Owners" defaultValue={v("owners")} />
             </Field>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="noOwnerOver25" defaultChecked={prev.noOwnerOver25 === "on"} /> Nobody owns or controls 25% or more</label>
@@ -192,7 +192,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
 
         <div className="flex flex-wrap gap-3">
           <button type="submit" name="intent" value="save" className="rounded border border-border px-4 py-2 text-sm">Save for later</button>
-          <button type="submit" name="intent" value="submit" className="rounded bg-accent px-4 py-2 text-sm font-medium text-white dark:text-black">Submit</button>
+          <button type="submit" name="intent" value="submit" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Submit</button>
         </div>
       </ActionForm>
       {ctx.privacy ? (

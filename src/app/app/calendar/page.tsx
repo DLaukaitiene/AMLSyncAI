@@ -8,7 +8,7 @@ import { can } from "@/lib/auth/permissions";
 const KIND: Record<string, string> = {
   refresh: "CDD refresh", "sdd-verification": "SDD verification (60 days)", "cdd-required": "CDD required", "threshold-report": "Threshold report",
   "discrepancy-report": "BO register discrepancy (14 days)", "transaction-hold": "Transaction hold (3 working days)", "fiu-request": "FIU request",
-  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "annual-report": "Annual compliance report", "refresh-review": "Refresh needs review", "idv-review": "Identity check needs review", "idv-mismatch": "Identity check differs from the file", "provider-purge": "Delete identity-check session at Didit (retry)", "matter-review": "New matter doesn't match the client profile", "integrity-declaration": "Integrity declaration", "whistleblowing-ack": "Acknowledge whistleblowing report (7 days)", "portal-stalled": "Client hasn't completed the portal (7+ days)",
+  "former-pep": "Former PEP review", "retention-end": "Records deletion", "portal-review": "Review client portal submission", "risk-assessment-review": "Review the business-wide risk assessment", "policy-review": "Review policies and procedures", "annual-report": "Annual compliance report", "refresh-review": "Refresh needs review", "idv-review": "Identity check needs review", "idv-mismatch": "Identity check differs from the file", "provider-purge": "Delete identity-check session at Didit (retry)", "kyb-mismatch": "Company register differs from the file", "kyb-inactive": "Company is not active in the register", "kyb-owners": "Add the owners found in the company register", "matter-review": "New matter doesn't match the client profile", "integrity-declaration": "Integrity declaration", "whistleblowing-ack": "Acknowledge whistleblowing report (7 days)", "portal-stalled": "Client hasn't completed the portal (7+ days)",
 };
 const TITLES: Record<CalendarBucket, string> = { overdue: "Overdue", "due-30-days": "Due in the next 30 days", later: "Later", done: "Done" };
 
@@ -48,7 +48,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       {(["overdue", "due-30-days", "later", "done"] as CalendarBucket[]).filter((b) => groups.has(b)).map((b) => (
         <section key={b}>
           <h2 className={`mb-2 font-semibold ${b === "overdue" ? "text-red-700 dark:text-red-300" : ""}`}>{TITLES[b]}</h2>
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
             {groups.get(b)!.map((t) => (
               <li key={t.id} className="flex justify-between px-4 py-2">
                 <Link href={href(t)} className="text-accent underline">{KIND[t.kind] ?? t.kind}</Link>

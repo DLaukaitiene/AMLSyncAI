@@ -1,6 +1,6 @@
 /**
  * Maps a Didit session decision (GET /v3/session/{id}/decision/) to
- * AMLSyncAI records. Media URLs are presigned and short-lived: they are
+ * AMLSync App records. Media URLs are presigned and short-lived: they are
  * downloaded into our own storage right away, never stored as links.
  */
 
@@ -154,3 +154,98 @@ export function autoClear(hit: AmlHitMapped, firmThreshold: number | null): { cl
 export const CHECK_PRICE_CENTS = 300; // €3.00 per paid check (ID check or provider screening), excl. VAT
 export const TRIAL_CREDIT_CENTS = 1500; // 5 checks for new firms
 export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
+
+/**
+ * Company register checks through Didit (search free). Two levels [decision: prices]:
+ * - company & status (Didit "Lite": identifiers, status, legal form, address, officers);
+ * - full ownership (Didit "UBO" tier: plus shareholders and beneficial owners through the chain).
+ */
+export const KYB_LITE_PRICE_CENTS = 500;
+export const KYB_FULL_PRICE_CENTS = 1200;
+export const KYB_PRICE_CENTS = KYB_FULL_PRICE_CENTS;
+export type KybLevel = "lite" | "full";
+
+export interface KybPerson {
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  entityType: "person" | "company";
+  roles: string[]; // director, shareholder, ubo, …
+  designation?: string;
+  ownershipPct: number | null; // direct shareholding as stated (minimum of the band)
+  effectivePct: number | null; // through the chain, where the register resolves it
+  nationality?: string;
+  birthYear?: number;
+  birthMonth?: number;
+  birthDate?: string;
+  registrationNumber?: string;
+  active: boolean;
+}
+
+export interface KybCompany {
+  name: string | null;
+  registrationNumber: string | null;
+  country: string | null;
+  legalForm: string | null;
+  registryStatus: string | null;
+  incorporationDate: string | null;
+  registeredOffice: string | null;
+  taxNumber: string | null;
+  vatNumber: string | null;
+  lei: string | null;
+  natureOfBusiness: string | null;
+  tierDelivered: string | null;
+  ownershipStatus: string | null;
+  ownershipComplete: boolean | null;
+  people: KybPerson[];
+  sandbox: boolean;
+  fetchStatus: string | null;
+}
+
+const num = (v: unknown) => (v === null || v === undefined || v === "" || isNaN(Number(v)) ? null : Number(v));
+const sv = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+/** Maps Didit's company block (same shape in standalone registry calls and KYB sessions). */
+export function mapKybCompany(c: Record<string, unknown>, tierDelivered?: string | null): KybCompany {
+  const people = new Map<string, KybPerson>();
+  const add = (p: Record<string, unknown>, extraRole?: string) => {
+    const name = sv(p.name) ?? [sv(p.first_name), sv(p.last_name)].filter(Boolean).join(" ");
+    if (!name) return;
+    const entityType = p.entity_type === "company" ? "company" : "person";
+    const key = `${entityType}:${name.toLowerCase()}`;
+    const prev = people.get(key);
+    const roles = [...new Set([...(prev?.roles ?? []), ...((p.roles as string[]) ?? []), ...(sv(p.role) ? [String(p.role)] : []), ...(extraRole ? [extraRole] : [])])];
+    people.set(key, {
+      name, entityType, roles,
+      firstName: sv(p.first_name) ?? prev?.firstName, lastName: sv(p.last_name) ?? prev?.lastName,
+      designation: sv(p.designation) ?? prev?.designation,
+      ownershipPct: num(p.ownership_min_shares) ?? prev?.ownershipPct ?? null,
+      effectivePct: num(p.effective_ownership_percent) ?? prev?.effectivePct ?? null,
+      nationality: sv(p.nationality) ?? prev?.nationality,
+      birthYear: num(p.date_of_birth_year) ?? prev?.birthYear ?? undefined,
+      birthMonth: num(p.date_of_birth_month) ?? prev?.birthMonth ?? undefined,
+      birthDate: sv(p.date_of_birth) ?? prev?.birthDate,
+      registrationNumber: sv(p.registration_number) ?? prev?.registrationNumber,
+      active: p.is_active !== false && !sv(p.termination_date),
+    });
+  };
+  for (const o of (c.officers as Record<string, unknown>[]) ?? []) add(o, "officer");
+  for (const o of (c.beneficial_owners as Record<string, unknown>[]) ?? []) add(o);
+  const own = (c.ownership ?? {}) as Record<string, unknown>;
+  const reg = (c.registry_data ?? {}) as Record<string, unknown>;
+  return {
+    name: sv(c.company_name), registrationNumber: sv(c.registration_number), country: iso2(sv(c.country_code) ?? "") || null,
+    legalForm: sv(c.company_type), registryStatus: sv(c.registry_status), incorporationDate: sv(c.incorporation_date),
+    registeredOffice: sv(c.registered_address), taxNumber: sv(c.tax_number), vatNumber: sv(c.vat_number), lei: sv(c.legal_entity_identifier),
+    natureOfBusiness: sv(c.nature_of_business),
+    tierDelivered: tierDelivered ?? sv(c.registry_tier_delivered) ?? sv(own.tier_delivered),
+    ownershipStatus: sv(c.registry_ownership_status) ?? sv(own.status),
+    ownershipComplete: typeof own.direct_ownership_complete === "boolean" ? (own.direct_ownership_complete as boolean) : null,
+    people: [...people.values()],
+    sandbox: reg.sandbox === true,
+    fetchStatus: sv(c.fetch_status),
+  };
+}
+
+/** A company is a problem when the register doesn't show it as active. */
+export const kybInactive = (k: KybCompany) => !!k.registryStatus && !/^(active|registered|live)$/i.test(k.registryStatus);
