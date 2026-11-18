@@ -17,6 +17,7 @@ import { partyCountries, SECTOR_PRODUCT_RISK } from "@/lib/cdd/party";
 import { startRetentionClock } from "./retention";
 import { checkSectoralSanctions } from "@/lib/rules/sectoral-sanctions";
 import { takeScreeningSlots } from "./screening-limits";
+import { checkSatisfied, requiredCheck, type PartyEvidence, type RequiredCheck, type StructureRole } from "@/lib/rules/check-matrix";
 
 import type { CountryProfile } from "@/lib/rules/country-profile";
 
@@ -180,6 +181,7 @@ export interface ClientFile {
   extracts: Awaited<ReturnType<Tx["registryExtract"]["findMany"]>>;
   approvals: { edd: boolean; pep: boolean };
   smoFallbackOk: boolean;
+  checks: { partyId: string; name: string; kind: Party["kind"]; roles: StructureRole[]; required: RequiredCheck; evidence: PartyEvidence; done: boolean }[];
 }
 
 export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, opts: { sdd?: boolean } = {}): Promise<ClientFile> {
@@ -202,8 +204,11 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
   );
   const pepHit = screening.some((s) => s.listKind === "PEP" && s.decision === "TRUE_MATCH" && s.partyId === party.id);
 
-  const verifications = await tx.identityVerification.findMany({ where: { partyId: party.id }, orderBy: { verifiedAt: "desc" } });
-  const extracts = await tx.registryExtract.findMany({ where: { partyId: party.id }, orderBy: { retrievedAt: "desc" } });
+  const allVerifications = await tx.identityVerification.findMany({ where: { partyId: { in: treeIds } }, orderBy: { verifiedAt: "desc" } });
+  const allExtracts = await tx.registryExtract.findMany({ where: { partyId: { in: treeIds } }, orderBy: { retrievedAt: "desc" } });
+  const verifications = allVerifications.filter((v) => v.partyId === party.id);
+  const extracts = allExtracts.filter((x) => x.partyId === party.id);
+  const docsByParty = new Set((await tx.document.findMany({ where: { partyId: { in: treeIds }, malwareScan: { not: "quarantined" } }, select: { partyId: true } })).map((x) => x.partyId));
 
   // Risk inputs come from data already collected (spec §4A.4) — no separate questionnaire.
   const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId } });
@@ -246,6 +251,39 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
   const smoFallbackOk = !!smo && validateSmoFallback({ seniorManagingOfficials: smo.officials, stepsTaken: smo.stepsTaken }).length === 0;
   const checklist = new Set((f.eddChecklist as string[] | null) ?? []);
 
+  // Who needs which check (rules/check-matrix): roles from the structure, evidence from the file.
+  const roles = new Map<string, StructureRole[]>();
+  const addRole = (id: string, r: StructureRole) => roles.set(id, [...new Set([...(roles.get(id) ?? []), r])]);
+  addRole(party.id, "client");
+  const boIds = new Set((bo?.beneficialOwners ?? []).map((b) => b.personId));
+  for (const id of boIds) addRole(id, "beneficial-owner");
+  const LINK_ROLE: Record<string, StructureRole> = {
+    CONTROL: "controller", TRUST_SETTLOR: "trust-settlor", TRUSTEE: "trustee", TRUST_PROTECTOR: "trust-protector",
+    TRUST_BENEFICIARY: "trust-beneficiary", NOMINEE: "nominee", SENIOR_MANAGING_OFFICIAL: "senior-managing-official",
+  };
+  for (const l of tree.links) {
+    const owner = tree.parties.get(l.ownerId);
+    if (!owner) continue;
+    if (l.type === "SHAREHOLDING") addRole(l.ownerId, owner.kind === "NATURAL" ? (boIds.has(l.ownerId) ? "beneficial-owner" : "minority-owner") : "intermediate-owner");
+    else addRole(l.ownerId, LINK_ROLE[l.type] ?? "unknown");
+  }
+  for (const o of smo?.officials ?? []) if (tree.parties.has(o.personId)) addRole(o.personId, "senior-managing-official");
+  const fromRegister = new Set(tree.links.filter((l) => l.source === "REGISTER").map((l) => l.ownerId));
+  const checks = [...tree.parties.values()].map((p) => {
+    const pd = det(p);
+    const required = requiredCheck(kindOf(p.kind), roles.get(p.id) ?? [], { edd: risk.eddRequired });
+    const evidence = {
+      identityVerified: allVerifications.some((v) => v.partyId === p.id),
+      registerExtract: allExtracts.some((x) => x.partyId === p.id),
+      documentOnFile: docsByParty.has(p.id),
+      fromRegister: fromRegister.has(p.id),
+      clientRegisterChecked: extracts.length > 0,
+      identified: p.kind === "NATURAL" ? !!p.displayName && (!!pd.birthDate || ((pd.nationalities as string[]) ?? []).length > 0) : !!p.displayName,
+      screened: screening.some((x) => x.partyId === p.id),
+    };
+    return { partyId: p.id, name: p.displayName, kind: p.kind, roles: roles.get(p.id) ?? ["unknown" as StructureRole], required, evidence, done: checkSatisfied(required.level, evidence) };
+  });
+
   const state: CddFileState = {
     partyId: party.id,
     role: f.role.toLowerCase() as CddFileState["role"],
@@ -260,6 +298,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     isPep: isPep || formerPep || !!d.isPepFamilyOrAssociate,
     pepApprovalRecorded: approvals.pep,
     openScreeningMatches: screening.filter((s) => s.decision === "PENDING").length,
+    missingChecks: checks.filter((c) => c.partyId !== party.id && !c.done).map((c) => ({ name: c.name, label: c.required.label })),
     unscreenedParties: treeIds.filter((id) => !screening.some((s) => s.partyId === id)).length,
     trueSanctionsMatch: sanctions.affected,
     sddDelayedVerification: !!opts.sdd && risk.sddEligible,
@@ -269,7 +308,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     }),
   };
 
-  return { file: f as CddFile, party, tree, bo, sanctions, risk, profile, profileVersion, isPep, state, screening, verifications, extracts, approvals, smoFallbackOk };
+  return { file: f as CddFile, party, tree, bo, sanctions, risk, profile, profileVersion, isPep, state, screening, verifications, extracts, approvals, smoFallbackOk, checks };
 }
 
 /** Stores a new client risk assessment when the result changed (spec §4.3: rule-set version stored). */

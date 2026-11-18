@@ -405,13 +405,14 @@ export async function markRefreshedAction(fileId: string): Promise<ActionState> 
 // Didit: identity checks and provider screening (paid, €3.00 per check)
 // ---------------------------------------------------------------------------
 
-export async function diditIdvAction(fileId: string): Promise<ActionState> {
+export async function diditIdvAction(fileId: string, personId?: string): Promise<ActionState> {
   const s = await requireUser("client.edit");
   try {
     const r = await withTenant(s.firm.id, async (tx) => {
-      const created = await createIdvSession(tx, { firmId: s.firm.id, userId: s.user.id }, fileId, "staff", `/app/clients/${fileId}`);
+      const created = await createIdvSession(tx, { firmId: s.firm.id, userId: s.user.id }, fileId, "staff", `/app/clients/${fileId}`, personId);
       const f = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
-      const email = (f.party.details as { email?: string }).email;
+      const who = personId ? await tx.party.findUniqueOrThrow({ where: { id: personId } }) : f.party;
+      const email = (who.details as { email?: string }).email;
       if (email) {
         await sendEmail(email, `${s.firm.name}: please verify your identity`, `${s.firm.name} asks you to verify your identity. It takes about 3 minutes on your phone with your national eID or ID document and a short selfie video. The check is run by our partner Didit in the EU.\n\n${created.url}`);
       }

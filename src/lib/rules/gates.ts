@@ -50,6 +50,8 @@ export interface CddFileState {
   sddDelayedVerification?: boolean;
   /** Parties in the structure not screened yet (no list loaded, or the daily cap was reached). */
   unscreenedParties?: number;
+  /** Other people/entities in the structure whose required check (by role) is not done yet. */
+  missingChecks?: { name: string; label: string }[];
   /** EU sectoral sanctions that prohibit the service or sale (e.g. Reg. 833/2014 Art. 5n). */
   sectoralBans?: { regulation: string; explanation: string }[];
 }
@@ -69,6 +71,9 @@ export function openCddItems(f: CddFileState): GateItem[] {
   for (const b of f.sectoralBans ?? []) items.push({ id: `sectoral:${b.regulation}`, message: b.explanation, article: b.regulation, absolute: true });
   if (f.trueSanctionsMatch) items.push({ id: "sanctions", message: "True sanctions match: freeze and notify the sanctions authority.", article: "Art. 20(1)(d); Reg. 269/2014", absolute: true });
   if (!f.identityVerified && !f.sddDelayedVerification) items.push({ id: "identity", message: "Verify the identity of this party.", article: "Art. 22–23" });
+  if (f.missingChecks?.length) {
+    items.push({ id: "people-checks", message: `Checks still needed in the structure: ${f.missingChecks.map((m) => `${m.name} (${m.label.toLowerCase()})`).join("; ")}.`, article: "Art. 20(1)(b), 22, 58" });
+  }
   if (f.boResolved === false) items.push({ id: "beneficial-owners", message: "Identify the beneficial owners or record the senior managing officials.", article: "Art. 20(1)(b), 22(2)" });
   if (!f.purposeRecorded) items.push({ id: "purpose", message: "Record the purpose and intended nature of the relationship.", article: "Art. 25" });
   if (!f.riskAssessed) items.push({ id: "risk", message: "Complete the client risk assessment.", article: "Art. 20(2)" });

@@ -21,7 +21,7 @@ import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
-import { formatEur, KYB_PRICE_CENTS } from "@/lib/didit/map";
+import { CHECK_PRICE_CENTS, formatEur, KYB_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
@@ -32,6 +32,12 @@ const LABELS: Record<string, string> = {
   registeredOffice: "Registered office", principalPlaceOfBusiness: "Principal place of business", countryOfCreation: "Country of creation",
   natureOfBusiness: "Nature of business", sourceOfFunds: "Source of funds (declared)", sourceOfWealth: "Source of wealth (declared)",
   taxResidence: "Tax residence", actingForWhom: "Acting for", signatoryRole: "Signatory role",
+};
+
+const ROLE_TEXT: Record<string, string> = {
+  client: "client", "beneficial-owner": "beneficial owner", "intermediate-owner": "owning company", "minority-owner": "shareholder below threshold",
+  controller: "controls by other means", "senior-managing-official": "senior managing official", "trust-settlor": "settlor", trustee: "trustee",
+  "trust-protector": "protector", "trust-beneficiary": "beneficiary", nominee: "nominee", unknown: "role not known",
 };
 
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
@@ -423,6 +429,27 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           )}
         </Card>
       )}
+
+      <Card title="Checks per person (Art. 20, 22, 58)" id="checks">
+        <p className="text-xs text-muted">What each person or company in the structure needs, from their role. Several roles: the strictest applies. Unknown role: the strictest check.</p>
+        <ul className="divide-y divide-border rounded-lg border border-border text-sm" data-testid="checks-per-person">
+          {cf.checks.map((c) => (
+            <li key={c.partyId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <span>
+                <span className="font-medium">{c.name}</span>
+                <span className="text-muted"> · {c.roles.map((r) => ROLE_TEXT[r] ?? r).join(", ")}</span>
+                <span className="block text-xs text-muted" title={`${c.required.why} (${c.required.article})`}>{c.required.label}{c.evidence.screened ? " · screened" : " · not screened yet"}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                {c.done ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900 dark:bg-green-900/40 dark:text-green-200">Done</span> : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Needed</span>}
+                {!c.done && edit && diditEnabled() && c.kind === "NATURAL" && c.partyId !== cf.party.id && (c.required.level === "full" || c.required.level === "reasonable") && (
+                  <ActionButton action={diditIdvAction.bind(null, fileId, c.partyId)}>{`Send identity check (${formatEur(CHECK_PRICE_CENTS)})`}</ActionButton>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <Card title="Screening (sanctions, PEP)">
         <p className="text-xs text-muted">
