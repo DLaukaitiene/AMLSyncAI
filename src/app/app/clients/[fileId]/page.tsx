@@ -15,6 +15,7 @@ import {
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
   kybAddPersonAction,
+  kybRetrieveAction,
   setScopeAction,
   declareLookThroughAction,
   reopenLookThroughAction,
@@ -24,7 +25,7 @@ import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
-import { CHECK_PRICE_CENTS, formatEur, KYB_PRICE_CENTS } from "@/lib/didit/map";
+import { CHECK_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
@@ -213,7 +214,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
             {cf.extracts.length ? (
               <ul className="space-y-3 text-sm">
                 {cf.extracts.map((x) => {
-                  const xd = x.data as { extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
+                  const xd = x.data as { level?: string; kybResponseId?: string | null; extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
                   return (
                     <li key={x.id} className="space-y-2">
                       <p>
@@ -222,7 +223,13 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                         {xd.sandbox && " · sandbox"}
                         {xd.notes ? ` · ${xd.notes}` : ""}
                       </p>
-                      {xd.provider === "Didit" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
+                      {xd.provider === "Didit" && xd.level === "lite" && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                          <span>Company and status check — ownership not included.</span>
+                          {edit && xd.kybResponseId && <ActionButton action={kybRetrieveAction.bind(null, fileId, xd.kybResponseId, "full")}>{`Get full ownership (${formatEur(KYB_FULL_PRICE_CENTS)})`}</ActionButton>}
+                        </div>
+                      )}
+                      {xd.provider === "Didit" && xd.level !== "lite" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
                       {xd.people?.length ? (
                         <ul className="divide-y divide-border rounded-lg border border-border" data-testid="register-people">
                           {xd.people.map((p, i) => {
@@ -258,7 +265,9 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                 name={String((cf.party.details as { name?: string }).name ?? cf.party.displayName)}
                 registrationNumber={String((cf.party.details as { registrationNumber?: string }).registrationNumber ?? "")}
                 country={String((cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState)}
-                price={formatEur(KYB_PRICE_CENTS)}
+                litePrice={formatEur(KYB_LITE_PRICE_CENTS)}
+                fullPrice={formatEur(KYB_FULL_PRICE_CENTS)}
+                ownersRecorded={cf.tree.links.some((l) => l.ownedId === cf.party.id)}
               />
             )}
             {edit && (

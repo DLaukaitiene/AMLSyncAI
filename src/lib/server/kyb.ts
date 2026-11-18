@@ -5,7 +5,7 @@ import { audit } from "./audit";
 import { hit } from "./rate-limit";
 import { charge, didit, DiditError, diditEnabled, refund } from "./didit";
 import { loadClientFile, persistRiskIfChanged, runScreening, upsertTask } from "./cdd";
-import { KYB_PRICE_CENTS, kybInactive, mapKybCompany, type KybCompany } from "@/lib/didit/map";
+import { KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, kybInactive, mapKybCompany, type KybCompany, type KybLevel } from "@/lib/didit/map";
 import { normalizeCountry } from "@/lib/geo/countries";
 import { toIsoDate } from "@/lib/rules/dates";
 
@@ -38,19 +38,21 @@ export async function searchCompanyRegister(firmId: string, q: { country: string
   }));
 }
 
-/** Retrieves the chosen company with owners (UBO tier), charges the check, imports it when ready. */
-export async function retrieveCompany(ctx: { firmId: string; userId: string }, fileId: string, kybResponseId: string): Promise<{ status: "imported" | "pending"; company?: KybCompany }> {
+/** Retrieves the chosen company at the chosen level, charges the check, imports it when ready. */
+export async function retrieveCompany(ctx: { firmId: string; userId: string }, fileId: string, kybResponseId: string, level: KybLevel = "full"): Promise<{ status: "imported" | "pending"; company?: KybCompany }> {
   if (!diditEnabled()) throw new DiditError("Company register checks are not set up for this installation.");
   const pre = await withTenant(ctx.firmId, async (tx) => {
     const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
     if (file.party.kind === "NATURAL") throw new DiditError("Register checks are for companies and other legal entities.");
-    const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Company register check (details, officers, owners)", file.party.displayName, KYB_PRICE_CENTS);
+    const chargeId = level === "full"
+      ? await charge(tx, ctx.firmId, ctx.userId, "Company register check: full ownership (details, officers, owners)", file.party.displayName, KYB_FULL_PRICE_CENTS)
+      : await charge(tx, ctx.firmId, ctx.userId, "Company register check: company and status", file.party.displayName, KYB_LITE_PRICE_CENTS);
     return { partyId: file.partyId, chargeId };
   });
   type Resp = { request_id: string; registry_tier_delivered?: string; kyb_registry?: Record<string, unknown> };
   let r: Resp;
   try {
-    r = await didit<Resp>("POST", "/v3/kyb/ubo/", { kyb_response_id: kybResponseId, vendor_data: pre.partyId }, { "Idempotency-Key": `${pre.partyId}:${kybResponseId}` });
+    r = await didit<Resp>("POST", level === "full" ? "/v3/kyb/ubo/" : "/v3/kyb/select/", { kyb_response_id: kybResponseId, vendor_data: pre.partyId }, { "Idempotency-Key": `${pre.partyId}:${kybResponseId}:${level}` });
   } catch (e) {
     await withTenant(ctx.firmId, (tx) => refund(tx, ctx.firmId, pre.chargeId, "register could not be read"));
     throw e;
@@ -64,7 +66,7 @@ export async function retrieveCompany(ctx: { firmId: string; userId: string }, f
     await tx.creditEntry.update({ where: { id: pre.chargeId }, data: { reference: r.request_id } });
     await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "DiditSession", objectId: row.id, fields: ["kyb"] });
     if (!ready || !company) return { status: "pending" as const };
-    await importCompany(tx, ctx.firmId, { id: row.id, partyId: pre.partyId, cddFileId: fileId }, company, r.request_id);
+    await importCompany(tx, ctx.firmId, { id: row.id, partyId: pre.partyId, cddFileId: fileId }, company, r.request_id, { level, kybResponseId });
     return { status: "imported" as const, company };
   }, { timeoutMs: 60_000 });
 }
@@ -86,14 +88,14 @@ export async function refreshCompanyCheck(firmId: string, requestId: string): Pr
   }, { timeoutMs: 60_000 });
 }
 
-async function importCompany(tx: Tx, firmId: string, s: { id: string; partyId: string; cddFileId: string | null }, k: KybCompany, requestId: string) {
+async function importCompany(tx: Tx, firmId: string, s: { id: string; partyId: string; cddFileId: string | null }, k: KybCompany, requestId: string, meta: { level?: KybLevel; kybResponseId?: string } = {}) {
   const now = new Date();
   const party = await tx.party.findUniqueOrThrow({ where: { id: s.partyId } });
   const d = (party.details ?? {}) as Record<string, unknown>;
   const x = await tx.registryExtract.create({
     data: {
       firmId, partyId: s.partyId, register: `Company register${k.country ? ` (${k.country})` : ""} via Didit`, source: "REGISTER", retrievedAt: now,
-      data: { extractDate: toIsoDate(now), provider: "Didit", requestId, ...k, people: k.people.map((p) => ({ ...p, addedPartyId: null })) } as unknown as Prisma.InputJsonValue,
+      data: { extractDate: toIsoDate(now), provider: "Didit", requestId, level: meta.level ?? "full", kybResponseId: meta.kybResponseId ?? null, ...k, people: k.people.map((p) => ({ ...p, addedPartyId: null })) } as unknown as Prisma.InputJsonValue,
     },
   });
   await audit(tx, { firmId, userId: null, action: "create", objectType: "RegistryExtract", objectId: x.id, fields: ["register", "people"] });

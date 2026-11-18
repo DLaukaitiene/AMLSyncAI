@@ -19,6 +19,7 @@ import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/p
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 import { addPersonFromRegister, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
@@ -474,12 +475,14 @@ export async function kybSearchAction(fileId: string, _: ActionState, fd: FormDa
   }
 }
 
-export async function kybRetrieveAction(fileId: string, kybResponseId: string): Promise<ActionState> {
+export async function kybRetrieveAction(fileId: string, kybResponseId: string, level: "lite" | "full" = "full"): Promise<ActionState> {
   const s = await requireUser("client.edit");
   try {
-    const r = await retrieveCompany({ firmId: s.firm.id, userId: s.user.id }, fileId, kybResponseId);
+    const r = await retrieveCompany({ firmId: s.firm.id, userId: s.user.id }, fileId, kybResponseId, level);
     revalidatePath(`/app/clients/${fileId}`);
-    return { message: r.status === "imported" ? "Register data imported (€12.00). Review the owners below and add them to the structure." : "The register is preparing the ownership data. Use “Refresh” in a few minutes." };
+    const price = formatEur(level === "full" ? KYB_FULL_PRICE_CENTS : KYB_LITE_PRICE_CENTS);
+    if (r.status !== "imported") return { message: "The register is preparing the ownership data. Use “Refresh” in a few minutes." };
+    return { message: level === "full" ? `Register data imported (${price}). Review the owners below and add them to the structure.` : `Company and status imported (${price}).` };
   } catch (e) {
     return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register check failed: ") : "The register check failed." };
   }

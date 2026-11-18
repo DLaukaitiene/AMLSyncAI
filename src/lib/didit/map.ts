@@ -155,8 +155,15 @@ export const CHECK_PRICE_CENTS = 300; // €3.00 per paid check (ID check or pro
 export const TRIAL_CREDIT_CENTS = 1500; // 5 checks for new firms
 export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 
-/** Company register check through Didit (search free; profile with officers and owners). [decision: price] */
-export const KYB_PRICE_CENTS = 1200;
+/**
+ * Company register checks through Didit (search free). Two levels [decision: prices]:
+ * - company & status (Didit "Lite": identifiers, status, legal form, address, officers);
+ * - full ownership (Didit "UBO" tier: plus shareholders and beneficial owners through the chain).
+ */
+export const KYB_LITE_PRICE_CENTS = 500;
+export const KYB_FULL_PRICE_CENTS = 1200;
+export const KYB_PRICE_CENTS = KYB_FULL_PRICE_CENTS;
+export type KybLevel = "lite" | "full";
 
 export interface KybPerson {
   name: string;
