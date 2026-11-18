@@ -60,7 +60,7 @@ export interface CurrentSession {
   stage: SessionStage;
   mfaAt: Date | null;
   user: { id: string; firmId: string; email: string; name: string; roles: AppRole[]; external: boolean; mfaEnrolled: boolean };
-  firm: { id: string; name: string; homeState: string };
+  firm: { id: string; name: string; homeState: string; status: string; archiveUntil: string | null };
 }
 
 /** Reads and validates the session; enforces idle and absolute timeouts. */
@@ -94,7 +94,7 @@ export async function getSession(): Promise<CurrentSession | null> {
       external: s.user.external,
       mfaEnrolled: !!s.user.mfaEnrolledAt,
     },
-    firm: { id: s.user.firm.id, name: s.user.firm.name, homeState: s.user.firm.homeState },
+    firm: { id: s.user.firm.id, name: s.user.firm.name, homeState: s.user.firm.homeState, status: s.user.firm.status, archiveUntil: s.user.firm.archiveUntil },
   };
 }
 
@@ -106,6 +106,9 @@ export async function requireUser(action?: Action): Promise<CurrentSession> {
   if (s.stage === "MFA_PENDING") redirect("/login/mfa");
   // No permission: answer as if the page didn't exist (doesn't reveal what's there).
   if (action && !can(s.user.roles, action)) notFound();
+  // Cancelled firm: the archive is read-only. Server actions (writes) are refused;
+  // pages and exports still work until the end of the archive period.
+  if (s.firm.status === "cancelled" && (await headers()).get("next-action")) redirect("/app/archived");
   return s;
 }
 

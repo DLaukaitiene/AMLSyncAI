@@ -196,6 +196,10 @@ model Firm {
   crossBorderPct Int?
   sectorOther   String?  // description when the sector is OTHER
   defaultCddScope String @default("full") // scope for new client files: full | identification-only
+  // Subscription ended: records stay read-only (archive) until archiveUntil, then retention deletes them.
+  status        String    @default("active") // active | cancelled
+  cancelledAt   DateTime?
+  archiveUntil  String?   // YYYY-MM-DD
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)

@@ -76,6 +76,18 @@ async function markPaid(_: ActionState, fd: FormData): Promise<ActionState> {
   return { message: `Invoice ${number} marked paid.` };
 }
 
+async function reactivate(_: ActionState, fd: FormData): Promise<ActionState> {
+  "use server";
+  const g = await guard(); if (isErr(g)) return g;
+  const firm = await firmByDomain(fd);
+  if (!firm) return { error: "No firm uses that domain." };
+  if (firm.status !== "cancelled") return { error: `${firm.name} is active.` };
+  await adminDb.firm.update({ where: { id: firm.id }, data: { status: "active", cancelledAt: null, archiveUntil: null } });
+  await securityEvent({ firmId: firm.id, kind: "subscription-reactivated", details: { by: g.email } });
+  revalidatePath("/admin/billing");
+  return { message: `${firm.name} is active again.` };
+}
+
 async function runInvoicing(): Promise<ActionState> {
   "use server";
   const g = await guard(); if (isErr(g)) return g;
@@ -88,7 +100,7 @@ export default async function BillingAdmin() {
   const s = await requireUser();
   if (!isPlatformAdmin(s.user.email)) redirect("/app");
   const [firms, invoices] = await Promise.all([
-    adminDb.firm.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, emailDomain: true, plan: true, customFeeCents: true, spendLimitCents: true, trialEndsOn: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } }),
+    adminDb.firm.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, emailDomain: true, plan: true, status: true, archiveUntil: true, customFeeCents: true, spendLimitCents: true, trialEndsOn: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } }),
     adminDb.invoice.findMany({ orderBy: { seq: "desc" }, take: 200 }),
   ]);
   const firmName = new Map(firms.map((f) => [f.id, f.name]));
@@ -123,7 +135,7 @@ export default async function BillingAdmin() {
       </section>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Firm terms</h2>
-        <ul className="text-sm">{firms.map((f) => <li key={f.id}>{f.name} ({f.emailDomain}) · {planOf(f.plan).name}{f.trialEndsOn ? ` (trial until ${f.trialEndsOn})` : ""} · fee {f.customFeeCents !== null ? `${formatEur(f.customFeeCents)} (custom)` : planOf(f.plan).monthlyCents !== null ? formatEur(planOf(f.plan).monthlyCents!) : "not set"}/month · paid checks up to {formatEur(f.spendLimitCents)}/month · screenings {f.screenLimitMinute}/min, {f.screenLimitDay}/day, {f.screenLimitMonth}/month</li>)}</ul>
+        <ul className="text-sm">{firms.map((f) => <li key={f.id}>{f.name} ({f.emailDomain}){f.status === "cancelled" ? ` · CANCELLED, archive until ${f.archiveUntil}` : ""} · {planOf(f.plan).name}{f.trialEndsOn ? ` (trial until ${f.trialEndsOn})` : ""} · fee {f.customFeeCents !== null ? `${formatEur(f.customFeeCents)} (custom)` : planOf(f.plan).monthlyCents !== null ? formatEur(planOf(f.plan).monthlyCents!) : "not set"}/month · paid checks up to {formatEur(f.spendLimitCents)}/month · screenings {f.screenLimitMinute}/min, {f.screenLimitDay}/day, {f.screenLimitMonth}/month</li>)}</ul>
         <p className="text-sm text-muted">Leave a field empty to keep it. Raise screening limits within 1 business day of a request.</p>
         <ActionForm action={setTerms} className="grid gap-3 sm:grid-cols-4">
           <Field label="Firm email domain" name="domain" required />
@@ -134,6 +146,13 @@ export default async function BillingAdmin() {
           <Field label="Screenings per day" name="perDay" type="number" />
           <Field label="Screenings per month" name="perMonth" type="number" />
           <div className="sm:col-span-4"><Submit variant="secondary">Save terms</Submit><StepUpLink /></div>
+        </ActionForm>
+      </section>
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">Restart a cancelled subscription</h2>
+        <ActionForm action={reactivate} className="grid gap-3 sm:grid-cols-3">
+          <Field label="Firm email domain" name="domain" required />
+          <div className="sm:col-span-3"><Submit variant="secondary">Reactivate</Submit><StepUpLink /></div>
         </ActionForm>
       </section>
       <section className="space-y-2">

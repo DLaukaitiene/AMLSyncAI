@@ -83,6 +83,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       nav={nav}
       firmName={s.firm.name}
+      banner={s.firm.status === "cancelled" ? <>Subscription ended — read-only archive{s.firm.archiveUntil ? ` until ${s.firm.archiveUntil}` : ""}. <a className="underline" href="/app/billing">Download your full export</a></> : undefined}
       topRight={
         <>
           <SuggestFeature />

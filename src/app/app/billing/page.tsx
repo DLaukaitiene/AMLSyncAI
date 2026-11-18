@@ -5,7 +5,9 @@ import { buildInvoice, vatTreatment } from "@/lib/billing/invoice";
 import { customerOf } from "@/lib/server/invoicing";
 import { CONTACT_EMAIL, monthlyFeeFor, planOf } from "@/lib/billing/plans";
 import { ActionForm, Field, Submit } from "@/components/form";
-import { saveBillingDetails } from "./actions";
+import { cancelSubscriptionAction, saveBillingDetails } from "./actions";
+import { can } from "@/lib/auth/permissions";
+import { StepUpLink } from "@/components/step-up";
 
 export default async function BillingPage() {
   const s = await requireUser("approve.compliance");
@@ -79,6 +81,30 @@ export default async function BillingPage() {
           <div className="sm:col-span-2"><Submit variant="secondary">Save invoice details</Submit></div>
         </ActionForm>
       </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">Your data</h2>
+        <p className="text-sm text-muted">Download everything — the firm file and every client&apos;s file with its documents — as one ZIP. Owners are notified of every export.</p>
+        <a className="inline-block rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-accent" href="/api/export/all">Download full export</a>
+      </section>
+
+      {can(s.user.roles, "approve.management") && firm.status !== "cancelled" && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">End subscription</h2>
+          <p className="text-sm text-muted">
+            Your records then stay available read-only for the retention period your country requires (at least 5 years), so you can still show them to a supervisor, and are deleted after that.
+            The monthly fee stops on the day you cancel; a final invoice follows. Download your full export first if you want your own copy.
+          </p>
+          <details className="rounded border border-border p-3">
+            <summary className="cursor-pointer text-sm font-medium">End my subscription</summary>
+            <ActionForm action={cancelSubscriptionAction} className="mt-3 space-y-3">
+              <Field label="Type CANCEL to confirm" name="confirm" required autoComplete="off" />
+              <Submit variant="danger">End subscription</Submit>
+              <StepUpLink />
+            </ActionForm>
+          </details>
+        </section>
+      )}
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Usage</h2>

@@ -35,13 +35,16 @@ export function planOf(id: string): Plan {
  * months that start after the trial, a share by days for the month the trial
  * ends in, nothing before. `customFeeCents` (set by AMLSync App) overrides the list price.
  */
-export function monthlyFeeFor(plan: string, customFeeCents: number | null, trialEndsOn: string | null, periodFrom: string, periodToExclusive: string): number {
+export function monthlyFeeFor(plan: string, customFeeCents: number | null, trialEndsOn: string | null, periodFrom: string, periodToExclusive: string, cancelledOn: string | null = null): number {
   const fee = customFeeCents ?? planOf(plan).monthlyCents ?? 0;
   if (fee <= 0) return 0;
-  const start = Date.parse(periodFrom + "T00:00:00Z"), end = Date.parse(periodToExclusive + "T00:00:00Z");
+  const start = Date.parse(periodFrom + "T00:00:00Z");
+  // After cancellation no fee: the month of cancellation is charged up to the cancellation day.
+  const end = Math.min(Date.parse(periodToExclusive + "T00:00:00Z"), cancelledOn ? Date.parse(cancelledOn + "T00:00:00Z") : Infinity);
+  if (end <= start) return 0;
+  const monthDays = Math.round((Date.parse(periodToExclusive + "T00:00:00Z") - start) / 86_400_000);
   const paidFrom = trialEndsOn ? Math.max(start, Date.parse(trialEndsOn + "T00:00:00Z")) : start;
   if (paidFrom >= end) return 0;
-  const days = Math.round((end - start) / 86_400_000);
   const paid = Math.round((end - paidFrom) / 86_400_000);
-  return Math.round((fee * paid) / days);
+  return Math.round((fee * paid) / monthDays);
 }
