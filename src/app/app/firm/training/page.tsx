@@ -22,7 +22,7 @@ export default async function TrainingPage() {
         <h2 className="text-lg font-semibold">My training</h2>
         {data.mine.length === 0 && <p className="text-sm text-muted">Nothing assigned to you.</p>}
         {data.mine.map((a) => (
-          <div key={a.id} className="space-y-2 rounded-md border border-border p-4 text-sm">
+          <div key={a.id} className="space-y-2 rounded-xl border border-border p-4 text-sm">
             <p><strong>{a.module.title}</strong> · {a.module.minutes} min · due {a.dueOn.toISOString().slice(0, 10)}{a.completedAt ? ` · completed ${a.completedAt.toISOString().slice(0, 10)}` : ""}</p>
             {!a.completedAt && (
               <>
@@ -43,7 +43,7 @@ export default async function TrainingPage() {
             <div className="flex flex-wrap gap-4 text-sm">{data.users.map((u) => <label key={u.id} className="flex items-center gap-2"><input type="checkbox" name="userId" value={u.id} defaultChecked /> {u.name}</label>)}</div>
             <Submit variant="secondary">Assign</Submit>
           </ActionForm>
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
             {data.all.map((a) => <li key={a.id} className="flex justify-between px-4 py-2"><span>{names.get(a.userId) ?? "former user"} · {a.module.title}</span><span className="text-muted">{a.completedAt ? `completed ${a.completedAt.toISOString().slice(0, 10)}` : `due ${a.dueOn.toISOString().slice(0, 10)}`}</span></li>)}
           </ul>
         </section>

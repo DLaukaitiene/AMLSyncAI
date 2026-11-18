@@ -5,7 +5,7 @@ import { ActionForm, Field, Submit, type ActionState } from "./form";
 /** "Something feels off" — available to every user on client and matter pages (spec §4.6). */
 export function RaiseSuspicion({ action }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState> }) {
   return (
-    <details className="rounded-md border border-border p-4">
+    <details className="rounded-xl border border-border p-4">
       <summary className="cursor-pointer text-sm font-medium">Report a suspicion to the Compliance Officer</summary>
       <ActionForm action={action} className="mt-3 space-y-3">
         <p className="text-xs text-muted">

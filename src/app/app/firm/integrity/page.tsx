@@ -42,7 +42,7 @@ export default async function IntegrityPage() {
       {manage && (
         <section>
           <h2 className="mb-2 text-lg font-semibold">All declarations</h2>
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
             {data.all.map((d) => {
               const a = d.answers as Record<string, string>;
               const flags = INTEGRITY_QUESTIONS.filter((q) => ("expect" in q ? a[q.id] !== q.expect : a[q.id] === "yes")).map((q) => q.id);

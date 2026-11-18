@@ -16,10 +16,10 @@ export default async function MattersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Matters</h1>
-        {can(s.user.roles, "client.edit") && <Link href="/app/matters/new" className="rounded bg-accent px-4 py-2 text-sm font-medium text-white dark:text-black">New matter</Link>}
+        {can(s.user.roles, "client.edit") && <Link href="/app/matters/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">New matter</Link>}
       </div>
       {matters.length === 0 ? <p className="text-sm text-muted">No matters yet. A matter is an engagement, deal, sale, letting or transaction.</p> : (
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {matters.map((m) => (
             <li key={m.id} className="flex flex-wrap justify-between gap-2 px-4 py-2">
               <span><Link className="text-accent underline" href={`/app/matters/${m.id}`}>{m.title}</Link> <span className="text-muted">· {m.type === "OTHER" ? String((m.details as { typeOther?: string }).typeOther ?? "Other") : TYPE_LABELS[m.type]}</span></span>

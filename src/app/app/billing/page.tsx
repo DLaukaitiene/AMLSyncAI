@@ -26,7 +26,7 @@ export default async function BillingPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <h1 className="text-2xl font-semibold">Billing</h1>
-      <div className="rounded-md border border-border p-4 text-sm">
+      <div className="rounded-xl border border-border p-4 text-sm">
         <span className="font-medium">{plan.name} plan</span>
         {plan.monthlyCents !== null && <> · {formatEur(firm.customFeeCents ?? plan.monthlyCents)} per month excl. VAT</>}
         {plan.users !== null && <> · up to {plan.users} users</>}
@@ -34,9 +34,9 @@ export default async function BillingPage() {
         <span className="block text-xs text-muted">To change plan, or for more users: {CONTACT_EMAIL}. Screening limits: {firm.screenLimitMinute} per minute, {firm.screenLimitDay} per day, {firm.screenLimitMonth} per month — contact us to raise them (within 1 business day).</span>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-md border border-border p-4"><span className="block text-sm text-muted">Next invoice so far (excl. VAT)</span><span className="text-2xl font-semibold" data-testid="next-invoice">{formatEur(draft.netCents)}</span><span className="block text-xs text-muted">{draft.carryCents > 0 ? `${formatEur(draft.carryCents)} credit left` : "Invoiced on the 1st of each month"}</span></div>
-        <div className="rounded-md border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{formatEur(CHECK_PRICE_CENTS)}</span><span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>
-        <div className="rounded-md border border-border p-4"><span className="block text-sm text-muted">Monthly limit for paid checks</span><span className="text-2xl font-semibold">{formatEur(firm.spendLimitCents)}</span><span className="block text-xs text-muted">Contact AMLSyncAI to raise it</span></div>
+        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Next invoice so far (excl. VAT)</span><span className="text-2xl font-semibold" data-testid="next-invoice">{formatEur(draft.netCents)}</span><span className="block text-xs text-muted">{draft.carryCents > 0 ? `${formatEur(draft.carryCents)} credit left` : "Invoiced on the 1st of each month"}</span></div>
+        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{formatEur(CHECK_PRICE_CENTS)}</span><span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>
+        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Monthly limit for paid checks</span><span className="text-2xl font-semibold">{formatEur(firm.spendLimitCents)}</span><span className="block text-xs text-muted">Contact AMLSyncAI to raise it</span></div>
       </div>
       <p className="text-sm text-muted">
         Paid checks: remote identity checks and PEP / sanctions / adverse-media screening (Didit). Screening against EU and UN sanctions lists is included in your plan.

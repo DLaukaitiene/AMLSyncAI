@@ -23,7 +23,7 @@ export default async function TeamPage() {
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Users</h2>
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {users.map((u) => (
             <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
               <span>
@@ -44,7 +44,7 @@ export default async function TeamPage() {
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">My sessions</h2>
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {sessions.map((x) => (
             <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
               <span>
@@ -63,7 +63,7 @@ export default async function TeamPage() {
           {invites.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-lg font-semibold">Pending invitations</h2>
-              <ul className="divide-y divide-border rounded-md border border-border text-sm">
+              <ul className="divide-y divide-border rounded-xl border border-border text-sm">
                 {invites.map((i) => (
                   <li key={i.id} className="flex items-center justify-between px-4 py-2">
                     <span>

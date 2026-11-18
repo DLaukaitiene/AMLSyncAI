@@ -19,7 +19,7 @@ export default function Pricing() {
         {SELF_SERVE_PLANS.map((id) => {
           const p = PLANS[id];
           return (
-            <section key={id} className="space-y-2 rounded-md border border-border p-4">
+            <section key={id} className="space-y-2 rounded-xl border border-border p-4">
               <h2 className="text-lg font-semibold">{p.name}</h2>
               <p><span className="text-2xl font-semibold">{formatEur(p.monthlyCents!)}</span> <span className="text-sm text-muted">per month</span></p>
               <p className="text-sm text-muted">{p.blurb}</p>
@@ -29,11 +29,11 @@ export default function Pricing() {
                 <li>EU and UN sanctions screening included</li>
                 <li>Policies, firm risk assessment, training records</li>
               </ul>
-              <Link href={`/signup?plan=${id}`} className="inline-block rounded bg-accent px-3 py-2 text-sm text-white dark:text-black">Start free trial</Link>
+              <Link href={`/signup?plan=${id}`} className="inline-block rounded-full bg-brand px-3 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Start free trial</Link>
             </section>
           );
         })}
-        <section className="space-y-2 rounded-md border border-border p-4">
+        <section className="space-y-2 rounded-xl border border-border p-4">
           <h2 className="text-lg font-semibold">{PLANS.custom.name}</h2>
           <p className="text-2xl font-semibold">Contact sales</p>
           <p className="text-sm text-muted">More users, several offices, higher limits or an API.</p>

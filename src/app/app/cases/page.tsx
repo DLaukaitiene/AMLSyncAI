@@ -45,7 +45,7 @@ export default async function CasesPage() {
 function CaseList({ cases }: { cases: { id: string; type: keyof typeof CASE_LABELS; status: string; decision: string | null; createdAt: Date; dueOn: Date | null; summary: string }[] }) {
   if (!cases.length) return <p className="text-sm text-muted">None.</p>;
   return (
-    <ul className="divide-y divide-border rounded-md border border-border text-sm">
+    <ul className="divide-y divide-border rounded-xl border border-border text-sm">
       {cases.map((c) => (
         <li key={c.id} className="flex flex-wrap justify-between gap-2 px-4 py-2">
           <span><Link href={`/app/cases/${c.id}`} className="text-accent underline">{CASE_LABELS[c.type]}</Link> <span className="text-muted">· {c.summary.slice(0, 80)}</span></span>

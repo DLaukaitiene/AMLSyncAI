@@ -13,11 +13,11 @@ export default async function FeatureRequestsPage({ searchParams }: { searchPara
         <h1 className="text-2xl font-semibold">Feature requests</h1>
         <span className="flex gap-4 text-sm">
           {isPlatformAdmin(s.user.email) && <Link href="/admin/feature-requests" className="text-accent underline">Triage</Link>}
-          <Link href="/app/feature-requests/new" className="rounded bg-accent px-4 py-2 font-medium text-white dark:text-black">Suggest a feature</Link>
+          <Link href="/app/feature-requests/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Suggest a feature</Link>
         </span>
       </div>
       <nav className="flex gap-4 text-sm"><Link href="/app/feature-requests" className="underline">All</Link><Link href="/app/feature-requests?mine=1" className="underline">My requests and votes</Link></nav>
-      <ul className="divide-y divide-border rounded-md border border-border text-sm">
+      <ul className="divide-y divide-border rounded-xl border border-border text-sm">
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap justify-between gap-2 px-4 py-2">
             <span>

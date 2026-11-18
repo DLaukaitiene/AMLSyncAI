@@ -44,7 +44,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
         <p className="text-sm">Opened {c.createdAt.toISOString().slice(0, 10)}{c.dueOn ? ` · due ${toIsoDate(c.dueOn)}` : ""}</p>
       </div>
 
-      <section className="space-y-2 rounded-md border border-border p-4 text-sm">
+      <section className="space-y-2 rounded-xl border border-border p-4 text-sm">
         <h2 className="font-semibold">Details</h2>
         {parties.length > 0 && (
           <p>Concerns: {parties.map((p, i) => (
@@ -71,7 +71,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       </section>
 
       {c.type === "INTERNAL_SUSPICION" && c.status === "open" && (
-        <section className="space-y-3 rounded-md border border-border p-4">
+        <section className="space-y-3 rounded-xl border border-border p-4">
           <h2 className="font-semibold">Decision (Art. 69)</h2>
           <ActionForm action={decideAction.bind(null, caseId)} className="space-y-3">
             <fieldset className="space-y-1 text-sm">
@@ -94,7 +94,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       )}
 
       {c.holdEndsOn && (
-        <section className="space-y-2 rounded-md border border-border p-4 text-sm">
+        <section className="space-y-2 rounded-xl border border-border p-4 text-sm">
           <h2 className="font-semibold">Transaction hold (Art. 71)</h2>
           <p>
             {c.fiuInstruction === "stop" ? "The FIU instructed you not to proceed. The matter stays blocked." :
@@ -116,7 +116,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       )}
 
       {c.type === "FIU_REQUEST" && c.status === "open" && (
-        <ActionForm action={answerFiuAction.bind(null, caseId)} className="space-y-2 rounded-md border border-border p-4">
+        <ActionForm action={answerFiuAction.bind(null, caseId)} className="space-y-2 rounded-xl border border-border p-4">
           <h2 className="font-semibold">Answer</h2>
           <Field label="What you sent and how" name="note" required />
           <Submit>Mark as answered</Submit>
@@ -124,7 +124,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       )}
 
       {c.type === "DISCREPANCY" && c.status === "open" && (
-        <ActionForm action={resolveDiscrepancyAction.bind(null, caseId)} className="space-y-2 rounded-md border border-border p-4">
+        <ActionForm action={resolveDiscrepancyAction.bind(null, caseId)} className="space-y-2 rounded-xl border border-border p-4">
           <h2 className="font-semibold">Client corrected the register?</h2>
           <p className="text-sm text-muted">If the client corrects the register before the deadline, no report is needed. Otherwise submit the report below.</p>
           <Field label="How it was corrected" name="note" />

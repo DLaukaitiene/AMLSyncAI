@@ -20,7 +20,7 @@ export default async function RecordsPage() {
         <p className="text-sm">No records are due for deletion.</p>
       ) : (
         <ActionForm action={purgeAction}>
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
             {due.map((d) => (
               <li key={d.partyId} className="px-4 py-2">
                 <label className="flex items-center gap-3">

@@ -15,7 +15,7 @@ const STATUS_LABEL = { filled: "Filled", default: "Default", "required-missing":
 
 function Section({ title, children, note }: { title: string; children: React.ReactNode; note?: string }) {
   return (
-    <fieldset className="space-y-4 rounded-md border border-border p-4">
+    <fieldset className="space-y-4 rounded-xl border border-border p-4">
       <legend className="px-1 font-semibold">{title}</legend>
       {note && <p className="text-sm text-muted">{note}</p>}
       {children}
@@ -59,7 +59,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Setup checklist</h2>
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {checklist.map((c) => (
             <li key={c.parameter} className="flex justify-between gap-4 px-4 py-2">
               <span>{c.label}</span>
@@ -184,7 +184,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Version history</h2>
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {versions.map((v) => (
             <li key={v.version} className="flex justify-between px-4 py-2">
               <span>Version {v.version}{v.source ? ` · ${v.source}` : ""}</span>

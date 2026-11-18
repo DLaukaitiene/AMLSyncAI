@@ -42,7 +42,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
         {m.status === "ON_HOLD" && <p className="text-sm text-red-700 dark:text-red-300">On hold: a sanctions match or a pending suspicion report blocks this matter.</p>}
       </div>
 
-      <section className="space-y-2 rounded-md border border-border p-4">
+      <section className="space-y-2 rounded-xl border border-border p-4">
         <h2 className="font-semibold">Parties</h2>
         <p className="text-xs text-muted">Required here: {requiredRoles(st.sector, st.type).join(", ")} (AMLR Art. 19(6)).</p>
         <ul className="divide-y divide-border text-sm">
@@ -80,7 +80,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
         )}
       </section>
 
-      <section className="space-y-2 rounded-md border border-border p-4">
+      <section className="space-y-2 rounded-xl border border-border p-4">
         <h2 className="font-semibold">Payments and transactions</h2>
         {m.transactions.length ? (
           <ul className="text-sm">
@@ -107,7 +107,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
       {can(s.user.roles, "case.raise") && <RaiseSuspicion action={raiseSuspicionAction.bind(null, { partyIds: m.parties.map((p) => p.partyId), matterIds: [matterId] })} />}
 
       {m.status !== "COMPLETED" && (
-        <section className="space-y-3 rounded-md border border-border p-4">
+        <section className="space-y-3 rounded-xl border border-border p-4">
           <h2 className="font-semibold">{items.length ? "Open before completion" : "Ready"}</h2>
           {items.length > 0 && (
             <ul className="list-disc pl-5 text-sm">{items.map((i) => <li key={i.id}>{i.message} <span className="text-muted">({i.article})</span></li>)}</ul>

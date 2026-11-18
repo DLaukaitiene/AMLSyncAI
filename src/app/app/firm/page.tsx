@@ -20,7 +20,7 @@ export default async function FirmPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <h1 className="text-2xl font-semibold">Firm</h1>
-      <ul className="divide-y divide-border rounded-md border border-border text-sm">
+      <ul className="divide-y divide-border rounded-xl border border-border text-sm">
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/risk-assessment">Business-wide risk assessment</Link><span className="text-muted">{ra ? `v${ra.version} in force` : "not approved yet"}</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/governance">Governance and annual report</Link><span className="text-muted">Art. 11</span></li>
         <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/training">Training</Link><span className="text-muted">Art. 12</span></li>

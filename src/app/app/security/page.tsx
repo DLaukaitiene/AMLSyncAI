@@ -17,7 +17,7 @@ export default async function SecurityLogPage() {
         <h2 className="text-lg font-semibold">AMLSyncAI support access</h2>
         <p className="text-sm text-muted">AMLSyncAI staff can see nothing unless you approve a time-limited, read-only request. They never see cases, reports or documents.</p>
         {grants.length === 0 && <p className="text-sm text-muted">No requests.</p>}
-        <ul className="divide-y divide-border rounded-md border border-border text-sm">
+        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {grants.map((g) => {
             const active = g.status === "approved" && g.expiresAt && g.expiresAt > now;
             return (

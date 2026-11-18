@@ -48,7 +48,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       {(["overdue", "due-30-days", "later", "done"] as CalendarBucket[]).filter((b) => groups.has(b)).map((b) => (
         <section key={b}>
           <h2 className={`mb-2 font-semibold ${b === "overdue" ? "text-red-700 dark:text-red-300" : ""}`}>{TITLES[b]}</h2>
-          <ul className="divide-y divide-border rounded-md border border-border text-sm">
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
             {groups.get(b)!.map((t) => (
               <li key={t.id} className="flex justify-between px-4 py-2">
                 <Link href={href(t)} className="text-accent underline">{KIND[t.kind] ?? t.kind}</Link>

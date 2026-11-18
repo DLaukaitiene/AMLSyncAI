@@ -98,7 +98,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
       )}
 
       {natural && diditEnabled() && (
-        <section className="space-y-2 rounded-md border border-border p-4" data-testid="idv">
+        <section className="space-y-2 rounded-xl border border-border p-4" data-testid="idv">
           <h2 className="font-semibold">Verify your identity</h2>
           {ctx.verified ? (
             <p className="text-sm">Done. Your identity has been verified.</p>
@@ -192,7 +192,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
 
         <div className="flex flex-wrap gap-3">
           <button type="submit" name="intent" value="save" className="rounded border border-border px-4 py-2 text-sm">Save for later</button>
-          <button type="submit" name="intent" value="submit" className="rounded bg-accent px-4 py-2 text-sm font-medium text-white dark:text-black">Submit</button>
+          <button type="submit" name="intent" value="submit" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Submit</button>
         </div>
       </ActionForm>
       {ctx.privacy ? (

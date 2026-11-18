@@ -124,12 +124,12 @@ export function Field({
 export function Submit({ children, variant = "primary" }: { children: ReactNode; variant?: "primary" | "secondary" | "danger" }) {
   const pending = useContext(PendingCtx);
   const styles = {
-    primary: "bg-accent text-white dark:text-black",
-    secondary: "border border-border",
-    danger: "bg-red-700 text-white",
+    primary: "bg-brand text-brand-ink hover:brightness-105",
+    secondary: "border border-border bg-background hover:border-accent",
+    danger: "bg-red-700 text-white hover:bg-red-800",
   }[variant];
   return (
-    <button type="submit" disabled={pending} className={`rounded px-4 py-2 text-sm font-medium disabled:opacity-60 ${styles}`}>
+    <button type="submit" disabled={pending} className={`rounded-full px-5 py-2 text-sm font-semibold font-[family-name:var(--font-heading)] transition disabled:opacity-60 ${styles}`}>
       {pending ? "Working…" : children}
     </button>
   );

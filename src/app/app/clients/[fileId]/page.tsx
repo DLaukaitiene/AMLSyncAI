@@ -32,7 +32,7 @@ const LABELS: Record<string, string> = {
 
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section id={id} className="space-y-3 rounded-md border border-border p-4">
+    <section id={id} className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
       <h2 className="font-semibold">{title}</h2>
       {children}
     </section>

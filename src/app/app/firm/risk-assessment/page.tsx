@@ -33,7 +33,7 @@ export default async function RiskAssessmentPage() {
       </div>
 
       {data.current && data.currentDoc && (
-        <section className="space-y-3 rounded-md border border-border p-4">
+        <section className="space-y-3 rounded-xl border border-border p-4">
           <div className="flex items-center justify-between"><h2 className="font-semibold">In force: version {data.current.version}</h2><a className="text-sm text-accent underline" href={`/api/docs/risk-assessment/${data.current.id}`}>Download PDF</a></div>
           <details><summary className="cursor-pointer text-sm">Show</summary><div className="mt-3"><DocView doc={data.currentDoc} /></div></details>
         </section>
@@ -47,7 +47,7 @@ export default async function RiskAssessmentPage() {
             <h2 className="text-lg font-semibold">Draft version {data.draft.version}</h2>
             <fieldset disabled={!edit} className="space-y-6">
               {groups.map((g) => (
-                <fieldset key={g} className="space-y-4 rounded-md border border-border p-4">
+                <fieldset key={g} className="space-y-4 rounded-xl border border-border p-4">
                   <legend className="px-1 font-semibold">{g}</legend>
                   {RISK_QUESTIONS.filter((q) => q.group === g).map((q) => (
                     <fieldset key={q.id} className="space-y-1 text-sm">
@@ -59,7 +59,7 @@ export default async function RiskAssessmentPage() {
                   ))}
                 </fieldset>
               ))}
-              <fieldset className="space-y-4 rounded-md border border-border p-4">
+              <fieldset className="space-y-4 rounded-xl border border-border p-4">
                 <legend className="px-1 font-semibold">Controls</legend>
                 {CONTROL_QUESTIONS.map((q) => (
                   <fieldset key={q.id} className="space-y-1 text-sm">
@@ -75,7 +75,7 @@ export default async function RiskAssessmentPage() {
           </ActionForm>
 
           {data.draftDoc && unanswered && unanswered.length === 0 && (
-            <section className="space-y-3 rounded-md border border-border p-4">
+            <section className="space-y-3 rounded-xl border border-border p-4">
               <div className="flex items-center justify-between"><h2 className="font-semibold">Result (draft)</h2><a className="text-sm text-accent underline" href={`/api/docs/risk-assessment/${data.draft.id}`}>Download PDF</a></div>
               <DocView doc={data.draftDoc} />
               {can(s.user.roles, "approve.management")

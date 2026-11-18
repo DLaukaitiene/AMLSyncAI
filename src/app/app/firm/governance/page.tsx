@@ -30,7 +30,7 @@ export default async function GovernancePage() {
       {(Object.keys(FN) as (keyof typeof FN)[]).map((fn) => {
         const current = data.appts.find((a) => a.function === fn && !a.toDate);
         return (
-          <section key={fn} className="space-y-2 rounded-md border border-border p-4 text-sm">
+          <section key={fn} className="space-y-2 rounded-xl border border-border p-4 text-sm">
             <h2 className="font-semibold">{FN[fn]}</h2>
             <p>{current ? `${data.allUsers.get(current.userId)} since ${current.fromDate.toISOString().slice(0, 10)}` : "Not appointed."}</p>
             {data.appts.filter((a) => a.function === fn && a.toDate).map((a) => (
