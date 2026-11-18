@@ -14,9 +14,10 @@ export type PartyRole =
   | "tenant"
   | "supplier"
   | "representative"
-  | "beneficiary";
+  | "beneficiary"
+  | "other";
 
-export type MatterType = "engagement" | "property-sale" | "letting" | "goods-sale" | "company-formation" | "transaction";
+export type MatterType = "engagement" | "property-sale" | "letting" | "goods-sale" | "company-formation" | "transaction" | "other";
 
 /** Roles that must each have their own CDD file (Art. 19(6)). */
 export function requiredRoles(sector: Sector, type: MatterType): PartyRole[] {

@@ -58,6 +58,7 @@ enum PartyRole {
   SUPPLIER
   REPRESENTATIVE
   BENEFICIARY
+  OTHER
 }
 
 enum MatterType {
@@ -67,6 +68,7 @@ enum MatterType {
   GOODS_SALE
   COMPANY_FORMATION
   TRANSACTION
+  OTHER
 }
 
 enum MatterStatus {
@@ -192,6 +194,7 @@ model Firm {
   clientTypes   String[]
   usesCash      Boolean  @default(false)
   crossBorderPct Int?
+  sectorOther   String?  // description when the sector is OTHER
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
@@ -421,6 +424,7 @@ model MatterParty {
   partyId  String    @db.Uuid
   party    Party     @relation(fields: [partyId], references: [id], onDelete: Cascade)
   role     PartyRole
+  roleOther String? // description when role is OTHER
 
   @@unique([matterId, partyId, role])
   @@index([firmId])

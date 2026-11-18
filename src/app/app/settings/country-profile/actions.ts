@@ -8,6 +8,7 @@ import { currentProfile } from "@/lib/server/country-profile";
 import { audit } from "@/lib/server/audit";
 import { defaultCountryProfile, diffProfiles, parseCountryProfile, type CountryProfileInput } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
+import { isKnownCountry, normalizeCountry } from "@/lib/geo/countries";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const num = (fd: FormData, k: string) => (str(fd, k) === "" ? undefined : Number(str(fd, k)));
@@ -97,9 +98,9 @@ export async function addOfficeAction(_: ActionState, fd: FormData): Promise<Act
   const s = await requireUser("countryProfile.edit");
   if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/country-profile" } };
   const name = String(fd.get("name") ?? "").trim();
-  const memberState = String(fd.get("memberState") ?? "").trim().toUpperCase();
+  const memberState = normalizeCountry(String(fd.get("memberState") ?? "")) ?? "";
   if (name.length < 2) return { error: "Name the office.", fieldErrors: { name: ["Required."] } };
-  if (!/^[A-Z]{2}$/.test(memberState)) return { error: "Choose the member state.", fieldErrors: { memberState: ["2-letter code"] } };
+  if (!isKnownCountry(memberState)) return { error: "Choose the country from the list.", fieldErrors: { memberState: ["Choose from the list"] } };
   await withTenant(s.firm.id, async (tx) => {
     const o = await tx.office.create({ data: { firmId: s.firm.id, name, memberState } });
     const row = await tx.countryProfileVersion.create({

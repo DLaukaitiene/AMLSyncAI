@@ -13,6 +13,7 @@ import { defaultCountryProfile } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
 import { CONTACT_EMAIL, planOf, TRIAL_DAYS } from "@/lib/billing/plans";
+import { isKnownCountry, normalizeCountry } from "@/lib/geo/countries";
 import type { Role, Sector } from "@prisma/client";
 
 export const EU_MEMBER_STATES = [
@@ -32,6 +33,7 @@ export const SECTORS: [string, string][] = [
   ["CROWDFUNDING", "Crowdfunding service provider"],
   ["GAMBLING", "Gambling provider"],
   ["INVESTMENT_MIGRATION", "Investment migration operator"],
+  ["FOOTBALL", "Football agent or professional football club"],
   ["OTHER", "Other obliged entity"],
 ];
 const SECTOR_VALUES = SECTORS.map(([v]) => v) as [string, ...string[]];
@@ -51,14 +53,24 @@ export const signupSchema = z.object({
   companyName: z.string().trim().min(2, "Enter the company name").max(200),
   name: z.string().trim().min(2, "Enter your name").max(200),
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
-  memberState: z.enum(EU_MEMBER_STATES, { errorMap: () => ({ message: "Choose the member state" }) }),
+  // Any country; firms outside the EU are told AMLSyncAI follows EU rules (AMLR).
+  memberState: z.string().transform((v, ctx) => {
+    const c = normalizeCountry(v);
+    if (!c || !isKnownCountry(c)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose your country from the list" });
+      return z.NEVER;
+    }
+    return c;
+  }),
   sector: z.enum(SECTOR_VALUES, { errorMap: () => ({ message: "Choose your sector" }) }),
+  sectorOther: z.string().trim().max(200).optional(),
   plan: z.enum(["solo", "starter"], { errorMap: () => ({ message: "Choose a plan" }) }).default("starter"),
   password: z.string(),
   signupCode: z.string().trim().optional(),
 });
 
 export async function startSignup(input: z.infer<typeof signupSchema>, ip: string | null): Promise<FlowResult> {
+  if (input.sector === "OTHER" && !input.sectorOther) return fail("Describe your activity.", { sectorOther: ["Describe your activity."] });
   if (!(await hit(`signup:ip:${ip}`, LIMITS.signupPerIp))) {
     await securityEvent({ kind: "rate-limit", ip, details: { endpoint: "signup" } });
     return fail("Too many sign-up attempts. Try again later.");
@@ -92,6 +104,7 @@ export async function startSignup(input: z.infer<typeof signupSchema>, ip: strin
         name: input.name,
         memberState: input.memberState,
         sector: input.sector,
+        sectorOther: input.sector === "OTHER" ? input.sectorOther || null : null,
         plan: input.plan,
         passwordHash: await hashPassword(input.password),
         codeId,
@@ -116,7 +129,7 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
     return { ok: false, error: "This link is invalid or has expired. Sign up again to get a new one." };
   }
   const d = t.data as {
-    companyName: string; name: string; memberState: string; sector: string; plan?: string; passwordHash: string; codeId: string | null;
+    companyName: string; name: string; memberState: string; sector: string; sectorOther?: string | null; plan?: string; passwordHash: string; codeId: string | null;
     checks: { freeOrDisposable: boolean; hasMx?: boolean; domainAgeDays?: number | null };
   };
   const domain = emailDomain(t.email)!;
@@ -132,7 +145,7 @@ export async function confirmSignup(token: string): Promise<{ ok: true; user: { 
       const firm = await tx.firm.create({
         data: {
           name: d.companyName, emailDomain: domain, homeState: d.memberState, sectors: [d.sector as Sector],
-          plan: d.plan ?? "starter", trialEndsOn: new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString().slice(0, 10),
+          sectorOther: d.sectorOther ?? null, plan: d.plan ?? "starter", trialEndsOn: new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString().slice(0, 10),
         },
       });
       await tx.office.create({ data: { firmId: firm.id, name: "Head office", memberState: d.memberState, isHome: true } });

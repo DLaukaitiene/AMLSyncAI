@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, startTransition, useActionState, useContext, useId, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, useId, useState, type ReactNode } from "react";
+import { countryName, countryOptions, normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
 
 export type ActionState = { error?: string; fieldErrors?: Record<string, string[]>; message?: string; data?: unknown } | null;
 export type FormAction = (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -142,6 +143,172 @@ export function Honeypot() {
         Website
         <input type="text" name="website" tabIndex={-1} autoComplete="off" />
       </label>
+    </div>
+  );
+}
+
+const label = (v: string) => (/^[A-Z]{2}$/.test(v) ? `${countryName(v)} (${v})` : v);
+
+/**
+ * Country picker for every country field: type to search all countries, or
+ * type any other name ("Other"). `multiple` lets people add several (e.g.
+ * nationalities). Submits ISO codes where recognised, otherwise the text.
+ */
+export function CountryField({
+  label: text,
+  name,
+  hint,
+  defaultValue,
+  required,
+  multiple,
+  euFirst,
+}: {
+  label: string;
+  name: string;
+  hint?: ReactNode;
+  defaultValue?: string | string[];
+  required?: boolean;
+  multiple?: boolean;
+  euFirst?: boolean;
+}) {
+  const id = useId();
+  const listId = `${id}-countries`;
+  const state = useContext(Ctx);
+  const errors = state?.fieldErrors?.[name];
+  const initial = normalizeCountries(defaultValue ?? []);
+  const [values, setValues] = useState<string[]>(initial);
+  const [draft, setDraft] = useState(multiple ? "" : initial[0] ? label(initial[0]) : "");
+  const describedBy = [`${id}-hint`, errors ? `${id}-err` : null].filter(Boolean).join(" ");
+  const add = () => {
+    const v = normalizeCountry(draft);
+    if (v && !values.includes(v)) setValues([...values, v]);
+    setDraft("");
+  };
+  const cls = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm focus:outline-2 focus:outline-accent";
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-sm font-medium">
+        {text}
+        {required && <span aria-hidden="true" className="text-muted"> *</span>}
+      </label>
+      <datalist id={listId}>
+        {countryOptions(euFirst).map((c) => <option key={c.code} value={`${c.name} (${c.code})`} />)}
+      </datalist>
+      {multiple ? (
+        <>
+          {values.length > 0 && (
+            <ul className="flex flex-wrap gap-2" aria-label={`${text}: chosen`}>
+              {values.map((v) => (
+                <li key={v} className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-sm">
+                  {label(v)}
+                  <button type="button" className="text-muted hover:text-foreground" aria-label={`Remove ${label(v)}`} onClick={() => setValues(values.filter((x) => x !== v))}>×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <input
+              id={id}
+              list={listId}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); } }}
+              aria-invalid={errors ? true : undefined}
+              aria-describedby={describedBy}
+              placeholder="Type a country"
+              autoComplete="off"
+              className={cls}
+            />
+            <button type="button" onClick={add} className="rounded border border-border px-3 text-sm whitespace-nowrap">Add country</button>
+          </div>
+          {/* A country typed but not yet added still counts. */}
+          <input type="hidden" name={name} value={[...values, ...(normalizeCountry(draft) && !values.includes(normalizeCountry(draft)!) ? [normalizeCountry(draft)!] : [])].join(", ")} />
+        </>
+      ) : (
+        <>
+          <input
+            id={id}
+            list={listId}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            required={required}
+            aria-invalid={errors ? true : undefined}
+            aria-describedby={describedBy}
+            placeholder="Type a country"
+            autoComplete="off"
+            className={cls}
+          />
+          <input type="hidden" name={name} value={normalizeCountry(draft) ?? ""} />
+        </>
+      )}
+      <p id={`${id}-hint`} className="text-xs text-muted">
+        {hint ?? "Pick from the list, or type the name if it isn't listed."}
+      </p>
+      {errors?.map((e) => (
+        <p key={e} id={`${id}-err`} className="text-xs text-red-700 dark:text-red-300">
+          {e}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A dropdown with an "Other" choice that opens a text box (`${name}Other`) to
+ * describe it. Use for every list where real life can fall outside the options.
+ */
+export function SelectWithOther({
+  label: text,
+  name,
+  options,
+  otherValue = "OTHER",
+  otherLabel = "Other (describe)",
+  defaultValue,
+  defaultOther,
+  required,
+  hint,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  options: [string, string][];
+  otherValue?: string;
+  otherLabel?: string;
+  defaultValue?: string;
+  defaultOther?: string;
+  required?: boolean;
+  hint?: ReactNode;
+  placeholder?: string;
+}) {
+  const id = useId();
+  const state = useContext(Ctx);
+  const errors = [...(state?.fieldErrors?.[name] ?? []), ...(state?.fieldErrors?.[`${name}Other`] ?? [])];
+  const [value, setValue] = useState(defaultValue ?? "");
+  const cls = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="block text-sm font-medium">
+        {text}
+        {required && <span aria-hidden="true" className="text-muted"> *</span>}
+      </label>
+      <select id={id} name={name} value={value} onChange={(e) => setValue(e.target.value)} required={required} className={cls} aria-invalid={errors.length ? true : undefined} aria-describedby={hint ? `${id}-hint` : undefined}>
+        {placeholder !== undefined && <option value="" disabled={required}>{placeholder}</option>}
+        {options.filter(([v]) => v !== otherValue).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        <option value={otherValue}>{otherLabel}</option>
+      </select>
+      {value === otherValue && (
+        <input
+          name={`${name}Other`}
+          defaultValue={defaultOther}
+          required
+          maxLength={200}
+          aria-label={`${text}: describe`}
+          placeholder="Describe"
+          className="w-full rounded border border-border bg-transparent px-3 py-2 text-sm focus:outline-2 focus:outline-accent"
+        />
+      )}
+      {hint && <p id={`${id}-hint`} className="text-xs text-muted">{hint}</p>}
+      {errors.map((e) => <p key={e} className="text-xs text-red-700 dark:text-red-300">{e}</p>)}
     </div>
   );
 }

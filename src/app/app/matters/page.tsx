@@ -22,8 +22,8 @@ export default async function MattersPage() {
         <ul className="divide-y divide-border rounded-md border border-border text-sm">
           {matters.map((m) => (
             <li key={m.id} className="flex flex-wrap justify-between gap-2 px-4 py-2">
-              <span><Link className="text-accent underline" href={`/app/matters/${m.id}`}>{m.title}</Link> <span className="text-muted">· {TYPE_LABELS[m.type]}</span></span>
-              <span className="text-muted">{m.parties.map((p) => `${p.party.displayName} (${p.role.toLowerCase()})`).join(", ") || "no parties"} · {m.status.toLowerCase().replace("_", " ")}</span>
+              <span><Link className="text-accent underline" href={`/app/matters/${m.id}`}>{m.title}</Link> <span className="text-muted">· {m.type === "OTHER" ? String((m.details as { typeOther?: string }).typeOther ?? "Other") : TYPE_LABELS[m.type]}</span></span>
+              <span className="text-muted">{m.parties.map((p) => `${p.party.displayName} (${p.role === "OTHER" ? p.roleOther ?? "other" : p.role.toLowerCase()})`).join(", ") || "no parties"} · {m.status.toLowerCase().replace("_", " ")}</span>
             </li>
           ))}
         </ul>

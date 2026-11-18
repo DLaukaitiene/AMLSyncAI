@@ -19,8 +19,8 @@ import { toIsoDate } from "@/lib/rules/dates";
 import { encryptField } from "@/lib/server/crypto";
 import { matterHeld } from "@/lib/server/cases";
 
-const ROLES = ["CLIENT", "BUYER", "SELLER", "LANDLORD", "TENANT", "SUPPLIER", "REPRESENTATIVE", "BENEFICIARY"] as const;
-const TYPES = ["ENGAGEMENT", "PROPERTY_SALE", "LETTING", "GOODS_SALE", "COMPANY_FORMATION", "TRANSACTION"] as const;
+const ROLES = ["CLIENT", "BUYER", "SELLER", "LANDLORD", "TENANT", "SUPPLIER", "REPRESENTATIVE", "BENEFICIARY", "OTHER"] as const;
+const TYPES = ["ENGAGEMENT", "PROPERTY_SALE", "LETTING", "GOODS_SALE", "COMPANY_FORMATION", "TRANSACTION", "OTHER"] as const;
 const SECTOR_KEY: Record<string, Sector> = {
   ACCOUNTANT: "accountant", ESTATE_AGENT: "estate-agent", HVG_TRADER: "hvg-trader", PRECIOUS_METALS: "precious-metals", TCSP: "tcsp", LEGAL: "legal",
   ART_TRADER: "art-trader", GAMBLING: "gambling", CROWDFUNDING: "crowdfunding", CREDIT_INTERMEDIARY: "credit-intermediary", INVESTMENT_MIGRATION: "investment-migration",
@@ -32,9 +32,11 @@ export async function createMatterAction(_: ActionState, fd: FormData): Promise<
   const type = TYPES.find((t) => t === o.type);
   const sector = o.sector;
   if (!type) return { error: "Choose the matter type.", fieldErrors: { type: ["Required."] } };
+  if (type === "OTHER" && !String(o.typeOther ?? "").trim()) return { error: "Describe the type of matter.", fieldErrors: { typeOther: ["Describe it."] } };
+  if (o.goodsCategory === "other" && !String(o.goodsCategoryOther ?? "").trim()) return { error: "Describe the goods category.", fieldErrors: { goodsCategoryOther: ["Describe it."] } };
   if (!o.title || o.title.trim().length < 3) return { error: "Give the matter a title.", fieldErrors: { title: ["Required."] } };
   const details: Record<string, string> = {};
-  for (const k of ["property", "price", "financing", "item", "goodsCategory", "value", "engagementType", "monthlyRent"]) if (o[k]) details[k] = o[k];
+  for (const k of ["property", "price", "financing", "item", "goodsCategory", "goodsCategoryOther", "typeOther", "value", "engagementType", "monthlyRent"]) if (o[k]) details[k] = String(o[k]).slice(0, 500);
   const id = await withTenant(s.firm.id, async (tx) => {
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } });
     const officeId = o.officeId ? (await tx.office.findUnique({ where: { id: o.officeId } }))?.id ?? null : null;
@@ -64,12 +66,14 @@ export async function addPartyAction(matterId: string, _: ActionState, fd: FormD
   const o = formToObject(fd);
   const role = ROLES.find((r) => r === o.role);
   if (!role) return { error: "Choose the role.", fieldErrors: { role: ["Required."] } };
+  const roleOther = role === "OTHER" ? String(o.roleOther ?? "").trim().slice(0, 200) : null;
+  if (role === "OTHER" && !roleOther) return { error: "Describe the role.", fieldErrors: { roleOther: ["Describe it."] } };
   return withTenant(s.firm.id, async (tx) => {
     let partyId = o.existingPartyId;
     if (!partyId) {
       const kind = o.kind === "LEGAL" ? "LEGAL" : "NATURAL";
       const parsed = kind === "NATURAL"
-        ? naturalPersonSchema.safeParse({ firstNames: o.firstNames, lastName: o.lastName, birthDate: o.birthDate, nationalities: (o.nationalities ?? "").split(/[,\s]+/).filter(Boolean), residenceCountry: o.residenceCountry, isPep: o.isPep === "on", isPepFamilyOrAssociate: o.isPepFamilyOrAssociate === "on" })
+        ? naturalPersonSchema.safeParse({ firstNames: o.firstNames, lastName: o.lastName, birthDate: o.birthDate, nationalities: o.nationalities ?? "", residenceCountry: o.residenceCountry, isPep: o.isPep === "on", isPepFamilyOrAssociate: o.isPepFamilyOrAssociate === "on" })
         : legalEntitySchema.safeParse({ name: o.name, legalForm: o.legalForm, registrationNumber: o.registrationNumber, countryOfCreation: o.countryOfCreation, bearerShares: o.bearerShares === "on", nomineeArrangements: o.nomineeArrangements === "on" });
       if (!parsed.success) return zodErrors(parsed.error);
       const p = await tx.party.create({ data: { firmId: s.firm.id, kind, displayName: displayName(kind, parsed.data), details: parsed.data as Prisma.InputJsonValue } });
@@ -80,7 +84,7 @@ export async function addPartyAction(matterId: string, _: ActionState, fd: FormD
     const exists = await tx.matterParty.findFirst({ where: { matterId, partyId, role } });
     if (exists) return { error: "This party already has that role in the matter." };
     const review = o.existingPartyId ? await compareWithProfile(tx, s.firm.id, matterId, partyId) : null;
-    await tx.matterParty.create({ data: { firmId: s.firm.id, matterId, partyId, role } });
+    await tx.matterParty.create({ data: { firmId: s.firm.id, matterId, partyId, role, roleOther } });
     const fileId = await ensureFile(tx, s.firm.id, partyId, role);
     await persistRiskIfChanged(tx, s.firm.id, await loadClientFile(tx, s.firm.id, fileId));
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Matter", objectId: matterId, fields: ["parties"] });
@@ -97,6 +101,7 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
   if (!(amount > 0)) return { error: "Enter the amount in EUR.", fieldErrors: { amountEUR: ["More than 0."] } };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(o.date ?? "")) return { error: "Enter the date.", fieldErrors: { date: ["YYYY-MM-DD"] } };
   const method = ["cash", "bank-transfer", "card", "crypto", "other"].includes(o.method) ? (o.method as "cash") : "bank-transfer";
+  const methodStored = o.method === "other" && String(o.methodOther ?? "").trim() ? `other: ${String(o.methodOther).trim().slice(0, 100)}` : method;
   if (!o.customerId) return { error: "Choose who pays." };
 
   return withTenant(s.firm.id, async (tx) => {
@@ -116,7 +121,7 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
       id: t.id, customerId: t.customerId, date: toIsoDate(t.date), amountEUR: Number(t.amountEUR), method: t.method as "cash", occasional: t.occasional,
     }));
     const t = await tx.transaction.create({
-      data: { firmId: s.firm.id, matterId, customerId: o.customerId, date: new Date(o.date), amountEUR: amount, method, occasional: o.occasional === "on" },
+      data: { firmId: s.firm.id, matterId, customerId: o.customerId, date: new Date(o.date), amountEUR: amount, method: methodStored, occasional: o.occasional === "on" },
     });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Transaction", objectId: t.id, fields: ["amountEUR", "method"] });
 

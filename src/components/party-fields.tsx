@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Field } from "./form";
+import { CountryField, Field } from "./form";
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
 export function PartyFields({ prefix = "", allowLegal = true, compact = false }: { prefix?: string; allowLegal?: boolean; compact?: boolean }) {
@@ -26,8 +26,8 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false }:
           <Field label="Surname" name={n("lastName")} required />
           <Field label="Date of birth" name={n("birthDate")} type="date" />
           {!compact && <Field label="Place of birth" name={n("placeOfBirth")} />}
-          <Field label="Nationalities" name={n("nationalities")} hint="All of them, 2-letter codes, e.g. LT, PL" />
-          <Field label="Country of residence" name={n("residenceCountry")} hint="2-letter code" />
+          <CountryField label="Nationalities" name={n("nationalities")} multiple hint="Add all of them. Not listed? Type the name and press Add country." />
+          <CountryField label="Country of residence" name={n("residenceCountry")} />
           {!compact && (
             <>
               <Field label="Residential address" name={n("address")} />
@@ -54,7 +54,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false }:
           <Field label="Legal name" name={n("name")} required />
           <Field label="Legal form" name={n("legalForm")} />
           <Field label="Registration number" name={n("registrationNumber")} />
-          <Field label="Country of creation" name={n("countryOfCreation")} hint="2-letter code" />
+          <CountryField label="Country of creation" name={n("countryOfCreation")} />
           {!compact && (
             <>
               <Field label="LEI" name={n("lei")} />

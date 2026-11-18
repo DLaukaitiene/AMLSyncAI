@@ -32,7 +32,7 @@ function readParty(fd: FormData, prefix = "") {
       kind,
       parsed: naturalPersonSchema.safeParse({
         firstNames: get("firstNames"), lastName: get("lastName"), birthDate: get("birthDate"), placeOfBirth: get("placeOfBirth"),
-        nationalities: get("nationalities").split(/[,\s]+/).filter(Boolean), residenceCountry: get("residenceCountry"), address: get("address"),
+        nationalities: get("nationalities"), residenceCountry: get("residenceCountry"), address: get("address"),
         occupation: get("occupation"), email: get("email"), phone: get("phone"), isPep: o[prefix + "isPep"] === "on",
         pepFunction: get("pepFunction"), pepLeftOfficeOn: get("pepLeftOfficeOn"), isPepFamilyOrAssociate: o[prefix + "isPepFamilyOrAssociate"] === "on",
       }),

@@ -4,7 +4,7 @@ import { currentProfile } from "@/lib/server/country-profile";
 import { setupChecklist } from "@/lib/rules/country-profile";
 import { EU_CORE } from "@/lib/rules/eu-core";
 import { can } from "@/lib/auth/permissions";
-import { ActionForm, Field, Submit } from "@/components/form";
+import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { addOfficeAction, saveProfileAction } from "./actions";
 import Link from "next/link";
@@ -176,7 +176,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           <p className="text-sm text-muted">Branches or activity in another member state use that state&apos;s Country Profile for their matters (Art. 8) [verify scope with counsel].</p>
           <ActionForm action={addOfficeAction} className="grid gap-3 sm:grid-cols-3">
             <Field label="Office name" name="name" required />
-            <Field label="Member state" name="memberState" required hint="2-letter code, e.g. PL" />
+            <CountryField label="Country of the office" name="memberState" required euFirst hint="EU countries are listed first." />
             <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit><StepUpLink /></div>
           </ActionForm>
         </section>

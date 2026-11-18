@@ -63,7 +63,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
 
   // Office in Poland with a lower cash cap
   await p.goto(BASE + "/app/settings/country-profile");
-  await p.getByLabel("Office name *").fill("Warsaw branch"); await p.getByLabel("Member state *").fill("PL");
+  await p.getByLabel("Office name *").fill("Warsaw branch"); await p.getByLabel("Country of the office").fill("PL");
   await submit(p, "Add office", "Office added with a PL Country Profile");
   await p.getByRole("link", { name: "Warsaw branch (PL)" }).click();
   await p.getByRole("heading", { name: /Poland · Warsaw branch \(host state\)/ }).waitFor();
