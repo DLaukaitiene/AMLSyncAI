@@ -99,7 +99,7 @@ export function AppShell({ nav, topRight, firmName, children }: { nav: NavItem[]
       )}
       <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-2.5 backdrop-blur">
         <button type="button" className="rounded p-1.5 lg:hidden" onClick={() => setDrawer(true)} aria-label="Open menu" aria-expanded={drawer}><Menu className="h-5 w-5" /></button>
-        <span className="lg:hidden"><Logo href="/app" tagline={false} dark={false} /></span>
+        <span className="lg:hidden"><Logo href="/app" dark={false} /></span>
         <div className="ml-auto flex items-center gap-3 text-sm">{topRight}</div>
       </header>
       <main id="content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>

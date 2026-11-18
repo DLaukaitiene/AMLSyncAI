@@ -344,3 +344,9 @@ section[id] { scroll-margin-top: 80px; }
 :root{--cyan-deep:#0a7596}
 .trigger .num,.tag{color:#b9520b !important}
 main p a:not(.btn),main li a:not(.btn),.form-note a,.prose a:not(.btn),figcaption a{text-decoration:underline;text-underline-offset:2px}
+
+/* AMLSync App launch */
+.nav-links a.nav-signin { color: #fff; font-weight: 600; }
+.hero-new { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 22px; padding: 6px 14px 6px 6px; border-radius: 999px; background: rgba(67,198,232,.12); border: 1px solid rgba(67,198,232,.35); color: #fff; font-size: .92rem; font-weight: 500; }
+.hero-new:hover { text-decoration: none; background: rgba(67,198,232,.2); }
+.hero-new span { background: var(--cyan); color: var(--navy-950); font-weight: 700; font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; }
