@@ -19,6 +19,7 @@ import { createSession, destroySession, getSession, markMfa, requestMeta } from 
 import { formToObject, isBot, safeNext, zodErrors } from "@/lib/server/form";
 import { securityEvent } from "@/lib/server/audit";
 import { checkPow, POW_FAILED } from "@/lib/server/pow";
+import { EMAIL_FAILED, EmailDeliveryError } from "@/lib/server/email";
 
 export async function signupAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip, userAgent } = await requestMeta();
@@ -29,7 +30,13 @@ export async function signupAction(_: ActionState, fd: FormData): Promise<Action
   if (!(await checkPow(fd, "signup", ip, userAgent))) return { error: POW_FAILED };
   const parsed = signupSchema.safeParse(formToObject(fd));
   if (!parsed.success) return zodErrors(parsed.error);
-  const r = await startSignup(parsed.data, ip);
+  let r: Awaited<ReturnType<typeof startSignup>>;
+  try {
+    r = await startSignup(parsed.data, ip);
+  } catch (e) {
+    if (e instanceof EmailDeliveryError) return { error: EMAIL_FAILED };
+    throw e;
+  }
   if (!r.ok) return { error: r.error, fieldErrors: r.fieldErrors };
   redirect("/signup/sent");
 }
@@ -96,7 +103,14 @@ export async function acceptInviteAction(token: string, _: ActionState, fd: Form
 export async function forgotAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip } = await requestMeta();
   if (!(await checkPow(fd, "reset", ip))) return { error: POW_FAILED };
-  if (!isBot(fd)) await requestPasswordReset(String(fd.get("email") ?? ""), ip);
+  if (!isBot(fd)) {
+    try {
+      await requestPasswordReset(String(fd.get("email") ?? ""), ip);
+    } catch (e) {
+      if (e instanceof EmailDeliveryError) return { error: EMAIL_FAILED };
+      throw e;
+    }
+  }
   return { message: "If an account exists for this email, we've sent a link to reset the password." };
 }
 
@@ -116,6 +130,13 @@ export async function logoutAction() {
 export async function recoverAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const { ip } = await requestMeta();
   if (!(await checkPow(fd, "recover", ip))) return { error: POW_FAILED };
-  if (!isBot(fd)) await requestSelfRecovery(String(fd.get("email") ?? ""), String(fd.get("password") ?? ""), ip);
+  if (!isBot(fd)) {
+    try {
+      await requestSelfRecovery(String(fd.get("email") ?? ""), String(fd.get("password") ?? ""), ip);
+    } catch (e) {
+      if (e instanceof EmailDeliveryError) return { error: EMAIL_FAILED };
+      throw e;
+    }
+  }
   return { message: "If the details are correct, we've emailed the next steps. For your security, two-factor can be set up again only after 72 hours, and the firm's Owner is notified." };
 }

@@ -8,6 +8,7 @@ import { adminDb } from "@/lib/server/db";
 import { withTenant } from "@/lib/server/db";
 import { audit, securityEvent } from "@/lib/server/audit";
 import { formToObject, zodErrors } from "@/lib/server/form";
+import { EMAIL_FAILED, EmailDeliveryError } from "@/lib/server/email";
 
 const STEP_UP = { error: "For security, confirm it's you first.", data: { stepUp: "/app/team" } };
 
@@ -18,7 +19,13 @@ export async function inviteAction(_: ActionState, fd: FormData): Promise<Action
   const parsed = inviteSchema.safeParse({ ...raw, allowExternal: raw.allowExternal === "on" });
   if (!parsed.success) return zodErrors(parsed.error);
   if (parsed.data.role === "OWNER" && !s.user.roles.includes("OWNER")) return { error: "Only an Owner can invite another Owner." };
-  const r = await createInvitation(s.firm.id, s.user.id, parsed.data);
+  let r: Awaited<ReturnType<typeof createInvitation>>;
+  try {
+    r = await createInvitation(s.firm.id, s.user.id, parsed.data);
+  } catch (e) {
+    if (e instanceof EmailDeliveryError) return { error: EMAIL_FAILED };
+    throw e;
+  }
   if (!r.ok) return { error: r.error, fieldErrors: r.fieldErrors };
   revalidatePath("/app/team");
   return { message: `Invitation sent to ${parsed.data.email}. It expires in 72 hours.` };

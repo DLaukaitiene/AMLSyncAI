@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { adminDb } from "../db";
 import { randomToken, sha256, encryptField, decryptField } from "../crypto";
-import { appUrl, sendEmail } from "../email";
+import { appUrl, notify, sendEmail } from "../email";
 import { hit, LIMITS } from "../rate-limit";
 import { securityEvent } from "../audit";
 import { domainLookups } from "../domain-lookups";
@@ -219,7 +219,7 @@ export async function passwordLogin(
     });
     await securityEvent({ firmId: user.firmId, userId: user.id, kind: "login-failed", ip, userAgent, details: { failed } });
     if (failed === LOCK_AFTER) {
-      await sendEmail(user.email, "AMLSyncAI: your account is temporarily locked",
+      await notify(user.email, "AMLSyncAI: your account is temporarily locked",
         `There were ${failed} failed sign-in attempts on your account, so it is locked for a short time. If this wasn't you, tell your Compliance Officer.`);
     }
     return { ok: false, error: GENERIC_LOGIN_ERROR };
@@ -237,10 +237,10 @@ export async function newDeviceCheck(userId: string, ip: string | null, userAgen
   const user = await adminDb.user.findUniqueOrThrow({ where: { id: userId } });
   await securityEvent({ firmId: user.firmId, userId, kind: "new-device", ip, userAgent });
   const text = `A new sign-in to AMLSyncAI for ${user.email} from a new device or location.\nTime: ${new Date().toISOString()}\nIf this wasn't you, sign out everywhere and tell your Compliance Officer.`;
-  await sendEmail(user.email, "AMLSyncAI: new sign-in", text);
+  await notify(user.email, "AMLSyncAI: new sign-in", text);
   if (user.roles.some((r) => r === "OWNER" || r === "COMPLIANCE_OFFICER")) {
     const owners = await adminDb.user.findMany({ where: { firmId: user.firmId, roles: { has: "OWNER" }, deactivatedAt: null, NOT: { id: userId } } });
-    for (const o of owners) await sendEmail(o.email, "AMLSyncAI: new sign-in by a privileged user", text);
+    for (const o of owners) await notify(o.email, "AMLSyncAI: new sign-in by a privileged user", text);
   }
 }
 
@@ -435,7 +435,7 @@ export async function resetUserMfa(firmId: string, byUserId: string, userId: str
   await adminDb.user.update({ where: { id: userId }, data: { mfaEnrolledAt: null, totpSecretEnc: null, recoveryCodeHashes: [] } });
   await adminDb.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
   await securityEvent({ firmId, userId: byUserId, kind: "mfa-reset", details: { target: userId } });
-  await sendEmail(u.email, "AMLSyncAI: your two-factor authentication was reset", "A colleague reset your two-factor authentication. Sign in with your password and set it up again. If you didn't ask for this, contact your Compliance Officer.");
+  await notify(u.email, "AMLSyncAI: your two-factor authentication was reset", "A colleague reset your two-factor authentication. Sign in with your password and set it up again. If you didn't ask for this, contact your Compliance Officer.");
 }
 
 export async function requestSelfRecovery(email: string, password: string, ip: string | null): Promise<void> {
