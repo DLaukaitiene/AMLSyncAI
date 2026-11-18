@@ -29,7 +29,7 @@ export function privacyNoticeDoc(i: PrivacyInput, version: number, date: string)
       ] }] },
       { id: "auto", heading: "Automated steps and your rights", blocks: [{ p: `Our software calculates a risk level from the information collected and screens names against official lists. A member of our staff reviews every decision to accept, refuse or end a relationship. You can ask us to explain how a decision about you was reached and to challenge it, except where this would reveal information we must keep confidential by law (AMLR Art. 76(5)).${i.aiEnabled ? " We may use AI to help draft documents; a person always reviews them, and your data is not used to train AI models." : ""}` }] },
       { id: "sharing", heading: "Who we share it with", blocks: [{ list: [
-        "Our AML software provider (AMLSync App), as our processor, hosting data in the EU.",
+        "Our AML software provider (AMLSync App), as our processor, hosting data in the EU. Its suppliers and where they process data are listed at https://app.amlsync.com/subprocessors.",
         "Identity-verification and screening providers we use for these checks.",
         `Authorities when the law requires it, for example ${i.profile.fiu?.name ?? "the Financial Intelligence Unit"} or ${i.profile.supervisors[0]?.name ?? "our supervisor"}.`,
       ] }] },

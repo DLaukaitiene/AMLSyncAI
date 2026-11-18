@@ -13,6 +13,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <span>© {new Date().getFullYear()} {SELLER.name} · company code {SELLER.companyCode} · {SELLER.address}</span>
           <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white">{CONTACT_EMAIL}</a>
           <Link href="/security" className="hover:text-white">Security</Link>
+          <Link href="/subprocessors" className="hover:text-white">Sub-processors</Link>
           <a href="https://amlsync.com" className="hover:text-white">amlsync.com</a>
         </div>
       </footer>
