@@ -41,8 +41,8 @@ export class SpendError extends Error {}
 export async function serviceBlock(tx: Tx, firmId: string): Promise<string | null> {
   const f = await tx.firm.findUnique({ where: { id: firmId }, select: { status: true } });
   if (!f || f.status === "active") return null;
-  return f.status === "closed"
-    ? "This account is closed. Your records stay available for export until their retention period ends."
+  return f.status === "cancelled"
+    ? "This subscription has ended. Your records stay available read-only until their retention period ends."
     : `New checks and screenings are ${f.status === "paused" ? "paused" : "suspended"} for your firm. Your records stay available. Contact contact@amlsync.com.`;
 }
 

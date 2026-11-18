@@ -372,3 +372,8 @@ export async function startDueRefreshes(firmId: string, now = new Date()) {
     return { due: files.length, sent };
   });
 }
+
+/** Revokes every open client-portal link of a firm (subscription ended or firm closed by AMLSync). */
+export async function revokeFirmPortalLinks(tx: Tx, firmId: string) {
+  await tx.portalLink.updateMany({ where: { firmId, status: { not: "REVOKED" } }, data: { status: "REVOKED" } });
+}

@@ -20,7 +20,7 @@ export default async function FirmsPage({ searchParams }: { searchParams: Promis
       </nav>
       <form className="flex flex-wrap gap-2 text-sm" role="search">
         <input name="q" defaultValue={sp.q} placeholder="Name, domain, VAT or company code" aria-label="Search firms" className={`${input} min-w-64`} />
-        <select name="status" defaultValue={sp.status ?? ""} aria-label="Status" className={input}><option value="">Any status</option>{["trial", "active", "paused", "suspended", "closed"].map((s) => <option key={s}>{s}</option>)}</select>
+        <select name="status" defaultValue={sp.status ?? ""} aria-label="Status" className={input}><option value="">Any status</option>{["trial", "active", "paused", "suspended", "cancelled"].map((s) => <option key={s}>{s}</option>)}</select>
         <select name="plan" defaultValue={sp.plan ?? ""} aria-label="Plan" className={input}><option value="">Any plan</option>{["solo", "starter", "custom"].map((s) => <option key={s}>{s}</option>)}</select>
         <input name="country" defaultValue={sp.country} placeholder="Country (LT)" aria-label="Country" maxLength={2} className={`${input} w-28`} />
         <select name="sector" defaultValue={sp.sector ?? ""} aria-label="Sector" className={input}><option value="">Any sector</option>{["ACCOUNTANT", "ESTATE_AGENT", "HVG_TRADER", "PRECIOUS_METALS", "TCSP", "LEGAL", "ART_TRADER", "GAMBLING", "CROWDFUNDING", "CREDIT_INTERMEDIARY", "INVESTMENT_MIGRATION", "FOOTBALL", "OTHER"].map((s) => <option key={s}>{s}</option>)}</select>

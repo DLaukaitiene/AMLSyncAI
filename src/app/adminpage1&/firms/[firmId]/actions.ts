@@ -21,7 +21,7 @@ export async function setStatusAction(firmId: string, _: ActionState, fd: FormDa
   if (!["active", "paused", "suspended"].includes(status)) return { error: "Choose active, paused or suspended. Closing a firm needs four-eyes approval." };
   if (reason.length < 5) return { error: "Give a reason (it is logged and shown to the firm if suspended)." };
   const before = await adminDb.firm.findUniqueOrThrow({ where: { id: firmId }, select: { status: true } });
-  if (before.status === "closed") return { error: "This firm is closed." };
+  if (before.status === "cancelled") return { error: "This firm has cancelled; its records are a read-only archive." };
   await adminDb.$transaction(async (tx) => {
     await tx.firm.update({ where: { id: firmId }, data: { status, statusReason: reason, statusChangedAt: new Date() } });
     await adminAudit({ adminEmail: a.email, action: "firm.status", targetType: "Firm", targetId: firmId, reason, details: { from: before.status, to: status } }, tx);

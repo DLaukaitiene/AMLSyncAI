@@ -24,7 +24,7 @@ export default async function RevenuePage() {
   ]);
   const mrrAt = (m: Date) => {
     const from = iso(m), to = iso(new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1)));
-    return firms.filter((f) => f.createdAt < new Date(to + "T00:00:00Z") && f.status !== "closed").reduce((s, f) => s + monthlyFeeFor(f.plan, f.customFeeCents, f.trialEndsOn, from, to), 0);
+    return firms.filter((f) => f.createdAt < new Date(to + "T00:00:00Z") && f.status !== "cancelled").reduce((s, f) => s + monthlyFeeFor(f.plan, f.customFeeCents, f.trialEndsOn, from, to), 0);
   };
   const series = months.map((m) => {
     const key = m.toISOString().slice(0, 7);

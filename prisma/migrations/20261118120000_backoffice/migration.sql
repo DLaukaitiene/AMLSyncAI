@@ -1,6 +1,6 @@
 -- AlterTable
-ALTER TABLE "Firm" ADD COLUMN     "status" TEXT NOT NULL DEFAULT 'active',
-ADD COLUMN     "statusChangedAt" TIMESTAMP(3),
+-- "status" is added by 20261118190000_firm_archive (one column, shared by the archive and the Backoffice).
+ALTER TABLE "Firm" ADD COLUMN     "statusChangedAt" TIMESTAMP(3),
 ADD COLUMN     "statusReason" TEXT;
 
 -- CreateTable

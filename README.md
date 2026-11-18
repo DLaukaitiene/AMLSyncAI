@@ -24,24 +24,29 @@ Not yet connected (need vendor decisions): eID broker, NFC/liveness vendor, BRIS
 
 ## Backoffice (AMLSync admin)
 
-Internal admin at `/admin` for running the business. Rule one: **AMLSync sees the business, not the customers' AML files.** Backoffice code only counts or groups tenant tables that hold client data, never touches cases, STRs or whistleblowing reports (`src/lib/backoffice/str-wall.test.ts` fails the build otherwise), and the only look inside a firm is the consented, time-limited support view.
+Internal admin at **https://app.amlsync.com/adminpage1&** (`amlsync.com/adminpage1&` redirects there; `website/public_html/.htaccess`). Spec: [`docs/BACKOFFICE_SPEC.md`](docs/BACKOFFICE_SPEC.md).
+
+**Access.** Only `deimena@amlsync.com` can open it: the normal AMLSync App sign-in with password and two-factor, plus the authenticator code again after one hour in the Backoffice and before every change (step-up). Production ignores any other setting (`VERCEL_ENV=production`); tests set `BACKOFFICE_OWNER_EMAIL`, and `BACKOFFICE_TEAM=on` (never in production) enables the Admin team page and further roles. Everyone else gets a 404; anonymous visitors are sent to sign-in and come back after two-factor.
+
+**Rule one: AMLSync sees the business, not the customers' AML files.** Backoffice code only counts or groups tenant tables that hold client data and never touches cases, STRs or whistleblowing reports (`src/lib/backoffice/str-wall.test.ts` fails the build otherwise). The only look inside a firm is the consented, time-limited support view.
 
 | Area | What is built |
 |---|---|
-| Today | Alerts with owners, firms, MRR, paid checks, overdue invoices, sign-in failures, bot blocks, MFA adoption, 7-day sign-up funnel, at-risk firms, new feature requests, sanctions list freshness |
-| Firms | Search, filters, saved views, CSV export (purpose logged; four-eyes above 500 rows); Firm 360 with overview, health score with reasons, AMLSync's own KYB (firm, directors, BOs screened against official lists; confirmed hit suspends), users, usage, compliance health counts, billing and credits, support grants, feature requests, timeline, admin actions; status (active / paused / suspended blocks new checks and screenings, read access stays), trial changes, tags, account manager, internal notes, closure (four-eyes) |
-| Users | Global search; sign-in history, sessions, risk signals; lock, unlock, revoke sessions (logged in the firm's security log) |
-| Revenue | MRR / ARR, usage revenue, ARPA, invoiced vs cash, receivables, EU cross-border B2C VAT threshold monitor (€10,000, alert at 80 %) |
-| Security | Sign-in events, failures by IP, password-spraying detection, lockouts, MFA adoption, sessions, exports; incident and breach register with 24 h firm / 72 h DPA clocks |
-| Bots & abuse | Bot / challenge / rate-limit blocks, fake sign-up ratio, screening limits hit, check-misuse rules (spike > 5× median, burst after sign-up, checks without onboarding) |
-| Vendors & AI | Didit status mix, webhook and media errors, email failures, list freshness, AI calls and tokens per purpose |
-| Rules content | EU Core catalogue with provisional parameters, Country Profile coverage per member state, sanctions list ingestion |
-| Privacy | Data subject request register (controller vs processor, 1-month deadline, extension), retention table, sub-processors |
-| Admin team, approvals, log | Nine narrow roles (§4.1), four-eyes approvals, quarterly access review, append-only hash-chained admin log with chain check |
+| Today | Alerts with owners (incidents, KYB matches, tickets past SLA, new leads and follow-ups, overdue invoices, misuse, stale lists, data requests), firms, MRR, paid checks, security, funnel from website visitors to first accepted client |
+| Firms | List, filters, saved views, CSV export (purpose logged; four-eyes above 500 rows); Firm 360: health score, AMLSync's own KYB against official lists, VIES check of the VAT ID, users, usage and compliance counts, billing and credits, tickets and support access, timeline, admin actions; pause / suspend (blocks new checks, banner in the app), trial, tags, notes, close (four-eyes; read-only archive like a firm's own cancellation) |
+| Users | Search, sign-in history, sessions, risk signals; lock, unlock, sign out everywhere |
+| Website | Cookieless, first-party audience measurement for amlsync.com and the app's public pages: visitors, pages, channels incl. AI assistants, referrers, UTM campaigns, countries, devices, contact form and app clicks, bots. No cookies, no stored IP (daily-rotating visitor code), Do Not Track respected; privacy policy updated |
+| Leads | Own light CRM: website contact form copies (alongside Web3Forms), unfinished sign-ups, manual leads; score with reasons, stages, owner, next steps, notes, linked website visit, auto trial/customer when the firm signs up; erase on request |
+| Tickets | Firms raise requests under Help & support in the app (scanned for client data); P1/P2/P3 first-response targets, email notifications both ways, SLA and CSAT figures |
+| Messages | In-app banners and service emails to segments (country, plan, status, sector); email to all firms needs approval |
+| Expert | Art. 18 engagements, task queue, time logging, billable value |
+| Revenue, billing ops | MRR / ARR, usage revenue, receivables, EU B2C VAT threshold; invoices, terms, credits |
+| Security | Sign-in events, spraying detection, lockouts, MFA adoption; incident and breach register with 24 h / 72 h clocks; public status page at `/status` for incidents marked public |
+| Bots & abuse, Vendors & AI | Bot and rate-limit blocks, check-misuse rules; Didit status mix, unit costs, margin per month and reconciliation against Didit invoices, email failures, list freshness, AI usage |
+| Rules content, Privacy | EU Core catalogue, Country Profile coverage, list ingestion; data subject requests, retention, sub-processors |
+| Approvals, Admin log | Four-eyes requests (single owner: self-approval after 15 minutes, labelled), append-only hash-chained admin log with chain check |
 
-Access: admins sign in to the normal app (password + mandatory two-factor, 15-minute idle timeout); every write needs a fresh step-up. Emails in `PLATFORM_ADMIN_EMAILS` are Owners; other admins and roles are managed under **Admin team** (each change needs an Owner's approval). With a single Owner, that Owner may confirm their own four-eyes request after a 15-minute cooling-off (labelled "self-approved" in the log); add a second Owner for real four-eyes control. Non-admins get a 404 on every `/admin` page.
-
-Not built yet (need an integration or a decision): website visitor analytics, leads and CRM (PostHog / HubSpot), Cloudflare WAF and bot scores, Stripe, support tickets, communications, Expert-service queue, VIES checks, vendor cost reconciliation, separate admin domain behind zero-trust access.
+Not built (needs a paid service or a decision): Cloudflare WAF / bot scores, Stripe, PostHog session replay, Google sign-in for the Backoffice.
 
 ## Development
 

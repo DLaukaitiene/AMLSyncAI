@@ -197,7 +197,7 @@ model Firm {
   sectorOther   String?  // description when the sector is OTHER
   defaultCddScope String @default("full") // scope for new client files: full | identification-only
   // Subscription ended: records stay read-only (archive) until archiveUntil, then retention deletes them.
-  status        String    @default("active") // active | cancelled
+  status        String    @default("active") // active | paused | suspended (Backoffice) | cancelled
   cancelledAt   DateTime?
   archiveUntil  String?   // YYYY-MM-DD
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
@@ -216,9 +216,8 @@ model Firm {
   billingEmail    String?
   customFeeCents  Int?     // overrides the plan's list price (custom plans, discounts)
   spendLimitCents Int      @default(30000) // paid checks per calendar month (net); raised on request
-  // Service status set by AMLSyncAI (Backoffice §6.2): active | paused | suspended | closed.
-  // paused and suspended block new checks and screenings; read access and retention continue.
-  status          String   @default("active")
+  // status (above) is also set by AMLSyncAI in the Backoffice (§6.2): paused and suspended block new
+  // checks and screenings, read access and retention continue; closing a firm sets cancelled.
   statusReason    String?
   statusChangedAt DateTime?
   // VIES check of vatId (Backoffice §9.3)

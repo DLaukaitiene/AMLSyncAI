@@ -64,6 +64,7 @@ export default async function Firm360({ params, searchParams }: { params: Promis
               ["Billing country", firm.billingCountry ?? firm.homeState], ["Billing email", firm.billingEmail ?? "—"], ["Size", firm.size ?? "—"],
               ["Offices", firm.offices.map((o) => `${o.name} (${o.memberState}${o.isHome ? ", home" : ""})`).join("; ") || "—"],
               ["Uses cash", firm.usesCash ? "yes" : "no"], ["Trial", firm.trialEndsOn ? `until ${firm.trialEndsOn}` : "—"],
+              ...(firm.cancelledAt ? [["Cancelled", `${fmtDate(firm.cancelledAt)} · read-only archive until ${firm.archiveUntil ?? "—"}`] as [string, React.ReactNode]] : []),
               ["Status", `${firm.status}${firm.statusReason ? ` — ${firm.statusReason}` : ""}${firm.statusChangedAt ? ` (${fmtDate(firm.statusChangedAt)})` : ""}`],
               ["Account manager", meta?.accountManager ?? "—"], ["Tags", meta?.tags.join(", ") || "—"],
             ] as [string, React.ReactNode][]).map(([k, v]) => [<dt key={k + "k"} className="text-muted">{k}</dt>, <dd key={k + "v"}>{v}</dd>])}
@@ -77,7 +78,7 @@ export default async function Firm360({ params, searchParams }: { params: Promis
           <>
             <Section title="Service status" note="Paused and suspended firms keep read access and their records but cannot start checks or screenings.">
               <ActionForm action={setStatusAction.bind(null, firmId)} className="space-y-2">
-                <Field label="Status" name="status"><select name="status" aria-label="Status" defaultValue={firm.status === "closed" ? "active" : firm.status} className={sel}><option>active</option><option>paused</option><option>suspended</option></select></Field>
+                <Field label="Status" name="status"><select name="status" aria-label="Status" defaultValue={firm.status === "cancelled" ? "active" : firm.status} className={sel}><option>active</option><option>paused</option><option>suspended</option></select></Field>
                 <Field label="Reason" name="reason" required />
                 <Submit variant="secondary">Set status</Submit><StepUpLink />
               </ActionForm>

@@ -4,6 +4,7 @@ import { securityEvent } from "../audit";
 import { adminAudit } from "./audit";
 import { ownerCount } from "./access";
 import { sendAnnouncementEmails } from "./comms";
+import { revokeFirmPortalLinks } from "../portal";
 import { APPROVAL_TTL_MS, canDecide, type FourEyesAction } from "@/lib/backoffice/four-eyes";
 import { envOwners, isAdminRole } from "@/lib/backoffice/roles";
 
@@ -64,8 +65,14 @@ export async function approveAndRun(id: string, by: string): Promise<string> {
           break;
         }
         case "firm.close": {
-          const firm = await tx.firm.update({ where: { id: String(p.firmId) }, data: { status: "closed", statusReason: String(p.reason ?? a.reason), statusChangedAt: new Date() } });
-          result = `${firm.name} closed. Checks are blocked; records stay until their retention ends (§12.4).`;
+          // Same end state as a firm cancelling itself (Billing → cancel): read-only archive for the retention period.
+          const today = new Date().toISOString().slice(0, 10);
+          const prof = await tx.countryProfileVersion.findFirst({ where: { firmId: String(p.firmId), officeId: null }, orderBy: { version: "desc" }, select: { data: true } });
+          const years = Number((prof?.data as { retentionYears?: number } | null)?.retentionYears) || 5;
+          const archiveUntil = `${Number(today.slice(0, 4)) + years}${today.slice(4)}`;
+          const firm = await tx.firm.update({ where: { id: String(p.firmId) }, data: { status: "cancelled", cancelledAt: new Date(), archiveUntil, statusReason: String(p.reason ?? a.reason), statusChangedAt: new Date() } });
+          await revokeFirmPortalLinks(tx, firm.id);
+          result = `${firm.name} closed: read-only archive until ${archiveUntil}, then deleted by retention (§12.4).`;
           break;
         }
         case "comms.broadcast": {

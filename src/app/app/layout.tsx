@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { can, ROLE_LABELS } from "@/lib/auth/permissions";
 import { logoutAction } from "@/app/(auth)/actions";
@@ -80,7 +81,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       nav={nav}
       firmName={s.firm.name}
-      banner={s.firm.status === "cancelled" ? <>Subscription ended — read-only archive{s.firm.archiveUntil ? ` until ${s.firm.archiveUntil}` : ""}. <a className="underline" href="/app/billing">Download your full export</a></> : undefined}
+      banner={s.firm.status === "cancelled" ? <>Subscription ended — read-only archive{s.firm.archiveUntil ? ` until ${s.firm.archiveUntil}` : ""}. <a className="underline" href="/app/billing">Download your full export</a></> : s.firm.status === "paused" || s.firm.status === "suspended" ? <>New checks and screenings are {s.firm.status} for your firm. Your records stay available. Questions: <Link className="underline" href="/app/support">Help &amp; support</Link></> : undefined}
       topRight={
         <>
           <SuggestFeature />

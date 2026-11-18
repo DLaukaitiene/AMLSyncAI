@@ -5,7 +5,7 @@ import { inAudience, type Audience } from "@/lib/backoffice/ops";
 
 /** Firms in an audience (active, paused and suspended firms; never closed ones). */
 export async function audienceFirms(a: Audience) {
-  const firms = await adminDb.firm.findMany({ where: { status: { not: "closed" } }, select: { id: true, homeState: true, plan: true, status: true, sectors: true } });
+  const firms = await adminDb.firm.findMany({ where: { status: { not: "cancelled" } }, select: { id: true, homeState: true, plan: true, status: true, sectors: true } });
   return firms.filter((f) => inAudience(a, f));
 }
 
