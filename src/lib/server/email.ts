@@ -26,7 +26,13 @@ export async function sendEmail(to: string, subject: string, text: string): Prom
     });
   } catch (e) {
     // Never log the recipient or the message (personal data); the provider's error code is enough.
-    console.error("email delivery failed:", (e as { code?: string }).code ?? "", String((e as Error).message).split("\n")[0].slice(0, 120));
+    // Shape of SMTP_URL only (never the password itself) to help fix configuration mistakes.
+    let shape = "unparseable SMTP_URL";
+    try {
+      const u = new URL(url);
+      shape = `${u.protocol}//${decodeURIComponent(u.username)}@${u.hostname}:${u.port} password length ${decodeURIComponent(u.password).length}${/\s/.test(decodeURIComponent(u.password)) ? " (contains spaces)" : ""}`;
+    } catch {}
+    console.error("email delivery failed:", (e as { code?: string }).code ?? "", String((e as Error).message).split("\n")[0].slice(0, 120), "|", shape);
     throw new EmailDeliveryError((e as Error).message);
   }
 }
