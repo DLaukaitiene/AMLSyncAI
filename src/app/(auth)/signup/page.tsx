@@ -22,7 +22,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <ActionForm action={signupAction}>
         <Honeypot />
         <PowChallenge purpose="signup" />
-        {invite && <Field label="Sign-up code" name="signupCode" required hint="AMLSync App is currently invitation only. Your code is in your invitation email." autoComplete="off" />}
+        {invite && <Field label="Invitation code" name="signupCode" required hint="AMLSync App is currently invitation only. Enter the invitation code exactly as you received it. No code? Write to contact@amlsync.com." autoComplete="off" />}
         <Field label="Company name" name="companyName" required autoComplete="organization" />
         <CountryField label="Country where your firm is established" name="memberState" required euFirst hint="EU countries are listed first. AMLSync App applies the EU anti-money-laundering rules (AMLR); outside the EU, check your local rules too." />
         <SelectWithOther label="Sector" name="sector" required placeholder="Choose…" options={SECTORS} otherLabel="Other (describe your activity)" />

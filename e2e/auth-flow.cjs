@@ -20,7 +20,7 @@ const log=(...a)=>console.log('✔',...a);
   // 1. Free email refused
   await p.goto(BASE+'/signup');
   const fill = async (data) => { for (const [l,v] of Object.entries(data)) await p.getByLabel(l, {exact:true}).fill(v); };
-  await fill({'Sign-up code *':process.env.CODE,'Company name *':'Jonaitis ir partneriai','Your name *':'Anna Jonaitė','Company email *':'anna@gmail.com','Password *':'correct horse battery staple'});
+  await fill({'Invitation code *':process.env.CODE,'Company name *':'Jonaitis ir partneriai','Your name *':'Anna Jonaitė','Company email *':'anna@gmail.com','Password *':'correct horse battery staple'});
   await p.getByLabel('Country where your firm is established').fill('LT'); await p.locator('select[name=sector]').selectOption('ACCOUNTANT');
   await p.getByRole('button',{name:'Create account'}).click();
   await p.getByText('Free email providers are not accepted').first().waitFor();
@@ -29,10 +29,15 @@ const log=(...a)=>console.log('✔',...a);
   // 2. Company domain different from name accepted
   await p.getByLabel('Company email *',{exact:true}).fill('anna@jip.lt');
   await p.getByLabel('Password *',{exact:true}).fill('correct horse battery staple');
-  await p.getByLabel('Sign-up code *',{exact:true}).fill(process.env.CODE.toLowerCase());
+  await p.getByLabel('Invitation code *',{exact:true}).fill(process.env.CODE.toLowerCase());
+  await p.getByRole('button',{name:'Create account'}).click();
+  await p.getByText('This sign-up code is not valid.').first().waitFor();
+  log('invitation code typed differently (lower case) refused');
+  await p.getByLabel('Invitation code *',{exact:true}).fill(process.env.CODE);
+  await p.getByLabel('Password *',{exact:true}).fill('correct horse battery staple');
   await p.getByRole('button',{name:'Create account'}).click();
   await p.getByRole('heading',{name:'Check your email'}).waitFor();
-  log('sign-up accepted (jip.lt, lowercase code)');
+  log('sign-up accepted (jip.lt, exact code)');
 
   // 3. Confirm
   const link = await lastMail(p,'anna@jip.lt');

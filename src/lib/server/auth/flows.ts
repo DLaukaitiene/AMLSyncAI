@@ -79,7 +79,8 @@ export async function startSignup(input: z.infer<typeof signupSchema>, ip: strin
   let codeId: string | null = null;
   if (signupMode() === "invite") {
     if (!input.signupCode) return fail("Enter your sign-up code.", { signupCode: ["AMLSync App is currently invitation only."] });
-    codeId = sha256(input.signupCode.toUpperCase());
+    // Exact match (case-sensitive): the code must be entered exactly as issued.
+    codeId = sha256(input.signupCode.trim());
     const code = await adminDb.signupCode.findUnique({ where: { id: codeId } });
     if (!code || code.uses >= code.maxUses || (code.expiresAt && code.expiresAt < new Date())) {
       return fail("This sign-up code is not valid.", { signupCode: ["Check the code or ask AMLSync for a new one."] });

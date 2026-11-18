@@ -13,7 +13,7 @@ async function signupFirm(browser, { code, company, email, sector, state = "LT" 
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const p = await ctx.newPage();
   await p.goto(BASE + "/signup");
-  await p.getByLabel("Sign-up code *", { exact: true }).fill(code);
+  await p.getByLabel("Invitation code *", { exact: true }).fill(code);
   await p.getByLabel("Company name *", { exact: true }).fill(company);
   await p.getByLabel("Country where your firm is established").fill(state);
   await p.locator("select[name=sector]").selectOption(sector);
