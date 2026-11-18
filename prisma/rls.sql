@@ -80,3 +80,22 @@ CREATE POLICY tenant_write ON "ScreeningEntry" FOR ALL USING (EXISTS (
 -- File bytes (STORAGE_DRIVER=db) are read and written only by the owner connection.
 ALTER TABLE "Blob" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Blob" FORCE ROW LEVEL SECURITY;
+
+-- Backoffice (docs/BACKOFFICE_SPEC.md): AMLSyncAI-internal tables. RLS on with no
+-- policy, so the tenant role (app_user) reads and writes nothing; the owner
+-- connection (adminDb) is the table owner and bypasses it.
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'AdminMember','AdminAuditEvent','AdminApproval','FirmAdminMeta','FirmNote','FirmKyb',
+    'Incident','IncidentUpdate','DataSubjectRequest'
+  ] LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+  END LOOP;
+END $$;
+
+-- The admin audit log is append-only and hash-chained (§2.4).
+DROP TRIGGER IF EXISTS admin_audit_immutable ON "AdminAuditEvent";
+CREATE TRIGGER admin_audit_immutable BEFORE UPDATE OR DELETE ON "AdminAuditEvent"
+  FOR EACH ROW EXECUTE FUNCTION forbid_mutation();

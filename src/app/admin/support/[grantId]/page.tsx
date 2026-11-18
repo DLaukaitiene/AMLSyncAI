@@ -1,18 +1,17 @@
-import { notFound, redirect } from "next/navigation";
-import { requireUser, requestMeta } from "@/lib/server/session";
-import { isPlatformAdmin } from "@/lib/server/feedback";
+import { notFound } from "next/navigation";
+import { requestMeta } from "@/lib/server/session";
+import { requireAdmin } from "@/lib/server/backoffice/access";
 import { supportSummary } from "@/lib/server/support";
 
 export default async function SupportView({ params }: { params: Promise<{ grantId: string }> }) {
   const { grantId } = await params;
-  const s = await requireUser();
-  if (!isPlatformAdmin(s.user.email)) redirect("/app");
+  const s = (await requireAdmin("support.access")).session;
   const { ip } = await requestMeta();
   const d = await supportSummary(s.user.email, grantId, ip);
   if (!d) notFound();
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-      <p className="rounded border border-amber-400 px-3 py-2 text-sm">Read-only support view for {d.firm.name}, granted until {d.grant.expiresAt!.toISOString().slice(0, 16).replace("T", " ")} UTC. Every view is logged in the firm&apos;s security log.</p>
+      <p className="sticky top-0 z-10 rounded border-2 border-amber-500 bg-background px-3 py-2 text-sm font-medium" role="status">Read-only support view for {d.firm.name}, granted until {d.grant.expiresAt!.toISOString().slice(0, 16).replace("T", " ")} UTC. Every view is logged in the firm&apos;s security log.</p>
       <h1 className="text-2xl font-semibold">{d.firm.name}</h1>
       <p className="text-sm text-muted">{d.firm.homeState} · {d.firm.sectors.join(", ")} · plan {d.firm.plan} · Country Profile v{d.profileVersion}</p>
       <section>

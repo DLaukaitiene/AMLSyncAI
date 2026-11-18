@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import type { FeatureRequestStatus } from "@prisma/client";
 import type { ActionState } from "@/components/form";
 import { requireUser, hasRecentMfa } from "@/lib/server/session";
-import { comment, createRequest, hideComment, hideRequest, isPlatformAdmin, merge, setStatus, vote } from "@/lib/server/feedback";
+import { comment, createRequest, hideComment, hideRequest, merge, setStatus, vote } from "@/lib/server/feedback";
+import { hasAdminPermission } from "@/lib/server/backoffice/access";
+import { adminAudit } from "@/lib/server/backoffice/audit";
 import { STATUSES } from "@/lib/feedback/rules";
 
 const g = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -34,7 +36,7 @@ export async function voteAction(id: string): Promise<ActionState> {
 
 export async function commentAction(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser();
-  const team = isPlatformAdmin(s.user.email) && fd.get("asTeam") === "on";
+  const team = fd.get("asTeam") === "on" && (await hasAdminPermission(s.user.email, "features.triage"));
   const r = await comment(s, id, g(fd, "text"), fd.get("confirmNoClientData") === "on", team);
   if (!r.ok) return { error: r.error, data: { pii: r.pii } };
   revalidatePath(`/app/feature-requests/${id}`);
@@ -45,7 +47,7 @@ export async function commentAction(id: string, _: ActionState, fd: FormData): P
 
 async function requireTeam() {
   const s = await requireUser();
-  if (!isPlatformAdmin(s.user.email)) redirect("/app");
+  if (!(await hasAdminPermission(s.user.email, "features.triage"))) redirect("/app");
   return s;
 }
 
@@ -55,6 +57,7 @@ export async function statusAction(id: string, _: ActionState, fd: FormData): Pr
   const status = g(fd, "status") as FeatureRequestStatus;
   if (!STATUSES.includes(status as (typeof STATUSES)[number])) return { error: "Choose a status." };
   const r = await setStatus(s.user.email, id, status, g(fd, "reason"), g(fd, "releaseNoteUrl"));
+  if (r.ok) await adminAudit({ adminEmail: s.user.email, action: "feature.status", targetType: "FeatureRequest", targetId: id, details: { status } });
   revalidatePath("/admin/feature-requests");
   return r.ok ? { message: `Status updated; ${r.notified} person(s) notified.` } : { error: r.error };
 }
@@ -62,20 +65,23 @@ export async function statusAction(id: string, _: ActionState, fd: FormData): Pr
 export async function mergeAction(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireTeam();
   const r = await merge(s.user.email, id, g(fd, "targetId"));
+  if (r.ok) await adminAudit({ adminEmail: s.user.email, action: "feature.merge", targetType: "FeatureRequest", targetId: id, details: { into: g(fd, "targetId") } });
   revalidatePath("/admin/feature-requests");
   return r.ok ? { message: "Merged; votes combined." } : { error: r.error };
 }
 
 export async function hideAction(id: string, hidden: boolean): Promise<ActionState> {
-  await requireTeam();
+  const s = await requireTeam();
   await hideRequest(id, hidden);
+  await adminAudit({ adminEmail: s.user.email, action: hidden ? "feature.hide" : "feature.show", targetType: "FeatureRequest", targetId: id });
   revalidatePath("/admin/feature-requests");
   return { message: hidden ? "Hidden." : "Visible again." };
 }
 
 export async function hideCommentAction(commentId: string, requestId: string): Promise<ActionState> {
-  await requireTeam();
+  const s = await requireTeam();
   await hideComment(commentId);
+  await adminAudit({ adminEmail: s.user.email, action: "feature.hide-comment", targetType: "FeatureComment", targetId: commentId });
   revalidatePath(`/app/feature-requests/${requestId}`);
   return { message: "Comment hidden." };
 }

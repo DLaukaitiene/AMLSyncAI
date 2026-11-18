@@ -1,8 +1,10 @@
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
-import { isPlatformAdmin } from "@/lib/server/feedback";
 import { adminDb } from "@/lib/server/db";
+import { adminAction, isActionError, requireAdmin } from "@/lib/server/backoffice/access";
+import { adminAudit } from "@/lib/server/backoffice/audit";
+import { requestApproval } from "@/lib/server/backoffice/approvals";
+import { CREDIT_FOUR_EYES_CENTS, needsFourEyes } from "@/lib/backoffice/four-eyes";
+import type { AdminPermission } from "@/lib/backoffice/roles";
 import { ActionForm, Field, Submit, type ActionState } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { securityEvent } from "@/lib/server/audit";
@@ -10,13 +12,8 @@ import { issueMonthlyInvoices } from "@/lib/server/invoicing";
 import { formatEur } from "@/lib/didit/map";
 import { PLANS, planOf } from "@/lib/billing/plans";
 
-async function guard(): Promise<{ email: string } | ActionState> {
-  const s = await requireUser();
-  if (!isPlatformAdmin(s.user.email)) redirect("/app");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/admin/billing" } };
-  return { email: s.user.email };
-}
-const isErr = (g: unknown): g is ActionState => !!g && typeof g === "object" && "error" in g;
+const guard = (p: AdminPermission = "billing.manage") => adminAction(p, "/admin/billing");
+const isErr = isActionError;
 const firmByDomain = (fd: FormData) => adminDb.firm.findUnique({ where: { emailDomain: String(fd.get("domain") ?? "").trim().toLowerCase() } });
 
 async function setTerms(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -42,19 +39,28 @@ async function setTerms(_: ActionState, fd: FormData): Promise<ActionState> {
     },
   });
   await securityEvent({ firmId: firm.id, kind: "billing-terms", details: { by: g.email, plan, fee, limit, perMinute, perDay, perMonth } });
+  await adminAudit({ adminEmail: g.email, action: "billing.terms", targetType: "Firm", targetId: firm.id, details: { plan, fee, limit, perMinute, perDay, perMonth } });
   revalidatePath("/admin/billing");
   return { message: `${firm.name} updated.` };
 }
 
 async function addCredit(_: ActionState, fd: FormData): Promise<ActionState> {
   "use server";
-  const g = await guard(); if (isErr(g)) return g;
+  const g = await guard("credits.grant"); if (isErr(g)) return g;
   const firm = await firmByDomain(fd);
   const euros = Number(fd.get("euros")), ref = String(fd.get("reference") ?? "").trim();
   if (!firm) return { error: "No firm uses that domain." };
   if (!(euros > 0 && euros <= 10_000)) return { error: "Enter an amount between €1 and €10,000." };
   if (ref.length < 3) return { error: "Enter a reason or reference." };
-  await adminDb.creditEntry.create({ data: { firmId: firm.id, amountCents: Math.round(euros * 100), kind: "topup", description: `Credit (${ref})`, reference: ref } });
+  const cents = Math.round(euros * 100);
+  if (needsFourEyes("credit.grant", cents)) {
+    await requestApproval(g.email, "credit.grant", { firmId: firm.id, cents, reference: ref }, `Credit €${euros.toFixed(2)} for ${firm.name}`, ref);
+    return { message: `Above €${CREDIT_FOUR_EYES_CENTS / 100}: an Owner must approve this credit in Approvals.` };
+  }
+  await adminDb.$transaction(async (tx) => {
+    await tx.creditEntry.create({ data: { firmId: firm.id, amountCents: cents, kind: "topup", description: `Credit (${ref})`, reference: ref } });
+    await adminAudit({ adminEmail: g.email, action: "credit.grant", targetType: "Firm", targetId: firm.id, reason: ref, details: { cents } }, tx);
+  });
   await securityEvent({ firmId: firm.id, kind: "credit-added", details: { by: g.email, euros, ref } });
   revalidatePath("/admin/billing");
   return { message: `Credit of €${euros.toFixed(2)} added for ${firm.name}; it is deducted on the next invoice.` };
@@ -72,6 +78,7 @@ async function markPaid(_: ActionState, fd: FormData): Promise<ActionState> {
   if (inv.status !== "issued") return { error: `Invoice ${number} is already ${inv.status}.` };
   await adminDb.invoice.update({ where: { id: inv.id }, data: { status: "paid", paidOn, paymentRef: ref || null } });
   await securityEvent({ firmId: inv.firmId, kind: "invoice-paid", details: { by: g.email, number, paidOn } });
+  await adminAudit({ adminEmail: g.email, action: "invoice.paid", targetType: "Invoice", targetId: inv.id, details: { number, paidOn, paymentRef: ref || null } });
   revalidatePath("/admin/billing");
   return { message: `Invoice ${number} marked paid.` };
 }
@@ -80,13 +87,13 @@ async function runInvoicing(): Promise<ActionState> {
   "use server";
   const g = await guard(); if (isErr(g)) return g;
   const r = await issueMonthlyInvoices();
+  await adminAudit({ adminEmail: g.email, action: "invoice.run", targetType: "Invoice", details: r });
   revalidatePath("/admin/billing");
   return { message: `Last month's invoices: ${r.issued} issued, ${r.skipped} skipped (already issued or nothing to bill).` };
 }
 
 export default async function BillingAdmin() {
-  const s = await requireUser();
-  if (!isPlatformAdmin(s.user.email)) redirect("/app");
+  await requireAdmin("billing.view");
   const [firms, invoices] = await Promise.all([
     adminDb.firm.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, emailDomain: true, plan: true, customFeeCents: true, spendLimitCents: true, trialEndsOn: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } }),
     adminDb.invoice.findMany({ orderBy: { seq: "desc" }, take: 200 }),
@@ -95,7 +102,7 @@ export default async function BillingAdmin() {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-      <h1 className="text-2xl font-semibold">Billing (AMLSyncAI admin)</h1>
+      <h1 className="text-2xl font-semibold">Billing operations</h1>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Invoices</h2>
         <ActionForm action={runInvoicing}><Submit variant="secondary">Issue last month&apos;s invoices now</Submit><StepUpLink /></ActionForm>

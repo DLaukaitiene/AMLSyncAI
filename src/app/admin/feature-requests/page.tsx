@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/server/session";
-import { isPlatformAdmin, triageList } from "@/lib/server/feedback";
+import { requireAdmin } from "@/lib/server/backoffice/access";
+import { triageList } from "@/lib/server/feedback";
 import { STATUSES, STATUS_LABELS, type Status } from "@/lib/feedback/rules";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
@@ -10,8 +9,7 @@ import { hideAction, mergeAction, statusAction } from "@/app/app/feature-request
 
 /** AMLSyncAI internal triage. Shows request text only — never firm names or client data. */
 export default async function TriagePage({ searchParams }: { searchParams: Promise<{ module?: string; status?: string; regulatory?: string }> }) {
-  const s = await requireUser();
-  if (!isPlatformAdmin(s.user.email)) redirect("/app");
+  await requireAdmin("features.triage");
   const sp = await searchParams;
   const rows = await triageList({ module: sp.module, status: sp.status, regulatory: sp.regulatory === "1" });
   const sel = "w-full rounded border border-border bg-background px-2 py-1 text-sm";

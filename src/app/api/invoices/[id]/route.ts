@@ -3,7 +3,7 @@ import { getSession } from "@/lib/server/session";
 import { adminDb, withTenant } from "@/lib/server/db";
 import { renderPdf } from "@/lib/docs/pdf";
 import { can } from "@/lib/auth/permissions";
-import { isPlatformAdmin } from "@/lib/server/feedback";
+import { hasAdminPermission } from "@/lib/server/backoffice/access";
 import { formatEur } from "@/lib/didit/map";
 import type { InvoiceLine } from "@/lib/billing/invoice";
 
@@ -17,7 +17,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const s = await getSession();
   if (!s || s.stage !== "ACTIVE" || !/^[0-9a-f-]{36}$/i.test(id)) return new NextResponse("Not found", { status: 404 });
-  const inv = isPlatformAdmin(s.user.email)
+  const inv = (await hasAdminPermission(s.user.email, "billing.view"))
     ? await adminDb.invoice.findUnique({ where: { id } })
     : can(s.user.roles, "approve.compliance") ? await withTenant(s.firm.id, (tx) => tx.invoice.findUnique({ where: { id } })) : null;
   if (!inv) return new NextResponse("Not found", { status: 404 });

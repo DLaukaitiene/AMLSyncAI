@@ -2,7 +2,8 @@ import "server-only";
 import { adminDb, withTenant } from "./db";
 import { securityEvent } from "./audit";
 import { appUrl, sendEmail } from "./email";
-import { isPlatformAdmin } from "./feedback";
+import { hasAdminPermission } from "./backoffice/access";
+import { adminAudit } from "./backoffice/audit";
 import { currentProfile } from "./country-profile";
 import { setupChecklist } from "@/lib/rules/country-profile";
 
@@ -15,13 +16,14 @@ import { setupChecklist } from "@/lib/rules/country-profile";
 export const MAX_HOURS = 8;
 
 export async function requestSupportAccess(requesterEmail: string, emailDomain: string, reason: string, hours: number) {
-  if (!isPlatformAdmin(requesterEmail)) throw new Error("Not allowed");
+  if (!(await hasAdminPermission(requesterEmail, "support.access"))) throw new Error("Not allowed");
   if (reason.trim().length < 10) throw new Error("Give a reason the firm can judge.");
   const h = Math.max(1, Math.min(MAX_HOURS, Math.round(hours)));
   const firm = await adminDb.firm.findUnique({ where: { emailDomain: emailDomain.trim().toLowerCase() } });
   if (!firm) throw new Error("No firm uses that email domain.");
   const g = await adminDb.supportGrant.create({ data: { firmId: firm.id, requesterEmail, reason: reason.trim(), hours: h } });
   await securityEvent({ firmId: firm.id, kind: "staff-access-requested", details: { grant: g.id, by: requesterEmail, hours: h } });
+  await adminAudit({ adminEmail: requesterEmail, action: "support.access-requested", targetType: "Firm", targetId: firm.id, reason: reason.trim(), details: { grant: g.id, hours: h } });
   const approvers = await adminDb.user.findMany({ where: { firmId: firm.id, roles: { hasSome: ["OWNER", "COMPLIANCE_OFFICER"] }, deactivatedAt: null } });
   for (const a of approvers) {
     await sendEmail(a.email, "AMLSyncAI support asks for access to your firm", `${requesterEmail} asks for read-only access for ${h} hour(s).\nReason: ${reason}\n\nApprove or deny it in the security log: ${appUrl("/app/security")}\nNothing is visible to AMLSyncAI until you approve.`);
@@ -52,6 +54,7 @@ export async function supportSummary(requesterEmail: string, grantId: string, ip
   const g = await activeGrant(requesterEmail, grantId);
   if (!g) return null;
   await securityEvent({ firmId: g.firmId, kind: "staff-access", ip, details: { grant: grantId, by: requesterEmail, viewed: "summary" } });
+  await adminAudit({ adminEmail: requesterEmail, action: "support.access-viewed", targetType: "Firm", targetId: g.firmId, details: { grant: grantId } });
   return withTenant(g.firmId, async (tx) => {
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: g.firmId }, select: { name: true, homeState: true, sectors: true, plan: true } });
     const { profile, version } = await currentProfile(tx, g.firmId);

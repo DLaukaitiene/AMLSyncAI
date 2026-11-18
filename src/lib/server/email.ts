@@ -33,6 +33,8 @@ export async function sendEmail(to: string, subject: string, text: string): Prom
       shape = `${u.protocol}//${decodeURIComponent(u.username)}@${u.hostname}:${u.port} password length ${decodeURIComponent(u.password).length}${/\s/.test(decodeURIComponent(u.password)) ? " (contains spaces)" : ""}`;
     } catch {}
     console.error("email delivery failed:", (e as { code?: string }).code ?? "", String((e as Error).message).split("\n")[0].slice(0, 120), "|", shape);
+    // Count for the Backoffice vendor health page (no recipient, no content).
+    await adminDb.securityEvent.create({ data: { kind: "email-failed", details: { code: String((e as { code?: string }).code ?? "unknown").slice(0, 40) } } }).catch(() => {});
     throw new EmailDeliveryError((e as Error).message);
   }
 }

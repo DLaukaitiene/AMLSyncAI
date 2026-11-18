@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/server/session";
-import { isPlatformAdmin } from "@/lib/server/feedback";
+import { requireAdmin } from "@/lib/server/backoffice/access";
 import { adminDb } from "@/lib/server/db";
 import { MAX_HOURS } from "@/lib/server/support";
 import { ActionForm, Field, Submit } from "@/components/form";
@@ -9,8 +7,7 @@ import { StepUpLink } from "@/components/step-up";
 import { requestAccessAction } from "./actions";
 
 export default async function SupportPage() {
-  const s = await requireUser();
-  if (!isPlatformAdmin(s.user.email)) redirect("/app");
+  const s = (await requireAdmin("support.access")).session;
   const grants = await adminDb.supportGrant.findMany({ where: { requesterEmail: s.user.email }, orderBy: { createdAt: "desc" }, take: 50 });
   const firms = new Map((await adminDb.firm.findMany({ where: { id: { in: grants.map((g) => g.firmId) } }, select: { id: true, emailDomain: true } })).map((f) => [f.id, f.emailDomain]));
   const now = new Date();

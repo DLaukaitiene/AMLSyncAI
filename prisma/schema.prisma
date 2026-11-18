@@ -208,6 +208,11 @@ model Firm {
   billingEmail    String?
   customFeeCents  Int?     // overrides the plan's list price (custom plans, discounts)
   spendLimitCents Int      @default(30000) // paid checks per calendar month (net); raised on request
+  // Service status set by AMLSyncAI (Backoffice §6.2): active | paused | suspended | closed.
+  // paused and suspended block new checks and screenings; read access and retention continue.
+  status          String   @default("active")
+  statusReason    String?
+  statusChangedAt DateTime?
   createdAt     DateTime @default(now())
 
   offices               Office[]
@@ -1117,4 +1122,144 @@ model Blob {
   key       String   @id
   data      Bytes
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Backoffice (docs/BACKOFFICE_SPEC.md). AMLSyncAI-internal tables: row-level
+// security is enabled without policies (prisma/rls.sql), so the tenant
+// connection can read none of them. They never hold customers' client data.
+// ---------------------------------------------------------------------------
+
+/// AMLSyncAI admin team (§4.1). Emails in PLATFORM_ADMIN_EMAILS are always Owners.
+model AdminMember {
+  email      String    @id
+  roles      String[] // OWNER | OPERATIONS | SUPPORT | FINANCE | SECURITY | CONTENT_EDITOR | CONTENT_REVIEWER | SALES | AUDITOR
+  addedBy    String
+  createdAt  DateTime  @default(now())
+  removedAt  DateTime?
+  reviewedAt DateTime? // quarterly access review (§4.2)
+  reviewedBy String?
+}
+
+/// Append-only, hash-chained log of every admin action (§2.4, §21).
+model AdminAuditEvent {
+  id            BigInt   @id @default(autoincrement())
+  at            DateTime
+  adminEmail    String
+  action        String
+  targetType    String
+  targetId      String?
+  reason        String?
+  details       Json?
+  approverEmail String?
+  prevHash      String
+  hash          String   @unique
+
+  @@index([targetType, targetId])
+  @@index([adminEmail, at])
+}
+
+/// Four-eyes approvals for dangerous actions (§2.5).
+model AdminApproval {
+  id          String    @id @default(uuid()) @db.Uuid
+  action      String // credit.grant | admin.set-roles | firm.close | firms.export
+  payload     Json
+  summary     String
+  reason      String
+  requestedBy String
+  status      String    @default("pending") // pending | executed | rejected | failed | expired
+  decidedBy   String?
+  decidedAt   DateTime?
+  result      String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// Internal notes, tags and account owner per firm (§6.2 Overview).
+model FirmAdminMeta {
+  firmId         String   @id @db.Uuid
+  tags           String[]
+  accountManager String?
+  updatedAt      DateTime @updatedAt
+}
+
+model FirmNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  authorEmail String
+  text        String
+  createdAt   DateTime @default(now())
+
+  @@index([firmId, createdAt])
+}
+
+/// AMLSyncAI's own KYB of a customer firm (§6.2): registry reference, directors, BOs, sanctions screening.
+model FirmKyb {
+  id               String   @id @default(uuid()) @db.Uuid
+  firmId           String   @db.Uuid
+  registryRef      String?
+  directors        String[]
+  beneficialOwners String[]
+  russiaBelarus    String // none | link-found | not-checked (Reg. 833/2014 restrictions [verify])
+  result           String // clear | possible-match | confirmed-hit
+  matches          Json // [{ subject, matchedName, list, score }]
+  decision         String? // cleared | blocked (after review of a possible match)
+  decisionNote     String?
+  checkedBy        String
+  checkedAt        DateTime @default(now())
+
+  @@index([firmId, checkedAt])
+}
+
+/// Incident and personal-data-breach register (§10.3).
+model Incident {
+  id                  String    @id @default(uuid()) @db.Uuid
+  title               String
+  severity            String // sev1 | sev2 | sev3 | sev4
+  status              String    @default("open") // open | contained | resolved | closed
+  personalData        Boolean   @default(false)
+  controllerData      Boolean   @default(false) // AMLSync is controller (visitors, leads, own users): 72-hour DPA clock
+  systems             String[]
+  firmIds             String[]
+  summary             String
+  rootCause           String?
+  detectedAt          DateTime
+  resolvedAt          DateTime?
+  firmsNotifiedAt     DateTime?
+  dpaNotifiedAt       DateTime?
+  dpaNotRequiredReason String?
+  createdBy           String
+  createdAt           DateTime  @default(now())
+  updates             IncidentUpdate[]
+}
+
+model IncidentUpdate {
+  id          String   @id @default(uuid()) @db.Uuid
+  incidentId  String   @db.Uuid
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  authorEmail String
+  text        String
+  at          DateTime @default(now())
+
+  @@index([incidentId])
+}
+
+/// Data subject requests to AMLSync (§12.2).
+model DataSubjectRequest {
+  id             String    @id @default(uuid()) @db.Uuid
+  receivedOn     String // YYYY-MM-DD
+  requesterName  String
+  requesterEmail String
+  kind           String // access | erasure | rectification | portability | objection | restriction
+  role           String // controller | processor
+  firmId         String?   @db.Uuid // processor requests: the firm it was forwarded to
+  status         String    @default("received") // received | identity-check | in-progress | forwarded | completed | rejected
+  dueOn          String
+  extended       Boolean   @default(false)
+  notes          String?
+  closedAt       DateTime?
+  createdBy      String
+  createdAt      DateTime  @default(now())
 }
