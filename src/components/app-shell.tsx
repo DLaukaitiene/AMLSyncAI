@@ -70,7 +70,7 @@ function Item({ item, path, onNavigate }: { item: NavItem; path: string; onNavig
 }
 
 /** App frame: left sidebar (drawer on phones) with grouped navigation, top bar, content. */
-export function AppShell({ nav, topRight, firmName, children }: { nav: NavItem[]; topRight: ReactNode; firmName: string; children: ReactNode }) {
+export function AppShell({ nav, topRight, firmName, banner, children }: { nav: NavItem[]; topRight: ReactNode; firmName: string; banner?: ReactNode; children: ReactNode }) {
   const path = usePathname();
   const [drawer, setDrawer] = useState(false);
   useEffect(() => setDrawer(false), [path]);
@@ -103,6 +103,7 @@ export function AppShell({ nav, topRight, firmName, children }: { nav: NavItem[]
         <span className="lg:hidden"><Logo href="/app" dark={false} /></span>
         <div className="ml-auto flex items-center gap-3 text-sm">{topRight}</div>
       </header>
+      {banner && <div role="status" className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">{banner}</div>}
       <main id="content" className="mx-auto max-w-6xl px-4 py-8 sm:px-6">{children}</main>
     </div>
   );

@@ -60,7 +60,7 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
       if (await tx.invoice.findUnique({ where: { firmId_period: { firmId: f.id, period: label } } })) return false;
       const entries = await tx.creditEntry.findMany({ where: { firmId: f.id, invoiceId: null, createdAt: { lt: new Date(period.toExclusive + "T00:00:00Z") } }, orderBy: { createdAt: "asc" } });
       const customer = customerOf(f);
-      const draft = buildInvoice(monthlyFeeFor(f.plan, f.customFeeCents, f.trialEndsOn, period.from, period.toExclusive), planOf(f.plan).name, entries, customer);
+      const draft = buildInvoice(monthlyFeeFor(f.plan, f.customFeeCents, f.trialEndsOn, period.from, period.toExclusive, f.cancelledAt ? f.cancelledAt.toISOString().slice(0, 10) : null), planOf(f.plan).name, entries, customer);
       if (draft.netBeforeCreditCents <= 0) return false; // nothing to bill; entries roll forward
       // Continuous numbering across all firms: serialise on an advisory lock.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(424242)`;

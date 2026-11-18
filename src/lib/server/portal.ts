@@ -67,6 +67,8 @@ async function usableLink(token: string): Promise<Link | null> {
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return null;
   const l = await adminDb.portalLink.findUnique({ where: { tokenHash: sha256(token) } });
   if (!l || l.status === "REVOKED" || l.expiresAt < new Date()) return null;
+  // A firm whose subscription ended no longer collects data through the portal.
+  if ((await adminDb.firm.findUnique({ where: { id: l.firmId }, select: { status: true } }))?.status === "cancelled") return null;
   return l;
 }
 

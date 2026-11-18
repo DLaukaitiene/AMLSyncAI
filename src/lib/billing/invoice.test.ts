@@ -56,3 +56,10 @@ describe("plans and trial", () => {
     expect(monthlyFeeFor("custom", null, null, "2026-11-01", "2026-12-01")).toBe(0);
   });
 });
+
+describe("cancellation", () => {
+  it("charges the cancellation month up to the cancellation day, nothing after", () => {
+    expect(monthlyFeeFor("solo", null, null, "2026-11-01", "2026-12-01", "2026-11-16")).toBe(Math.round((4900 * 15) / 30));
+    expect(monthlyFeeFor("solo", null, null, "2026-12-01", "2027-01-01", "2026-11-16")).toBe(0);
+  });
+});

@@ -5,6 +5,9 @@ import { rescreenFirm } from "@/lib/server/screening-lists";
 import { sendPortalReminders, startDueRefreshes } from "@/lib/server/portal";
 import { issueMonthlyInvoices } from "@/lib/server/invoicing";
 import { refreshCompanyCheck } from "@/lib/server/kyb";
+import { hit } from "@/lib/server/rate-limit";
+import { notify } from "@/lib/server/email";
+import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
 
 export const maxDuration = 300;
 
@@ -24,7 +27,8 @@ export async function GET(req: Request) {
       out[name] = { error: (e as Error).message.slice(0, 200) };
     }
   };
-  const firms = await adminDb.firm.findMany({ select: { id: true } });
+  // Archived (cancelled) firms: no re-screening, refreshes or reminders — records are read-only.
+  const firms = await adminDb.firm.findMany({ where: { status: "active" }, select: { id: true } });
   await run("rescreen", async () => {
     let newHits = 0;
     for (const f of firms) newHits += (await rescreenFirm(f.id)).newHits;
@@ -41,6 +45,17 @@ export async function GET(req: Request) {
   });
   await run("portalReminders", () => sendPortalReminders());
   await run("invoices", () => issueMonthlyInvoices());
+  await run("archivesEnded", async () => {
+    // Read-only archives whose retention period ended: AMLSync operations deletes them.
+    const today = new Date().toISOString().slice(0, 10);
+    const ended = await adminDb.firm.findMany({ where: { status: "cancelled", archiveUntil: { lte: today } }, select: { id: true, name: true, archiveUntil: true } });
+    for (const f of ended) {
+      if (await hit(`archive-ended:${f.id}:${today.slice(0, 7)}`, { limit: 1, windowSec: 40 * 86_400 })) {
+        await notify(OPS_ALERT_EMAIL, `AMLSync App: archive of ${f.name} ended`, `The read-only archive of ${f.name} ended on ${f.archiveUntil}. Its records must now be deleted (firm id ${f.id}).`);
+      }
+    }
+    return { ended: ended.length };
+  });
   await run("companyChecks", async () => {
     // Register checks whose ownership data arrived after the first request.
     const pending = await adminDb.diditSession.findMany({ where: { kind: "kyb", importedAt: null }, select: { firmId: true, diditSessionId: true } });

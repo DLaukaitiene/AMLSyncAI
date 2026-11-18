@@ -1,8 +1,13 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/server/session";
+import { redirect } from "next/navigation";
+import { hasRecentMfa, requireUser } from "@/lib/server/session";
+import { audit, securityEvent } from "@/lib/server/audit";
+import { notify } from "@/lib/server/email";
+import { currentProfile } from "@/lib/server/country-profile";
+import { addYears } from "@/lib/rules/dates";
+import { CONTACT_EMAIL, OPS_ALERT_EMAIL } from "@/lib/billing/plans";
 import { withTenant } from "@/lib/server/db";
-import { audit } from "@/lib/server/audit";
 import type { ActionState } from "@/components/form";
 
 const clean = (fd: FormData, k: string, max = 200) => String(fd.get(k) ?? "").trim().slice(0, max) || null;
@@ -27,4 +32,27 @@ export async function saveBillingDetails(_: ActionState, fd: FormData): Promise<
   });
   revalidatePath("/app/billing");
   return { message: "Billing details saved. They are used on your next invoice." };
+}
+
+/**
+ * Ends the subscription (Owner, fresh two-factor check, typed confirmation).
+ * Records stay read-only for the retention period, then are deleted.
+ */
+export async function cancelSubscriptionAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("approve.management");
+  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/billing" } };
+  if (String(fd.get("confirm") ?? "").trim() !== "CANCEL") return { error: "Type CANCEL to confirm.", fieldErrors: { confirm: ["Type CANCEL"] } };
+  const today = new Date().toISOString().slice(0, 10);
+  const archiveUntil = await withTenant(s.firm.id, async (tx) => {
+    const { profile } = await currentProfile(tx, s.firm.id);
+    const until = addYears(today, profile.retentionYears);
+    await tx.firm.update({ where: { id: s.firm.id }, data: { status: "cancelled", cancelledAt: new Date(), archiveUntil: until } });
+    await tx.portalLink.updateMany({ where: { status: { not: "REVOKED" } }, data: { status: "REVOKED" } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["status:cancelled"] });
+    return until;
+  });
+  await securityEvent({ firmId: s.firm.id, userId: s.user.id, kind: "subscription-cancelled", details: { archiveUntil } });
+  await notify(OPS_ALERT_EMAIL, `AMLSync App: ${s.firm.name} cancelled`, `${s.firm.name} cancelled on ${today}. Read-only archive until ${archiveUntil}. A final invoice is issued with the next monthly run.`);
+  await notify(s.user.email, "AMLSync App: subscription ended", `Your AMLSync App subscription has ended. Your records stay available read-only until ${archiveUntil}, as anti-money-laundering law requires, and are deleted after that. Download your full export in Billing at any time. To restart, write to ${CONTACT_EMAIL}.`);
+  redirect("/app/archived");
 }
