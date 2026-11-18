@@ -3,6 +3,7 @@ import { adminDb } from "../db";
 import { securityEvent } from "../audit";
 import { adminAudit } from "./audit";
 import { ownerCount } from "./access";
+import { sendAnnouncementEmails } from "./comms";
 import { APPROVAL_TTL_MS, canDecide, type FourEyesAction } from "@/lib/backoffice/four-eyes";
 import { envOwners, isAdminRole } from "@/lib/backoffice/roles";
 
@@ -52,7 +53,7 @@ export async function approveAndRun(id: string, by: string): Promise<string> {
         case "admin.set-roles": {
           const email = String(p.email).toLowerCase();
           const roles = (p.roles as string[]).filter(isAdminRole);
-          if (envOwners().includes(email)) throw new Error("This admin is an Owner by configuration (PLATFORM_ADMIN_EMAILS).");
+          if (envOwners().includes(email)) throw new Error("This admin is the Backoffice Owner.");
           if (roles.length) {
             await tx.adminMember.upsert({ where: { email }, create: { email, roles, addedBy: a.requestedBy }, update: { roles, removedAt: null } });
             result = `${email}: ${roles.join(", ")}.`;
@@ -67,6 +68,12 @@ export async function approveAndRun(id: string, by: string): Promise<string> {
           result = `${firm.name} closed. Checks are blocked; records stay until their retention ends (§12.4).`;
           break;
         }
+        case "comms.broadcast": {
+          const ann = await tx.announcement.findUniqueOrThrow({ where: { id: String(p.announcementId) } });
+          if (ann.emailState === "sent") throw new Error("Already sent.");
+          result = `Email "${ann.title}" approved for sending.`;
+          break;
+        }
         case "firms.export":
           result = "Export approved. Download it from the firm list within 7 days.";
           break;
@@ -77,6 +84,12 @@ export async function approveAndRun(id: string, by: string): Promise<string> {
       await adminAudit({ adminEmail: a.requestedBy, action: a.action, targetType: "AdminApproval", targetId: id, reason: a.reason, details: { ...p, summary: a.summary }, approverEmail: approver }, tx);
       return result;
     });
+    if (a.action === "comms.broadcast") {
+      const n = await sendAnnouncementEmails(String(p.announcementId));
+      const r2 = `${result} Sent to ${n} Owner(s) / Compliance Officer(s).`;
+      await adminDb.adminApproval.update({ where: { id }, data: { result: r2 } });
+      return r2;
+    }
     if (a.action === "credit.grant") await securityEvent({ firmId: String(p.firmId), kind: "credit-added", details: { by: a.requestedBy, approvedBy: by, cents: p.cents } });
     return result;
   } catch (e) {

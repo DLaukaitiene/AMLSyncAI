@@ -4,6 +4,7 @@ import { logoutAction } from "@/app/(auth)/actions";
 import { SuggestFeature } from "@/components/suggest-feature";
 import { AppShell, type NavItem } from "@/components/app-shell";
 import { isPlatformAdmin } from "@/lib/server/feedback";
+import { Announcements } from "@/components/announcements";
 
 type Child = { href: string; label: string; icon: string; show?: boolean };
 type Entry = Child & { children?: Child[] };
@@ -63,14 +64,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ],
     },
     { href: "/app/feature-requests", label: "Feature requests", icon: "ideas" },
+    { href: "/app/support", label: "Help & support", icon: "help" },
     ...(isPlatformAdmin(s.user.email)
       ? [{
-          href: "/admin", label: "AMLSync admin", icon: "settings",
-          children: [
-            { href: "/admin/billing", label: "Billing & limits", icon: "billing" },
-            { href: "/admin/support", label: "Support access", icon: "security" },
-            { href: "/admin/feature-requests", label: "Feature triage", icon: "ideas" },
-          ],
+          href: "/adminpage1&", label: "Backoffice", icon: "settings",
         }]
       : []),
   ];
@@ -96,6 +93,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </>
       }
     >
+      <Announcements firmId={s.firm.id} userId={s.user.id} />
       {children}
     </AppShell>
   );

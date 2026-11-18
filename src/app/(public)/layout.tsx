@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/public-header";
+import { WebBeacon } from "@/components/web-beacon";
 import { SELLER } from "@/lib/billing/invoice";
 import { CONTACT_EMAIL } from "@/lib/billing/plans";
 
@@ -7,6 +8,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <>
       <PublicHeader />
+      <WebBeacon />
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6">{children}</main>
       <footer className="mt-10 bg-navy text-sm text-white/65">
         <div className="mx-auto flex max-w-6xl flex-wrap gap-x-8 gap-y-2 px-4 py-8 sm:px-6">

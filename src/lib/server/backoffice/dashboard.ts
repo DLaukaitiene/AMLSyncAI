@@ -38,12 +38,20 @@ export async function todayData() {
     adminDb.invoice.aggregate({ where: { issuedOn: { gte: iso(m0) }, status: { not: "void" } }, _sum: { netCents: true } }),
   ]);
   const metrics = await firmMetrics();
+  const [ticketsLate, ticketsOpen, leadsNew, leadsDue, visitors7] = await Promise.all([
+    adminDb.ticket.count({ where: { status: "open", firstResponseAt: null, slaDueAt: { lt: now } } }),
+    adminDb.ticket.count({ where: { status: "open" } }),
+    adminDb.lead.count({ where: { stage: "new" } }),
+    adminDb.lead.count({ where: { nextStepOn: { lte: todayIso }, stage: { notIn: ["customer", "lost"] } } }),
+    adminDb.$queryRaw<{ n: bigint }[]>`SELECT coalesce(sum(v), 0) AS n FROM (SELECT count(DISTINCT visitor) AS v FROM "WebEvent" WHERE at >= ${d7} AND bot IS NULL GROUP BY date_trunc('day', at)) x`,
+  ]);
   const misuse = await misuseSignals();
 
   // Funnel (§7.4) for firms that signed up in the last 7 days, from product data we hold.
   const recent = firms.filter((f) => f.createdAt >= d7);
   const rm = recent.map((f) => metrics.get(f.id)!).filter(Boolean);
   const funnel = [
+    { step: "Website visitors (sum of daily)", n: Number(visitors7[0]?.n ?? 0) },
     { step: "Sign-up started", n: signupsStarted7 },
     { step: "Email confirmed (firm created)", n: recent.length },
     { step: "Signed in after two-factor set-up", n: rm.filter((m) => m.users > 0 && m.activeUsers30d > 0).length },
@@ -66,16 +74,19 @@ export async function todayData() {
   const dsrSoon = dsrs.filter((d) => d.dueOn <= iso(new Date(now.getTime() + 7 * DAY))).length;
 
   const alerts: Alert[] = [];
-  for (const i of incidents) alerts.push({ label: `Incident ${i.severity}: ${i.title}${i.personalData ? " (personal data)" : ""}`, href: `/admin/security/incidents/${i.id}`, severity: i.severity === "sev1" || i.personalData ? "bad" : "warn", owner: "Security" });
-  if (kybOpen.length) alerts.push({ label: `${kybOpen.length} firm KYB possible sanctions match(es) to review`, href: "/admin/firms?view=kyb", severity: "bad", owner: "Owner + Legal" });
-  if (failed24 > 50) alerts.push({ label: `${failed24} failed sign-ins in 24 h: possible credential stuffing`, href: "/admin/security", severity: "bad", owner: "Security" });
-  if (misuse.length) alerts.push({ label: `${misuse.length} firm(s) with unusual check patterns`, href: "/admin/abuse", severity: "warn", owner: "Ops" });
-  if (overdueInv.length) alerts.push({ label: `${overdueInv.length} overdue invoice(s)`, href: "/admin/billing", severity: "warn", owner: "Finance" });
-  if (approvals) alerts.push({ label: `${approvals} four-eyes request(s) waiting`, href: "/admin/approvals", severity: "warn", owner: "Owner" });
-  if (!lists.length) alerts.push({ label: "No official sanctions list loaded", href: "/admin/content", severity: "bad", owner: "Content" });
-  else if (staleLists.length) alerts.push({ label: `${staleLists.length} sanctions list(s) not refreshed in 24 h`, href: "/admin/content", severity: "warn", owner: "Content" });
-  if (dsrSoon) alerts.push({ label: `${dsrSoon} data subject request(s) due within 7 days`, href: "/admin/privacy", severity: "warn", owner: "DPO" });
-  if (red.length) alerts.push({ label: `${red.length} active firm(s) with a red health score`, href: "/admin/firms?view=red", severity: "warn", owner: "CS" });
+  for (const i of incidents) alerts.push({ label: `Incident ${i.severity}: ${i.title}${i.personalData ? " (personal data)" : ""}`, href: `/adminpage1&/security/incidents/${i.id}`, severity: i.severity === "sev1" || i.personalData ? "bad" : "warn", owner: "Security" });
+  if (ticketsLate) alerts.push({ label: `${ticketsLate} support ticket(s) past the first-response target`, href: "/adminpage1&/tickets", severity: "bad", owner: "Support" });
+  if (leadsNew) alerts.push({ label: `${leadsNew} new lead(s) to contact`, href: "/adminpage1&/leads?stage=new", severity: "warn", owner: "Sales" });
+  if (leadsDue) alerts.push({ label: `${leadsDue} lead follow-up(s) due`, href: "/adminpage1&/leads", severity: "warn", owner: "Sales" });
+  if (kybOpen.length) alerts.push({ label: `${kybOpen.length} firm KYB possible sanctions match(es) to review`, href: "/adminpage1&/firms?view=kyb", severity: "bad", owner: "Owner + Legal" });
+  if (failed24 > 50) alerts.push({ label: `${failed24} failed sign-ins in 24 h: possible credential stuffing`, href: "/adminpage1&/security", severity: "bad", owner: "Security" });
+  if (misuse.length) alerts.push({ label: `${misuse.length} firm(s) with unusual check patterns`, href: "/adminpage1&/abuse", severity: "warn", owner: "Ops" });
+  if (overdueInv.length) alerts.push({ label: `${overdueInv.length} overdue invoice(s)`, href: "/adminpage1&/billing", severity: "warn", owner: "Finance" });
+  if (approvals) alerts.push({ label: `${approvals} four-eyes request(s) waiting`, href: "/adminpage1&/approvals", severity: "warn", owner: "Owner" });
+  if (!lists.length) alerts.push({ label: "No official sanctions list loaded", href: "/adminpage1&/content", severity: "bad", owner: "Content" });
+  else if (staleLists.length) alerts.push({ label: `${staleLists.length} sanctions list(s) not refreshed in 24 h`, href: "/adminpage1&/content", severity: "warn", owner: "Content" });
+  if (dsrSoon) alerts.push({ label: `${dsrSoon} data subject request(s) due within 7 days`, href: "/adminpage1&/privacy", severity: "warn", owner: "DPO" });
+  if (red.length) alerts.push({ label: `${red.length} active firm(s) with a red health score`, href: "/adminpage1&/firms?view=red", severity: "warn", owner: "CS" });
 
   return {
     alerts,
@@ -84,7 +95,8 @@ export async function todayData() {
     firms: { total: firms.length, active: firms.filter((f) => f.status === "active").length, trials },
     funnel,
     atRisk,
-    support: { pendingGrants },
+    support: { pendingGrants, ticketsOpen },
+    web: { visitors7: Number(visitors7[0]?.n ?? 0) },
     security: { failed24, bot24, locked, mfaPct: usersTotal ? Math.round((100 * usersMfa) / usersTotal) : 100, adminEvents24 },
     features7,
     lists,

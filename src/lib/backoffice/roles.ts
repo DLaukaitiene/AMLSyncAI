@@ -46,6 +46,12 @@ const MATRIX = {
   "team.manage": ["OWNER"],
   "audit.view": ["OWNER", "SECURITY", "AUDITOR"],
   "approvals.decide": ["OWNER"],
+  "web.view": ["OWNER", "OPERATIONS", "SALES", "AUDITOR"],
+  "leads.manage": ["OWNER", "SALES"],
+  "tickets.manage": ["OWNER", "SUPPORT"],
+  "comms.manage": ["OWNER", "OPERATIONS"],
+  "expert.manage": ["OWNER", "OPERATIONS"],
+  "vendors.manage": ["OWNER", "FINANCE"],
 } as const satisfies Record<string, readonly AdminRole[]>;
 
 export type AdminPermission = keyof typeof MATRIX;
@@ -58,7 +64,26 @@ export function isAdminRole(r: string): r is AdminRole {
   return (ADMIN_ROLES as readonly string[]).includes(r);
 }
 
-/** Emails that are Owners by configuration (cannot be removed from the Backoffice UI). */
-export function envOwners(value = process.env.PLATFORM_ADMIN_EMAILS ?? ""): string[] {
-  return value.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+/** Where the Backoffice lives (app.amlsync.com/adminpage1&; amlsync.com/adminpage1& redirects there). */
+export const BACKOFFICE_PATH = "/adminpage1&";
+
+/** The only person who can sign in to the Backoffice. */
+export const DEFAULT_OWNER = "deimena@amlsync.com";
+
+/**
+ * The Backoffice Owner. Production always uses DEFAULT_OWNER; other
+ * environments (tests, previews) may set BACKOFFICE_OWNER_EMAIL.
+ */
+export function backofficeOwner(env: Record<string, string | undefined> = process.env): string {
+  if (env.VERCEL_ENV === "production") return DEFAULT_OWNER;
+  return (env.BACKOFFICE_OWNER_EMAIL || DEFAULT_OWNER).trim().toLowerCase();
+}
+
+/** Further admins (Admin team page) only when explicitly enabled, never in production. */
+export function teamEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.BACKOFFICE_TEAM === "on" && env.VERCEL_ENV !== "production";
+}
+
+export function envOwners(): string[] {
+  return [backofficeOwner()];
 }

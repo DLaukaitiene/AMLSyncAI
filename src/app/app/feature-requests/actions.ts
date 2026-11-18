@@ -53,12 +53,12 @@ async function requireTeam() {
 
 export async function statusAction(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireTeam();
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/admin/feature-requests" } };
+  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/adminpage1&/feature-requests" } };
   const status = g(fd, "status") as FeatureRequestStatus;
   if (!STATUSES.includes(status as (typeof STATUSES)[number])) return { error: "Choose a status." };
   const r = await setStatus(s.user.email, id, status, g(fd, "reason"), g(fd, "releaseNoteUrl"));
   if (r.ok) await adminAudit({ adminEmail: s.user.email, action: "feature.status", targetType: "FeatureRequest", targetId: id, details: { status } });
-  revalidatePath("/admin/feature-requests");
+  revalidatePath("/adminpage1&/feature-requests");
   return r.ok ? { message: `Status updated; ${r.notified} person(s) notified.` } : { error: r.error };
 }
 
@@ -66,7 +66,7 @@ export async function mergeAction(id: string, _: ActionState, fd: FormData): Pro
   const s = await requireTeam();
   const r = await merge(s.user.email, id, g(fd, "targetId"));
   if (r.ok) await adminAudit({ adminEmail: s.user.email, action: "feature.merge", targetType: "FeatureRequest", targetId: id, details: { into: g(fd, "targetId") } });
-  revalidatePath("/admin/feature-requests");
+  revalidatePath("/adminpage1&/feature-requests");
   return r.ok ? { message: "Merged; votes combined." } : { error: r.error };
 }
 
@@ -74,7 +74,7 @@ export async function hideAction(id: string, hidden: boolean): Promise<ActionSta
   const s = await requireTeam();
   await hideRequest(id, hidden);
   await adminAudit({ adminEmail: s.user.email, action: hidden ? "feature.hide" : "feature.show", targetType: "FeatureRequest", targetId: id });
-  revalidatePath("/admin/feature-requests");
+  revalidatePath("/adminpage1&/feature-requests");
   return { message: hidden ? "Hidden." : "Visible again." };
 }
 

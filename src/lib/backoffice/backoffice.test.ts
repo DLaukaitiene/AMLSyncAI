@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminCan, envOwners } from "./roles";
+import { adminCan, backofficeOwner, teamEnabled } from "./roles";
 import { canDecide, needsFourEyes, SELF_APPROVAL_COOL_OFF_MS } from "./four-eyes";
 import { entryHash, GENESIS, verifyChain, type ChainEntry } from "./chain";
 import { healthScore } from "./health";
@@ -19,8 +19,13 @@ describe("admin roles", () => {
     expect(adminCan(["OWNER"], "approvals.decide")).toBe(true);
     expect(adminCan([], "dashboard.view")).toBe(false);
   });
-  it("parses configured owners", () => {
-    expect(envOwners(" A@x.lt, ,b@y.lt")).toEqual(["a@x.lt", "b@y.lt"]);
+  it("allows only deimena@amlsync.com in production", () => {
+    expect(backofficeOwner({ VERCEL_ENV: "production", BACKOFFICE_OWNER_EMAIL: "someone@else.lt" })).toBe("deimena@amlsync.com");
+    expect(backofficeOwner({})).toBe("deimena@amlsync.com");
+    expect(backofficeOwner({ BACKOFFICE_OWNER_EMAIL: " Test@X.lt " })).toBe("test@x.lt");
+    expect(teamEnabled({ BACKOFFICE_TEAM: "on", VERCEL_ENV: "production" })).toBe(false);
+    expect(teamEnabled({ BACKOFFICE_TEAM: "on" })).toBe(true);
+    expect(teamEnabled({})).toBe(false);
   });
 });
 

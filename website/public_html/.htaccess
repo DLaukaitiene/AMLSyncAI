@@ -1,4 +1,6 @@
 RewriteEngine On
+# AMLSync Backoffice: lives in the app (sign-in with two-factor there).
+RewriteRule ^adminpage1&(.*)$ https://app.amlsync.com/adminpage1&$1 [R=302,L,NE]
 RewriteCond %{HTTPS} off [OR]
 RewriteCond %{HTTP_HOST} ^www\. [NC]
 RewriteRule ^(.*)$ https://amlsync.com/$1 [L,R=301]

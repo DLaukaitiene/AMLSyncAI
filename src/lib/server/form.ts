@@ -19,5 +19,5 @@ export const isBot = (fd: FormData) => typeof fd.get("website") === "string" && 
 
 /** Only allow redirects to paths inside the app. */
 export function safeNext(next: unknown, fallback = "/app"): string {
-  return typeof next === "string" && /^\/app(\/[\w\-/?=&%.]*)?$/.test(next) ? next : fallback;
+  return typeof next === "string" && /^\/(app|adminpage1&)(\/[\w\-/?=&%.]*)?$/.test(next) ? next : fallback;
 }

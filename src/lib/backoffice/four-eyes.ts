@@ -12,13 +12,14 @@ export const EXPORT_FOUR_EYES_ROWS = 500; // §6.1
 export const APPROVAL_TTL_MS = 7 * 24 * 3600_000;
 export const SELF_APPROVAL_COOL_OFF_MS = 15 * 60_000;
 
-export type FourEyesAction = "credit.grant" | "admin.set-roles" | "firm.close" | "firms.export";
+export type FourEyesAction = "credit.grant" | "admin.set-roles" | "firm.close" | "firms.export" | "comms.broadcast";
 
 export const FOUR_EYES_LABELS: Record<FourEyesAction, string> = {
   "credit.grant": "Credit grant above €100",
   "admin.set-roles": "Admin role change",
   "firm.close": "Firm closure",
   "firms.export": "Large data export",
+  "comms.broadcast": "Email to all firms",
 };
 
 export function needsFourEyes(action: FourEyesAction, size = 0): boolean {

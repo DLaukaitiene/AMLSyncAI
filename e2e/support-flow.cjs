@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-// Just-in-time support access (spec §8C.7, §11.14). Server must run with PLATFORM_ADMIN_EMAILS=triage@amlsyncai-team.lt
+// Just-in-time support access (spec §8C.7, §11.14). Server must run with BACKOFFICE_OWNER_EMAIL=triage@amlsyncai-team.lt BACKOFFICE_TEAM=on
 //   CODE1=… CODE2=… node e2e/support-flow.cjs
 const { chromium } = require("playwright");
 const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
@@ -18,7 +18,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await f.getByLabel("What happened? *").fill("Secret case text XYZ"); await f.getByLabel("Why does it seem suspicious? *").fill("Secret case reasons XYZ");
   await submit(f, "Send report", "Sent to the Compliance Officer");
 
-  await t.goto(BASE + "/admin/support");
+  await t.goto(BASE + "/adminpage1&/support");
   await t.getByLabel("Firm email domain *").fill("klientai.lt");
   await t.getByLabel("Reason (shown to the firm) *").fill("Customer reported dashboard counts look wrong");
   await t.getByLabel(/Hours/).fill("2");
@@ -34,7 +34,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await f.getByText(/active until/).first().waitFor();
   log("firm approved 2 hours");
 
-  await t.goto(BASE + "/admin/support");
+  await t.goto(BASE + "/adminpage1&/support");
   await t.getByRole("link", { name: /Open \(until/ }).click();
   await t.getByText("Visible Summary").waitFor();
   const view = await t.locator("main").innerText();

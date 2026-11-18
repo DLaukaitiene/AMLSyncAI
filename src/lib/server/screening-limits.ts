@@ -43,6 +43,6 @@ async function limitReached(firmId: string, firmName: string, kind: LimitKind, l
   await sendEmail(
     OPS_ALERT_EMAIL,
     `AMLSync App: ${firmName} reached its ${kind === "day" ? "daily" : "monthly"} screening limit`,
-    `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/admin/billing")} (firm id ${firmId}).`,
+    `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/adminpage1&/billing")} (firm id ${firmId}).`,
   );
 }

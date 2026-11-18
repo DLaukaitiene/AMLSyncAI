@@ -1,14 +1,15 @@
 import "server-only";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { adminDb } from "../db";
 import { getSession, hasRecentMfa, requireUser, type CurrentSession } from "../session";
-import { adminCan, envOwners, isAdminRole, type AdminPermission, type AdminRole } from "@/lib/backoffice/roles";
+import { adminCan, BACKOFFICE_PATH, envOwners, isAdminRole, teamEnabled, type AdminPermission, type AdminRole } from "@/lib/backoffice/roles";
 import type { ActionState } from "@/components/form";
 
 /**
  * Backoffice access (§4). Admins sign in like every user (password + mandatory
  * TOTP, 15-minute idle timeout); their admin roles come from AdminMember, and
- * PLATFORM_ADMIN_EMAILS are always Owners. Writes need a fresh step-up.
+ * only the Owner (deimena@amlsync.com in production) has access. Writes need a fresh step-up.
  */
 export interface AdminContext {
   session: CurrentSession;
@@ -21,6 +22,7 @@ export async function adminRolesFor(email: string): Promise<AdminRole[]> {
   const e = email.toLowerCase();
   const roles = new Set<AdminRole>();
   if (envOwners().includes(e)) roles.add("OWNER");
+  if (!teamEnabled()) return [...roles];
   const m = await adminDb.adminMember.findUnique({ where: { email: e } });
   if (m && !m.removedAt) for (const r of m.roles) if (isAdminRole(r)) roles.add(r);
   return [...roles];
@@ -30,11 +32,17 @@ export async function isAdmin(email: string): Promise<boolean> {
   return (await adminRolesFor(email)).length > 0;
 }
 
+/** Just-in-time elevation (§4.2): the Backoffice asks for the authenticator code again after an hour. */
+export const ELEVATION_MS = 60 * 60 * 1000;
+
 /** For Backoffice pages: non-admins get a 404 (the Backoffice does not reveal itself). */
 export async function requireAdmin(p: AdminPermission = "dashboard.view"): Promise<AdminContext> {
+  const here = (await headers()).get("x-pathname") || BACKOFFICE_PATH;
+  if (!(await getSession())) redirect(`/login?next=${encodeURIComponent(here)}`);
   const session = await requireUser();
   const roles = await adminRolesFor(session.user.email);
   if (!roles.length || !adminCan(roles, p)) notFound();
+  if (!session.mfaAt || Date.now() - session.mfaAt.getTime() > ELEVATION_MS) redirect(`/reauth?next=${encodeURIComponent(here)}`);
   return { session, email: session.user.email.toLowerCase(), roles, can: (x) => adminCan(roles, x) };
 }
 

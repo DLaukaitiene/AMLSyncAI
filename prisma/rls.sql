@@ -89,7 +89,8 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'AdminMember','AdminAuditEvent','AdminApproval','FirmAdminMeta','FirmNote','FirmKyb',
-    'Incident','IncidentUpdate','DataSubjectRequest'
+    'Incident','IncidentUpdate','DataSubjectRequest','WebEvent','Lead','LeadNote','Ticket','TicketMessage',
+    'Announcement','AnnouncementDismissal','VendorPrice','VendorInvoice','ExpertEngagement','ExpertTask'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
   END LOOP;
