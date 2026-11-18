@@ -1,3 +1,5 @@
+import { CalendarCheck } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
@@ -44,7 +46,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         <Link href={show === "done" ? "/app/calendar" : "/app/calendar?show=done"} className="text-sm text-accent underline">{show === "done" ? "Show open" : "Show done"}</Link>
       </div>
       <p className="text-sm text-muted">Every deadline uses your Country Profile&apos;s working days and holidays.</p>
-      {tasks.length === 0 && <p className="text-sm">Nothing here.</p>}
+      {tasks.length === 0 && <EmptyState icon={CalendarCheck} title="Nothing due" text="Refresh dates, report deadlines, reviews and reminders appear here as soon as they are due. You're all caught up." />}
       {(["overdue", "due-30-days", "later", "done"] as CalendarBucket[]).filter((b) => groups.has(b)).map((b) => (
         <section key={b}>
           <h2 className={`mb-2 font-semibold ${b === "overdue" ? "text-red-700 dark:text-red-300" : ""}`}>{TITLES[b]}</h2>

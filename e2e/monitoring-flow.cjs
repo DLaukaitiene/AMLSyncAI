@@ -20,6 +20,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   await p.getByRole("heading", { name: "Rūta Klientė" }).waitFor();
   const fileUrl = p.url();
   const fileId = fileUrl.split("/").pop();
+  if (await p.getByText("Record a check done another way (in person, eID)").count()) await p.getByText("Record a check done another way (in person, eID)").click();
   await p.locator("select[name=method]").selectOption("IN_PERSON");
   await p.getByLabel("Document type").fill("ID card"); await p.getByLabel("Document number").fill("AB1234567");
   await p.getByLabel("Why national eID wasn't used").fill("Met the client in the office");

@@ -17,9 +17,27 @@ export default async function Dashboard() {
       tx.task.count({ where: { status: "OPEN", dueOn: { lt: new Date(today) } } }),
       tx.task.count({ where: { status: "OPEN", dueOn: { gte: new Date(today), lte: new Date(addCalendarDays(today, 30)) } } }),
     ]);
-    return { checklist: setupChecklist(profile), version, clients, openMatters, overdue, due30 };
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { billingName: true, vatId: true } });
+    const setup = {
+      ra: (await tx.firmRiskAssessment.count({ where: { status: "IN_FORCE" } })) > 0,
+      policy: (await tx.policyDocument.count({ where: { kind: "policy", status: "IN_FORCE" } })) > 0,
+      team: (await tx.user.count({ where: { deactivatedAt: null } })) > 1 || (await tx.invitation.count()) > 0,
+      client: (await tx.cddFile.count({ where: { role: "CLIENT" } })) > 0,
+      billing: !!firm.billingName,
+    };
+    return { checklist: setupChecklist(profile), version, clients, openMatters, overdue, due30, setup };
   });
   const missing = data.checklist.filter((c) => c.status === "required-missing" || c.status === "not-yet-reviewed");
+  const required = data.checklist.filter((c) => c.status === "required-missing");
+  const gettingStarted = [
+    { done: required.length === 0, title: "Fill in your Country Profile", text: "Your supervisor, FIU and national rules (the EU rules are built in).", href: "/app/settings/country-profile" },
+    { done: data.setup.ra, title: "Approve your firm risk assessment", text: "Answer a few questions; AMLSync App drafts it for you.", href: "/app/firm/risk-assessment" },
+    { done: data.setup.policy, title: "Approve your AML policy and procedures", text: "Generated from your risk assessment — review and approve.", href: "/app/firm/policies" },
+    { done: data.setup.client, title: "Onboard your first client", text: "A name and an email are enough to start.", href: "/app/clients/new" },
+    { done: data.setup.team, title: "Invite your team", text: "Give colleagues their own sign-in and role.", href: "/app/team" },
+    { done: data.setup.billing, title: "Add your invoice details", text: "Company name, VAT number and address for your invoices.", href: "/app/billing" },
+  ];
+  const doneCount = gettingStarted.filter((g) => g.done).length;
 
   return (
     <div className="space-y-8">
@@ -42,6 +60,30 @@ export default async function Dashboard() {
           </li>
         ))}
       </ul>
+      {doneCount < gettingStarted.length && (
+        <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" aria-labelledby="gs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="gs" className="text-lg">Getting started</h2>
+            <span className="text-sm text-muted">{doneCount} of {gettingStarted.length} done</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuemin={0} aria-valuemax={gettingStarted.length} aria-valuenow={doneCount} aria-label="Setup progress">
+            <div className="h-full rounded-full bg-brand" style={{ width: `${(doneCount / gettingStarted.length) * 100}%` }} />
+          </div>
+          <ol className="grid gap-2 sm:grid-cols-2">
+            {gettingStarted.map((g) => (
+              <li key={g.title}>
+                <Link href={g.href} className={`flex gap-3 rounded-xl border p-3 transition hover:border-accent border-border ${g.done ? "bg-surface" : ""}`}>
+                  <span aria-hidden className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${g.done ? "bg-green-600 text-white" : "border-2 border-border"}`}>{g.done ? "✓" : ""}</span>
+                  <span>
+                    <span className={`block text-sm font-semibold ${g.done ? "line-through" : ""}`}>{g.title}<span className="sr-only">{g.done ? " (done)" : ""}</span></span>
+                    <span className="block text-xs text-muted">{g.text}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           ["Active clients", data.clients, "/app/clients"],
@@ -62,7 +104,7 @@ export default async function Dashboard() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Finish setting up your Country Profile</h2>
           <p className="text-sm text-muted">
-            AMLSync App ships the general EU rules. National details are entered by your firm (spec §3A). Missing required items only block
+            AMLSync App ships the general EU rules. National details are entered by your firm. Missing required items only block
             the workflows that depend on them.
           </p>
           <ul className="divide-y divide-border rounded-xl border border-border text-sm">

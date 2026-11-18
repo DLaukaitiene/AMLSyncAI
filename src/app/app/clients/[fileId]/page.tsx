@@ -27,6 +27,7 @@ import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
 import { CHECK_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
+import { Chip, RiskChip, StatusChip } from "@/components/chips";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 
@@ -45,6 +46,13 @@ const ROLE_TEXT: Record<string, string> = {
   controller: "controls by other means", "senior-managing-official": "senior managing official", "trust-settlor": "settlor", trustee: "trustee",
   "trust-protector": "protector", "trust-beneficiary": "beneficiary", nominee: "nominee", unknown: "role not known",
 };
+
+function activityText(action: string, objectType: string, fields: string[], who?: string): string {
+  const verb: Record<string, string> = { create: "added", update: "changed", accept: "accepted", refuse: "refused", export: "exported", purge: "deleted", view: "viewed" };
+  const thing: Record<string, string> = { Party: who ?? "a person or company", CddFile: "the file", OwnershipLink: "ownership", RegistryExtract: "a register extract", IdentityVerification: "an identity verification", Document: "a document", DiditSession: "a provider check", ScreeningResult: "a screening result", ClientRiskAssessment: "the risk assessment", PortalLink: "a portal link" };
+  const f = fields.filter((x) => !x.includes(":")).slice(0, 4).join(", ");
+  return `${verb[action] ?? action} ${thing[objectType] ?? objectType}${f ? ` (${f})` : ""}`;
+}
 
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
@@ -71,10 +79,18 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
     const links = await tx.portalLink.findMany({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" }, take: 5 });
     const documents = await tx.document.findMany({ where: { partyId: cf.party.id }, orderBy: { uploadedAt: "desc" } });
     const didit = await tx.diditSession.findMany({ where: { partyId: { in: [...cf.tree.parties.keys()] } }, orderBy: { createdAt: "desc" }, take: 20 });
-    return { cf, lastRisk, approvals, hasCase, links, documents, didit };
+    // Activity timeline: the audit trail of this file and the people in its structure.
+    // Never cases or reports (they must not be visible to everyone who sees the file).
+    const activity = await tx.auditEvent.findMany({
+      where: { objectId: { in: [fileId, ...cf.tree.parties.keys()] }, objectType: { notIn: ["Case", "Report"] } },
+      orderBy: { at: "desc" }, take: 40,
+    });
+    const userIds = [...new Set(activity.map((a) => a.userId).filter((x): x is string => !!x))];
+    const names = new Map((await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
+    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names };
   });
   if (!data) notFound();
-  const { cf, lastRisk, approvals, hasCase, links, documents, didit } = data;
+  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names } = data;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
   const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
   const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
@@ -91,17 +107,35 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
   for (const x of cf.screening) if (!latestChecks.has(`${x.partyId}:${x.listName}`)) latestChecks.set(`${x.partyId}:${x.listName}`, x);
   const checklist = new Set((cf.file.eddChecklist as string[] | null) ?? []);
   const smo = cf.file.smoFallback as { officials: { name: string; position: string }[]; stepsTaken: string } | null;
+  const idOnly = cf.file.scope === "identification-only";
+  const st = cf.state;
+  const steps = [
+    { label: "Identity", anchor: "identity", done: idOnly ? st.clientIdentified !== false : st.identityVerified || !!st.sddDelayedVerification, na: false },
+    ...(cf.party.kind !== "NATURAL" ? [{ label: "Ownership", anchor: "ownership", done: st.boResolved !== false, na: idOnly }] : []),
+    { label: "People checks", anchor: "checks", done: !(st.missingChecks?.length), na: idOnly || cf.checks.length <= 1 },
+    { label: "Screening", anchor: "screening", done: !st.openScreeningMatches && !st.unscreenedParties && !st.trueSanctionsMatch, na: false },
+    { label: "Purpose", anchor: "client-data", done: st.purposeRecorded, na: idOnly },
+    { label: "Risk & EDD", anchor: st.eddRequired ? "edd" : "risk", done: !st.eddRequired || (!!st.eddChecklistComplete && !!st.seniorApprovalRecorded), na: idOnly },
+    { label: "Decision", anchor: "decision", done: decided, na: false },
+  ].map((x) => ({ ...x, done: x.done && !x.na }));
+  const ANCHOR_FOR: Record<string, string> = {
+    identity: "identity", identification: "client-data", "beneficial-owners": "ownership", "people-checks": "checks", purpose: "client-data", risk: "risk",
+    unscreened: "screening", screening: "screening", sanctions: "screening", edd: "edd", "senior-approval": "edd", "pep-approval": "edd", discrepancy: "identity",
+  };
 
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <p className="text-sm text-muted">{cf.party.kind === "NATURAL" ? "Person" : "Company"} · Client</p>
         <h1 className="text-2xl font-semibold">{cf.party.displayName}</h1>
-        <p className="text-sm">
-          <strong>{STATUS[cf.file.status]}</strong> · Risk <strong>{lastRisk?.final ?? cf.risk.level.toUpperCase()}</strong>
-          {lastRisk?.overrideReason ? ` (calculated ${lastRisk.calculated}, overridden)` : ""}
-          {cf.file.nextRefreshOn && ` · Next refresh ${cf.file.nextRefreshOn.toISOString().slice(0, 10)}`}
-          {cf.file.retentionUntil && ` · Delete after ${cf.file.retentionUntil.toISOString().slice(0, 10)}`}
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <StatusChip status={cf.file.status} ready={!decided && items.length === 0} />
+          <RiskChip level={lastRisk?.final ?? cf.risk.level} />
+          {cf.file.scope === "identification-only" && <Chip tone="grey">Identification only</Chip>}
+          <span className="sr-only">{STATUS[cf.file.status]} · Risk {lastRisk?.final ?? cf.risk.level.toUpperCase()}</span>
+          {lastRisk?.overrideReason ? <span className="text-muted">(calculated {lastRisk.calculated}, overridden)</span> : null}
+          {cf.file.nextRefreshOn && <span className="text-muted">Next refresh {cf.file.nextRefreshOn.toISOString().slice(0, 10)}</span>}
+          {cf.file.retentionUntil && <span className="text-muted">Delete after {cf.file.retentionUntil.toISOString().slice(0, 10)}</span>}
         </p>
         {can(r, "approve.compliance") && (
           <span className="flex flex-wrap gap-4 text-sm">
@@ -110,6 +144,19 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </span>
         )}
       </div>
+
+      <nav aria-label="Progress" className="overflow-x-auto">
+        <ol className="flex min-w-max gap-2">
+          {steps.map((st, i) => (
+            <li key={st.label}>
+              <a href={`#${st.anchor}`} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition hover:border-accent ${st.done ? "border-green-300 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100" : st.na ? "border-border text-muted" : "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"}`}>
+                <span aria-hidden className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${st.done ? "bg-green-600 text-white" : st.na ? "bg-slate-300 text-slate-700" : "bg-amber-500 text-white"}`}>{st.done ? "✓" : i + 1}</span>
+                {st.label}<span className="sr-only">{st.done ? " — done" : st.na ? " — not needed" : " — to do"}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
 
       {cf.file.source === "back-book" && cf.file.status === "OPEN" && (
         <p role="note" className="rounded border border-border px-3 py-2 text-sm">
@@ -129,7 +176,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           {items.length ? (
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               {items.map((i) => (
-                <li key={i.id}>{i.message} <span className="text-muted">({i.article})</span></li>
+                <li key={i.id}>{ANCHOR_FOR[i.id] ? <a className="hover:underline" href={`#${ANCHOR_FOR[i.id]}`}>{i.message}</a> : i.message} <span className="text-muted">({i.article})</span></li>
               ))}
             </ol>
           ) : (
@@ -139,7 +186,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Client data">
+        <Card title="Client data" id="client-data">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             {Object.entries(d).filter(([k]) => k !== "portalDeclaration" && k !== "additionalEddCaseIds").filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0) && typeof v !== "boolean").map(([k, v]) => (
               <div key={k} className="contents">
@@ -159,7 +206,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </Card>
 
         {cf.party.kind === "NATURAL" ? (
-          <Card title="Identity verification (Art. 22)">
+          <Card title="Identity verification (Art. 22)" id="identity">
             {cf.verifications.length ? (
               <ul className="text-sm">
                 {cf.verifications.map((v) => (
@@ -172,25 +219,6 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
               </ul>
             ) : (
               <p className="text-sm text-muted">Not verified yet. Order of preference: national eID (eIDAS substantial/high), in person, remote document + NFC + liveness.</p>
-            )}
-            {edit && (
-              <ActionForm action={recordVerificationAction.bind(null, fileId)}>
-                <Field label="Method" name="method" required>
-                  <select name="method" className={sel} aria-label="Method" defaultValue="IN_PERSON">
-                    <option value="EID">National eID (eIDAS)</option>
-                    <option value="IN_PERSON">In person with ID document</option>
-                    <option value="DOCUMENT_NFC_LIVENESS">Remote: document + NFC chip + liveness</option>
-                  </select>
-                </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Document type" name="documentType" hint="e.g. ID card, passport" />
-                  <Field label="Document number" name="documentNumber" hint="Stored encrypted." autoComplete="off" />
-                  <Field label="eID scheme / assurance level" name="assuranceLevel" hint="e.g. Smart-ID, high" />
-                  <Field label="Provider" name="provider" />
-                </div>
-                <Field label="Why national eID wasn't used" name="fallbackReason" hint="Required for in-person or remote document checks." />
-                <Submit variant="secondary">Record verification</Submit>
-              </ActionForm>
             )}
             {diditEnabled() ? (
               <div className="space-y-2 rounded border border-border p-3" data-testid="didit-idv">
@@ -208,9 +236,34 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
             ) : (
               <p className="text-xs text-muted">Remote identity checks aren&apos;t set up for this installation. Record the result of the check here.</p>
             )}
+            {edit && (
+              <details className="rounded border border-border p-3" open={!diditEnabled()}>
+                <summary className="cursor-pointer text-sm font-medium">Record a check done another way (in person, eID)</summary>
+                <div className="mt-3">
+              <ActionForm action={recordVerificationAction.bind(null, fileId)}>
+                <Field label="Method" name="method" required>
+                  <select name="method" className={sel} aria-label="Method" defaultValue="IN_PERSON">
+                    <option value="EID">National eID (eIDAS)</option>
+                    <option value="IN_PERSON">In person with ID document</option>
+                    <option value="DOCUMENT_NFC_LIVENESS">Remote: document + NFC chip + liveness</option>
+                  </select>
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Document type" name="documentType" hint="e.g. ID card, passport" />
+                  <Field label="Document number" name="documentNumber" hint="Stored encrypted." autoComplete="off" />
+                  <Field label="eID scheme / assurance level" name="assuranceLevel" hint="e.g. Smart-ID, high" />
+                  <Field label="Provider" name="provider" />
+                </div>
+                <Field label="Why national eID wasn't used" name="fallbackReason" hint="Required for in-person or remote document checks." />
+                <Submit variant="secondary">Record verification</Submit>
+              </ActionForm>
+                </div>
+              </details>
+            )}
+
           </Card>
         ) : (
-          <Card title="Register extract (Art. 22(7), 23(4))">
+          <Card title="Register extract (Art. 22(7), 23(4))" id="identity">
             {cf.extracts.length ? (
               <ul className="space-y-3 text-sm">
                 {cf.extracts.map((x) => {
@@ -271,6 +324,9 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
               />
             )}
             {edit && (
+              <details className="rounded border border-border p-3" open={!diditEnabled()}>
+                <summary className="cursor-pointer text-sm font-medium">Record an extract you obtained yourself</summary>
+                <div className="mt-3">
               <ActionForm action={recordExtractAction.bind(null, fileId)}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Register" name="register" defaultValue={cf.profile.boRegister?.name ?? ""} hint="Business or BO register" />
@@ -279,6 +335,8 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                 <Field label="Notes / differences found" name="notes" />
                 <Submit variant="secondary">Record extract</Submit>
               </ActionForm>
+                </div>
+              </details>
             )}
             {can(r, "client.edit") && cf.extracts.length > 0 && (
               <details className="rounded border border-border p-3">
@@ -506,7 +564,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </ul>
       </Card>
 
-      <Card title="Screening (sanctions, PEP)">
+      <Card title="Screening (sanctions, PEP)" id="screening">
         <p className="text-xs text-muted">
           Every person and company in the structure is screened. Screening can&apos;t be reduced for low-risk clients. The PEP/RCA data provider is
           not connected yet; record known PEP status on the client data.
@@ -566,7 +624,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         )}
       </Card>
 
-      <Card title={`Risk: ${cf.risk.level} (score ${cf.risk.score})`}>
+      <Card title={`Risk: ${cf.risk.level} (score ${cf.risk.score})`} id="risk">
         {cf.risk.factors.length ? (
           <table className="w-full text-sm">
             <tbody className="divide-y divide-border">
@@ -603,7 +661,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       </Card>
 
       {(cf.risk.eddRequired || cf.state.isPep) && (
-        <Card title="Enhanced due diligence (Art. 34, 42)">
+        <Card title="Enhanced due diligence (Art. 34, 42)" id="edd">
           {cf.risk.eddRequired && (
             <ActionForm action={eddChecklistAction.bind(null, fileId)} className="space-y-2">
               {EDD_CHECKLIST.map((i) => (
@@ -677,7 +735,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       </Card>
 
       {!decided && can(r, "client.accept") && (
-        <Card title="Decision">
+        <Card title="Decision" id="decision">
           <div className="grid gap-6 sm:grid-cols-2">
             <ActionForm action={acceptAction.bind(null, fileId)} className="space-y-3">
               <h3 className="text-sm font-semibold">Accept the client</h3>
@@ -748,6 +806,19 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </ul>
         </Card>
       )}
+      <details className="rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" id="activity">
+        <summary className="cursor-pointer font-semibold">Activity ({activity.length})</summary>
+        <ol className="mt-3 space-y-1 text-sm">
+          {activity.map((a) => (
+            <li key={String(a.id)} className="flex flex-wrap gap-x-2">
+              <span className="text-muted tabular-nums">{a.at.toISOString().slice(0, 16).replace("T", " ")}</span>
+              <span>{a.userId ? names.get(a.userId) ?? "A colleague" : "AMLSync App"}</span>
+              <span className="text-muted">{activityText(a.action, a.objectType, a.fields, cf.tree.parties.get(a.objectId)?.displayName)}</span>
+            </li>
+          ))}
+          {activity.length === 0 && <li className="text-muted">Nothing yet.</li>}
+        </ol>
+      </details>
     </div>
   );
 }
