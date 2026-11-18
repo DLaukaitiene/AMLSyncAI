@@ -7,7 +7,7 @@ describe("CSV parsing", () => {
     expect(parseCsv("a;b\r\n1;2")).toEqual([["a", "b"], ["1", "2"]]);
   });
 
-  it("parses the AMLSyncAI list format", () => {
+  it("parses the AMLSync App list format", () => {
     const e = parseAmlSyncList('type,name,aliases,birth_dates,countries,reference\nperson,Ivan Sidorov,"Ivan Sidorow|I. Sidorov",1965-04-12,ru,X-1\nentity,Example Trading UAB,,,LT,\n');
     expect(e).toHaveLength(2);
     expect(e[0]).toMatchObject({ entityType: "person", names: ["Ivan Sidorov", "Ivan Sidorow", "I. Sidorov"], countries: ["RU"], reference: "X-1" });

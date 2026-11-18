@@ -1,6 +1,6 @@
 /**
  * Privacy notice for clients and DPIA template (spec §3 row 34, §4A.6;
- * AMLR Art. 76; GDPR Art. 13–14, 35). AMLSyncAI is the firm's processor.
+ * AMLR Art. 76; GDPR Art. 13–14, 35). AMLSync App is the firm's processor.
  */
 import type { GeneratedDoc } from "@/lib/docs/model";
 import type { CountryProfile } from "@/lib/rules/country-profile";
@@ -29,7 +29,7 @@ export function privacyNoticeDoc(i: PrivacyInput, version: number, date: string)
       ] }] },
       { id: "auto", heading: "Automated steps and your rights", blocks: [{ p: `Our software calculates a risk level from the information collected and screens names against official lists. A member of our staff reviews every decision to accept, refuse or end a relationship. You can ask us to explain how a decision about you was reached and to challenge it, except where this would reveal information we must keep confidential by law (AMLR Art. 76(5)).${i.aiEnabled ? " We may use AI to help draft documents; a person always reviews them, and your data is not used to train AI models." : ""}` }] },
       { id: "sharing", heading: "Who we share it with", blocks: [{ list: [
-        "Our AML software provider (AMLSyncAI), as our processor, hosting data in the EU.",
+        "Our AML software provider (AMLSync App), as our processor, hosting data in the EU.",
         "Identity-verification and screening providers we use for these checks.",
         `Authorities when the law requires it, for example ${i.profile.fiu?.name ?? "the Financial Intelligence Unit"} or ${i.profile.supervisors[0]?.name ?? "our supervisor"}.`,
       ] }] },
@@ -45,7 +45,7 @@ export function dpiaDoc(i: PrivacyInput, version: number, date: string): Generat
     subtitle: i.firm.name,
     meta: [`Version ${version} · ${date}`, "GDPR Art. 35 · template to be reviewed by the firm"],
     sections: [
-      { id: "description", heading: "1. Description of the processing", blocks: [{ p: "Customer due diligence, screening, risk assessment, monitoring, suspicion reporting and record-keeping as required by AMLR, using AMLSyncAI as processor." }] },
+      { id: "description", heading: "1. Description of the processing", blocks: [{ p: "Customer due diligence, screening, risk assessment, monitoring, suspicion reporting and record-keeping as required by AMLR, using AMLSync App as processor." }] },
       { id: "necessity", heading: "2. Necessity and proportionality", blocks: [{ list: [
         "Legal basis: legal obligation (GDPR Art. 6(1)(c)); criminal-offence data only as permitted by AMLR Art. 76 and national law.",
         "Data minimisation: only the AMLR / CDD RTS data set is collected; screening is limited to parties linked to a matter.",

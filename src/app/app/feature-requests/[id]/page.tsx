@@ -20,7 +20,7 @@ export default async function FeatureRequestPage({ params }: { params: Promise<{
       </div>
       <p className="whitespace-pre-wrap text-sm">{r.problem}</p>
       <p className="text-sm text-muted">How often: {r.frequency || "—"} · Importance: {r.importance}{r.legalReference ? ` · Legal reference: ${r.legalReference}` : ""}</p>
-      {r.statusReason && <p className="text-sm">Note from the AMLSyncAI team: {r.statusReason}</p>}
+      {r.statusReason && <p className="text-sm">Note from the AMLSync team: {r.statusReason}</p>}
       {r.releaseNoteUrl && <p className="text-sm">Released: <a className="text-accent underline" href={r.releaseNoteUrl}>release note</a></p>}
       {r.voted ? <p className="text-sm">You voted for this.</p> : <ActionButton action={voteAction.bind(null, r.id)} variant="primary">Vote for this</ActionButton>}
       <section className="space-y-2">

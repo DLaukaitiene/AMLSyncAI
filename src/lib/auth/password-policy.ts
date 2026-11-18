@@ -29,7 +29,7 @@ export type BreachLookup = (sha1Prefix: string) => Promise<string>;
 /** Have I Been Pwned range API (k-anonymity: only the first 5 hex chars of the SHA-1 leave the server). */
 export const hibpLookup: BreachLookup = async (prefix) => {
   const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
-    headers: { "Add-Padding": "true", "User-Agent": "AMLSyncAI-password-check" },
+    headers: { "Add-Padding": "true", "User-Agent": "AMLSync-password-check" },
     signal: AbortSignal.timeout(3000),
   });
   if (!res.ok) throw new Error(`HIBP ${res.status}`);

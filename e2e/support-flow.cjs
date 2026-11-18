@@ -8,7 +8,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const b = await chromium.launch();
   const errors = [];
   const { p: f } = await signupFirm(b, { code: process.env.CODE1, company: "Klientų Firma UAB", email: "owner@klientai.lt", sector: "ACCOUNTANT" });
-  const { p: t } = await signupFirm(b, { code: process.env.CODE2, company: "AMLSyncAI Team", email: "triage@amlsyncai-team.lt", sector: "OTHER" });
+  const { p: t } = await signupFirm(b, { code: process.env.CODE2, company: "AMLSync Team", email: "triage@amlsyncai-team.lt", sector: "OTHER" });
   for (const x of [f, t]) x.on("pageerror", (e) => errors.push(e.message));
   await f.goto(BASE + "/app/clients/new");
   await f.getByLabel("First names (all) *").fill("Visible"); await f.getByLabel("Surname *").fill("Summary");

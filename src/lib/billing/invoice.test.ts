@@ -18,7 +18,7 @@ describe("buildInvoice", () => {
   it("groups checks, subtracts refunds, applies credit, adds VAT", () => {
     const inv = buildInvoice(4900, "starter", [ch("1"), ch("2"), ch("3", "Screening"), { id: "4", amountCents: 300, kind: "refund", description: "Refund: expired" }, { id: "5", amountCents: 1500, kind: "trial", description: "Welcome" }], lt);
     expect(inv.lines.map((l) => [l.description, l.quantity, l.netCents])).toEqual([
-      ["AMLSyncAI subscription, starter plan (monthly)", 1, 4900],
+      ["AMLSync App subscription, starter plan (monthly)", 1, 4900],
       ["Identity check", 2, 600],
       ["Screening", 1, 300],
       ["Refunds for checks that expired or failed", 1, -300],

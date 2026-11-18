@@ -8,7 +8,7 @@ import { ActionButton } from "@/components/action-button";
 import { StepUpLink } from "@/components/step-up";
 import { hideAction, mergeAction, statusAction } from "@/app/app/feature-requests/actions";
 
-/** AMLSyncAI internal triage. Shows request text only — never firm names or client data. */
+/** AMLSync App internal triage. Shows request text only — never firm names or client data. */
 export default async function TriagePage({ searchParams }: { searchParams: Promise<{ module?: string; status?: string; regulatory?: string }> }) {
   const s = await requireUser();
   if (!isPlatformAdmin(s.user.email)) redirect("/app");

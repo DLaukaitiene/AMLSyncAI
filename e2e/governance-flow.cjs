@@ -113,7 +113,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   if (!fz.includes("firm-summary.pdf") || !fz.includes("annual-report-v1.pdf")) throw new Error("firm zip: " + fz);
   log("firm supervisor file:", fz.join(", "));
   await p.goto(BASE + "/dev/mailbox");
-  await p.getByText("AMLSyncAI: supervisor file exported").first().waitFor();
+  await p.getByText("AMLSync App: supervisor file exported").first().waitFor();
   log("Owner notified of the export");
 
   // Signed-out request can't export

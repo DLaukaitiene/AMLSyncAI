@@ -1,6 +1,6 @@
 /**
  * Maps a Didit session decision (GET /v3/session/{id}/decision/) to
- * AMLSyncAI records. Media URLs are presigned and short-lived: they are
+ * AMLSync App records. Media URLs are presigned and short-lived: they are
  * downloaded into our own storage right away, never stored as links.
  */
 

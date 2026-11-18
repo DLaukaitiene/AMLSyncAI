@@ -36,7 +36,7 @@ export default async function BillingPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Next invoice so far (excl. VAT)</span><span className="text-2xl font-semibold" data-testid="next-invoice">{formatEur(draft.netCents)}</span><span className="block text-xs text-muted">{draft.carryCents > 0 ? `${formatEur(draft.carryCents)} credit left` : "Invoiced on the 1st of each month"}</span></div>
         <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{formatEur(CHECK_PRICE_CENTS)}</span><span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>
-        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Monthly limit for paid checks</span><span className="text-2xl font-semibold">{formatEur(firm.spendLimitCents)}</span><span className="block text-xs text-muted">Contact AMLSyncAI to raise it</span></div>
+        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Monthly limit for paid checks</span><span className="text-2xl font-semibold">{formatEur(firm.spendLimitCents)}</span><span className="block text-xs text-muted">Contact AMLSync to raise it</span></div>
       </div>
       <p className="text-sm text-muted">
         Paid checks: remote identity checks and PEP / sanctions / adverse-media screening (Didit). Screening against EU and UN sanctions lists is included in your plan.

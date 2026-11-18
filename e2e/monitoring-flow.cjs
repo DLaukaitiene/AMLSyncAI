@@ -102,8 +102,8 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   await submit(p, "Screen again now (EU/UN lists, free)", "You've reached your screening limit (30 per day)");
   if (!sql(`SELECT count(*) FROM "SecurityEvent" WHERE "firmId" = '${firmId}' AND kind = 'screening-limit-day'`).match(/^[1-9]/)) throw new Error("no security event");
   const alerts = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject LIKE '%daily screening limit%'`);
-  if (alerts !== "1") throw new Error("expected one alert email to AMLSyncAI, got " + alerts);
-  log("30-per-day limit: party left unscreened, acceptance blocked, client told to contact us, one alert to AMLSyncAI");
+  if (alerts !== "1") throw new Error("expected one alert email to AMLSync App, got " + alerts);
+  log("30-per-day limit: party left unscreened, acceptance blocked, client told to contact us, one alert to AMLSync App");
   sql(`DELETE FROM "ScreeningEvent" WHERE "firmId" = '${firmId}'`);
   await p.getByRole("button", { name: "Screen again now (EU/UN lists, free)", exact: true }).click();
   await p.getByText(/Screened against/).first().waitFor();

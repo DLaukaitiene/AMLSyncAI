@@ -4,7 +4,7 @@ import { CONTACT_EMAIL, PLANS, SELF_SERVE_PLANS, TRIAL_DAYS } from "@/lib/billin
 import { CHECK_PRICE_CENTS, formatEur, TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
 import { DEFAULT_LIMITS } from "@/lib/security/screening-caps";
 
-export const metadata: Metadata = { title: "Pricing · AMLSyncAI" };
+export const metadata: Metadata = { title: "Pricing · AMLSync App" };
 
 export default function Pricing() {
   return (

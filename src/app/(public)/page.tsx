@@ -5,7 +5,7 @@ import { PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
 
 const FEATURES = [
   { icon: Fingerprint, title: "Identity checks in minutes", text: "National eID or ID document with chip read, liveness and face match. Images, video and report saved to the client file." },
-  { icon: Users, title: "Beneficial owners, calculated", text: "Enter the structure once; AMLSyncAI works out who owns or controls 25% or more, and screens everyone in it." },
+  { icon: Users, title: "Beneficial owners, calculated", text: "Enter the structure once; AMLSync App works out who owns or controls 25% or more, and screens everyone in it." },
   { icon: ShieldCheck, title: "Sanctions and PEP screening", text: "EU and UN lists included, re-checked automatically whenever a list changes. Ownership chains are added up for the 50% rule." },
   { icon: Globe2, title: "Your country's rules", text: "EU rules built in, plus your national details in a Country Profile — for every country where you have an office." },
   { icon: CalendarClock, title: "Nothing slips", text: "Refresh dates, reports and deadlines in one compliance calendar, with reminders to clients and staff." },
@@ -46,9 +46,9 @@ export default function Home() {
 
       <section className="grid gap-6 rounded-3xl bg-surface p-8 sm:grid-cols-3 sm:p-12">
         {[
-          ["1", "Set up your firm", "Choose your country and sector. AMLSyncAI drafts your risk assessment and policies."],
+          ["1", "Set up your firm", "Choose your country and sector. AMLSync App drafts your risk assessment and policies."],
           ["2", "Invite your client", "One secure link: the client fills in the questionnaire, uploads documents and verifies their identity."],
-          ["3", "Decide with confidence", "Risk score, gates and the audit trail are done for you. You approve; AMLSyncAI keeps the record."],
+          ["3", "Decide with confidence", "Risk score, gates and the audit trail are done for you. You approve; AMLSync App keeps the record."],
         ].map(([n, title, text]) => (
           <div key={n}>
             <span className="font-[family-name:var(--font-heading)] text-3xl font-extrabold text-orange">{n}</span>

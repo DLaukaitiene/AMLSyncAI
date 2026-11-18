@@ -21,7 +21,7 @@ export async function afterExport(s: CurrentSession, what: string) {
   await securityEvent({ firmId: s.firm.id, userId: s.user.id, kind: "bulk-export", details: { what } });
   const owners = await adminDb.user.findMany({ where: { firmId: s.firm.id, roles: { has: "OWNER" }, deactivatedAt: null } });
   for (const o of owners) {
-    await sendEmail(o.email, "AMLSyncAI: supervisor file exported", `${s.user.name} exported ${what} at ${new Date().toISOString()}. If you didn't expect this, check the security log.`);
+    await sendEmail(o.email, "AMLSync App: supervisor file exported", `${s.user.name} exported ${what} at ${new Date().toISOString()}. If you didn't expect this, check the security log.`);
   }
 }
 

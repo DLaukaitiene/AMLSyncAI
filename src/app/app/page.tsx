@@ -62,7 +62,7 @@ export default async function Dashboard() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Finish setting up your Country Profile</h2>
           <p className="text-sm text-muted">
-            AMLSyncAI ships the general EU rules. National details are entered by your firm (spec §3A). Missing required items only block
+            AMLSync App ships the general EU rules. National details are entered by your firm (spec §3A). Missing required items only block
             the workflows that depend on them.
           </p>
           <ul className="divide-y divide-border rounded-xl border border-border text-sm">

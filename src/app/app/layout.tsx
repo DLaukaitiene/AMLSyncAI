@@ -65,7 +65,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/app/feature-requests", label: "Feature requests", icon: "ideas" },
     ...(isPlatformAdmin(s.user.email)
       ? [{
-          href: "/admin", label: "AMLSyncAI admin", icon: "settings",
+          href: "/admin", label: "AMLSync admin", icon: "settings",
           children: [
             { href: "/admin/billing", label: "Billing & limits", icon: "billing" },
             { href: "/admin/support", label: "Support access", icon: "security" },

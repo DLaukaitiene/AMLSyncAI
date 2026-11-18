@@ -140,7 +140,7 @@ export function buildProcedures(i: PolicyInput, version: number, date: string): 
     meta: [`Version ${version} · ${date}`],
     sections: [
       { id: "new-client", heading: "1. New client or new matter", blocks: steps([
-        "Create the client (or the matter and each party) in AMLSyncAI with at least the name and email.",
+        "Create the client (or the matter and each party) in AMLSync App with at least the name and email.",
         "Send the client the secure portal link, or enter the information yourself.",
         "Verify identity: national eID first; otherwise in person or remote document + NFC + liveness, with the reason recorded.",
         "For companies: record the register extract and the ownership structure until you reach the people who own or control it.",
@@ -149,7 +149,7 @@ export function buildProcedures(i: PolicyInput, version: number, date: string): 
         "Accept the client only when 'What to do next' is empty.",
       ]) },
       { id: "transactions", heading: "2. Payments and transactions", blocks: steps([
-        "Record each payment on the matter. AMLSyncAI flags when CDD is needed, including for linked transactions.",
+        "Record each payment on the matter. AMLSync App flags when CDD is needed, including for linked transactions.",
         `Refuse cash of €${i.profile.cashCapEUR.toLocaleString("en")} or more.`,
         "If a payment doesn't fit what you know about the client, report it internally before going ahead.",
       ]) },

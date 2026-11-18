@@ -53,7 +53,7 @@ export const signupSchema = z.object({
   companyName: z.string().trim().min(2, "Enter the company name").max(200),
   name: z.string().trim().min(2, "Enter your name").max(200),
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
-  // Any country; firms outside the EU are told AMLSyncAI follows EU rules (AMLR).
+  // Any country; firms outside the EU are told AMLSync App follows EU rules (AMLR).
   memberState: z.string().transform((v, ctx) => {
     const c = normalizeCountry(v);
     if (!c || !isKnownCountry(c)) {
@@ -78,11 +78,11 @@ export async function startSignup(input: z.infer<typeof signupSchema>, ip: strin
 
   let codeId: string | null = null;
   if (signupMode() === "invite") {
-    if (!input.signupCode) return fail("Enter your sign-up code.", { signupCode: ["AMLSyncAI is currently invitation only."] });
+    if (!input.signupCode) return fail("Enter your sign-up code.", { signupCode: ["AMLSync App is currently invitation only."] });
     codeId = sha256(input.signupCode.toUpperCase());
     const code = await adminDb.signupCode.findUnique({ where: { id: codeId } });
     if (!code || code.uses >= code.maxUses || (code.expiresAt && code.expiresAt < new Date())) {
-      return fail("This sign-up code is not valid.", { signupCode: ["Check the code or ask AMLSyncAI for a new one."] });
+      return fail("This sign-up code is not valid.", { signupCode: ["Check the code or ask AMLSync for a new one."] });
     }
   }
 
@@ -114,8 +114,8 @@ export async function startSignup(input: z.infer<typeof signupSchema>, ip: strin
   });
   await sendEmail(
     input.email,
-    "Confirm your AMLSyncAI account",
-    `Hello ${input.name},\n\nConfirm your company email to activate AMLSyncAI for ${input.companyName}:\n\n${appUrl(`/confirm/${token}`)}\n\nThe link works once and expires in 24 hours. If you did not sign up, ignore this email.`,
+    "Confirm your AMLSync App account",
+    `Hello ${input.name},\n\nConfirm your company email to activate AMLSync App for ${input.companyName}:\n\n${appUrl(`/confirm/${token}`)}\n\nThe link works once and expires in 24 hours. If you did not sign up, ignore this email.`,
   );
   await securityEvent({ kind: "signup-started", ip, details: { domain: domainCheck.domain } });
   return { ok: true };
@@ -232,7 +232,7 @@ export async function passwordLogin(
     });
     await securityEvent({ firmId: user.firmId, userId: user.id, kind: "login-failed", ip, userAgent, details: { failed } });
     if (failed === LOCK_AFTER) {
-      await notify(user.email, "AMLSyncAI: your account is temporarily locked",
+      await notify(user.email, "AMLSync App: your account is temporarily locked",
         `There were ${failed} failed sign-in attempts on your account, so it is locked for a short time. If this wasn't you, tell your Compliance Officer.`);
     }
     return { ok: false, error: GENERIC_LOGIN_ERROR };
@@ -249,11 +249,11 @@ export async function newDeviceCheck(userId: string, ip: string | null, userAgen
   if (seen > 1) return;
   const user = await adminDb.user.findUniqueOrThrow({ where: { id: userId } });
   await securityEvent({ firmId: user.firmId, userId, kind: "new-device", ip, userAgent });
-  const text = `A new sign-in to AMLSyncAI for ${user.email} from a new device or location.\nTime: ${new Date().toISOString()}\nIf this wasn't you, sign out everywhere and tell your Compliance Officer.`;
-  await notify(user.email, "AMLSyncAI: new sign-in", text);
+  const text = `A new sign-in to AMLSync App for ${user.email} from a new device or location.\nTime: ${new Date().toISOString()}\nIf this wasn't you, sign out everywhere and tell your Compliance Officer.`;
+  await notify(user.email, "AMLSync App: new sign-in", text);
   if (user.roles.some((r) => r === "OWNER" || r === "COMPLIANCE_OFFICER")) {
     const owners = await adminDb.user.findMany({ where: { firmId: user.firmId, roles: { has: "OWNER" }, deactivatedAt: null, NOT: { id: userId } } });
-    for (const o of owners) await notify(o.email, "AMLSyncAI: new sign-in by a privileged user", text);
+    for (const o of owners) await notify(o.email, "AMLSync App: new sign-in by a privileged user", text);
   }
 }
 
@@ -344,7 +344,7 @@ export async function createInvitation(
     if (used >= seats) return fail(`Your ${planOf(firm.plan).name} plan includes ${seats} users. For more users, contact ${CONTACT_EMAIL}. External reviewers don't count.`);
   }
   if (await adminDb.user.findUnique({ where: { email: input.email } })) {
-    return fail("This person already has an AMLSyncAI account.", { email: ["Already a user."] });
+    return fail("This person already has an AMLSync App account.", { email: ["Already a user."] });
   }
   const token = randomToken();
   await adminDb.$transaction(async (tx) => {
@@ -359,8 +359,8 @@ export async function createInvitation(
   });
   await sendEmail(
     input.email,
-    `You're invited to ${firm.name} on AMLSyncAI`,
-    `Hello ${input.name},\n\nYou've been invited to join ${firm.name} on AMLSyncAI.\n\n${appUrl(`/invite/${token}`)}\n\nThe link works once and expires in 72 hours.`,
+    `You're invited to ${firm.name} on AMLSync App`,
+    `Hello ${input.name},\n\nYou've been invited to join ${firm.name} on AMLSync App.\n\n${appUrl(`/invite/${token}`)}\n\nThe link works once and expires in 72 hours.`,
   );
   return { ok: true };
 }
@@ -410,7 +410,7 @@ export async function requestPasswordReset(email: string, ip: string | null): Pr
   await adminDb.emailToken.create({
     data: { id: sha256(token), purpose: "password-reset", email: user.email, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
   });
-  await sendEmail(user.email, "Reset your AMLSyncAI password",
+  await sendEmail(user.email, "Reset your AMLSync App password",
     `Reset your password here (valid for 1 hour, works once):\n\n${appUrl(`/reset/${token}`)}\n\nYou will still need your authenticator app to sign in.`);
   await securityEvent({ firmId: user.firmId, userId: user.id, kind: "password-reset-requested", ip });
 }
@@ -448,7 +448,7 @@ export async function resetUserMfa(firmId: string, byUserId: string, userId: str
   await adminDb.user.update({ where: { id: userId }, data: { mfaEnrolledAt: null, totpSecretEnc: null, recoveryCodeHashes: [] } });
   await adminDb.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
   await securityEvent({ firmId, userId: byUserId, kind: "mfa-reset", details: { target: userId } });
-  await notify(u.email, "AMLSyncAI: your two-factor authentication was reset", "A colleague reset your two-factor authentication. Sign in with your password and set it up again. If you didn't ask for this, contact your Compliance Officer.");
+  await notify(u.email, "AMLSync App: your two-factor authentication was reset", "A colleague reset your two-factor authentication. Sign in with your password and set it up again. If you didn't ask for this, contact your Compliance Officer.");
 }
 
 export async function requestSelfRecovery(email: string, password: string, ip: string | null): Promise<void> {
@@ -460,7 +460,7 @@ export async function requestSelfRecovery(email: string, password: string, ip: s
   }
   const others = await adminDb.user.count({ where: { firmId: u.firmId, deactivatedAt: null, id: { not: u.id }, roles: { hasSome: ["OWNER", "COMPLIANCE_OFFICER"] } } });
   if (others > 0) {
-    await sendEmail(u.email, "AMLSyncAI: two-factor recovery", "Ask another Owner or Compliance Officer of your firm to reset your two-factor authentication in Team.");
+    await sendEmail(u.email, "AMLSync App: two-factor recovery", "Ask another Owner or Compliance Officer of your firm to reset your two-factor authentication in Team.");
     return;
   }
   const confirm = randomToken();
@@ -470,7 +470,7 @@ export async function requestSelfRecovery(email: string, password: string, ip: s
   await securityEvent({ firmId: u.firmId, userId: u.id, kind: "mfa-recovery-requested", ip });
   const owners = await adminDb.user.findMany({ where: { firmId: u.firmId, roles: { has: "OWNER" }, deactivatedAt: null } });
   for (const o of new Map([...owners, u].map((x) => [x.email, x])).values()) {
-    await sendEmail(o.email, "AMLSyncAI: two-factor recovery requested",
+    await sendEmail(o.email, "AMLSync App: two-factor recovery requested",
       `Someone asked to recover two-factor authentication for ${u.email}.\n\nIf this was you, confirm your email: ${appUrl(`/recover/confirm/${confirm}`)}\nYou can then sign in and set up two-factor again after ${notBefore.toISOString().slice(0, 16).replace("T", " ")} UTC (72 hours).\n\nIf this wasn't you, cancel it now: ${appUrl(`/recover/cancel/${cancel}`)}`);
   }
 }

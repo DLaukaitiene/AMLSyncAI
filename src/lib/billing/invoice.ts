@@ -1,6 +1,6 @@
 /**
  * Monthly invoicing (postpaid). Pure functions: VAT treatment, invoice lines,
- * numbering. The seller is AMLSyncAI's operating company.
+ * numbering. The seller is AMLSync App's operating company.
  */
 
 export const SELLER = {
@@ -79,7 +79,7 @@ export interface InvoiceDraft {
  */
 export function buildInvoice(monthlyFeeCents: number, planName: string, entries: LedgerEntry[], customer: Customer): InvoiceDraft {
   const lines: InvoiceLine[] = [];
-  if (monthlyFeeCents > 0) lines.push({ description: `AMLSyncAI subscription, ${planName} plan (monthly)`, quantity: 1, unitCents: monthlyFeeCents, netCents: monthlyFeeCents });
+  if (monthlyFeeCents > 0) lines.push({ description: `AMLSync App subscription, ${planName} plan (monthly)`, quantity: 1, unitCents: monthlyFeeCents, netCents: monthlyFeeCents });
 
   const groups = new Map<string, { qty: number; unit: number }>();
   const key = (d: string) => d.replace(/^Refund: .*$/, "").trim();

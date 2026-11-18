@@ -14,8 +14,8 @@ export default async function SecurityLogPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Security log</h1>
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">AMLSyncAI support access</h2>
-        <p className="text-sm text-muted">AMLSyncAI staff can see nothing unless you approve a time-limited, read-only request. They never see cases, reports or documents.</p>
+        <h2 className="text-lg font-semibold">AMLSync support access</h2>
+        <p className="text-sm text-muted">AMLSync staff can see nothing unless you approve a time-limited, read-only request. They never see cases, reports or documents.</p>
         {grants.length === 0 && <p className="text-sm text-muted">No requests.</p>}
         <ul className="divide-y divide-border rounded-xl border border-border text-sm">
           {grants.map((g) => {
@@ -32,7 +32,7 @@ export default async function SecurityLogPage() {
           })}
         </ul>
       </section>
-      <p className="text-sm text-muted">Sign-ins, failed sign-ins, new devices, exports, role changes and AMLSyncAI staff access for your firm (latest 200).</p>
+      <p className="text-sm text-muted">Sign-ins, failed sign-ins, new devices, exports, role changes and AMLSync staff access for your firm (latest 200).</p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-muted">

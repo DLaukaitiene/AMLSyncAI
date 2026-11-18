@@ -51,7 +51,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
         </nav>
         <p className="max-w-3xl text-sm text-muted">
-          AMLSyncAI applies the general EU rules (EU Core {EU_CORE.version}). Here your firm enters its national details. Values can only fill in
+          AMLSync App applies the general EU rules (EU Core {EU_CORE.version}). Here your firm enters its national details. Values can only fill in
           or tighten the EU rules, never relax them. Every change creates a new version, needs a Compliance Officer and is logged. Earlier
           decisions keep the version that applied at the time. Current version: <strong>{cur.version}</strong>.
         </p>

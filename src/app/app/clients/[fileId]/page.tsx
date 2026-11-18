@@ -410,7 +410,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
               {x.decision === "NO_MATCH" ? "no match" : x.decision.toLowerCase().replace("_", " ")}
             </li>
           ))}
-          {latestChecks.size === 0 && <li className="text-muted">No screening lists are loaded. Ask AMLSyncAI to load the EU and UN lists, or upload your national list.</li>}
+          {latestChecks.size === 0 && <li className="text-muted">No screening lists are loaded. Ask AMLSync to load the EU and UN lists, or upload your national list.</li>}
         </ul>
         {decidedHits.length > 0 && (
           <details className="text-sm">

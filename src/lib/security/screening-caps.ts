@@ -1,8 +1,8 @@
 /**
- * Screening limits (spec §8C.4, §11.14): AMLSyncAI must not become a free
+ * Screening limits (spec §8C.4, §11.14): AMLSync App must not become a free
  * lookup service. Every screening a person starts (EU/UN lists or provider
  * screening) counts against per-minute, per-day and per-month limits, set per
- * firm and adjustable by AMLSyncAI. Automatic re-screening of existing clients
+ * firm and adjustable by AMLSync App. Automatic re-screening of existing clients
  * (list updates, monitoring, refresh runs) is not limited.
  */
 export const DEFAULT_LIMITS = { perMinute: 5, perDay: 30, perMonth: 100 } as const;

@@ -95,7 +95,7 @@ export default async function BillingAdmin() {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-      <h1 className="text-2xl font-semibold">Billing (AMLSyncAI admin)</h1>
+      <h1 className="text-2xl font-semibold">Billing (AMLSync admin)</h1>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Invoices</h2>
         <ActionForm action={runInvoicing}><Submit variant="secondary">Issue last month&apos;s invoices now</Submit><StepUpLink /></ActionForm>

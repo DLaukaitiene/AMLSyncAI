@@ -2,7 +2,7 @@
  * EU Core rule set (spec §3A.1).
  *
  * The general EU rules, identical in all 27 member states. Maintained by
- * AMLSyncAI, versioned, and referenced by every decision the system stores.
+ * AMLSync App, versioned, and referenced by every decision the system stores.
  * A firm's Country Profile may only add, tighten or fill in parameters on top
  * of these values — never relax them (spec §3A.3 rule 1).
  *

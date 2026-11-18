@@ -6,7 +6,7 @@ import { ActionForm, CountryField, Field, Honeypot, SelectWithOther, Submit } fr
 import { SECTORS, signupMode } from "@/lib/server/auth/flows";
 import { signupAction } from "../actions";
 
-export const metadata: Metadata = { title: "Sign up · AMLSyncAI" };
+export const metadata: Metadata = { title: "Sign up · AMLSync App" };
 
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
@@ -22,9 +22,9 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
       <ActionForm action={signupAction}>
         <Honeypot />
         <PowChallenge purpose="signup" />
-        {invite && <Field label="Sign-up code" name="signupCode" required hint="AMLSyncAI is currently invitation only. Your code is in your invitation email." autoComplete="off" />}
+        {invite && <Field label="Sign-up code" name="signupCode" required hint="AMLSync App is currently invitation only. Your code is in your invitation email." autoComplete="off" />}
         <Field label="Company name" name="companyName" required autoComplete="organization" />
-        <CountryField label="Country where your firm is established" name="memberState" required euFirst hint="EU countries are listed first. AMLSyncAI applies the EU anti-money-laundering rules (AMLR); outside the EU, check your local rules too." />
+        <CountryField label="Country where your firm is established" name="memberState" required euFirst hint="EU countries are listed first. AMLSync App applies the EU anti-money-laundering rules (AMLR); outside the EU, check your local rules too." />
         <SelectWithOther label="Sector" name="sector" required placeholder="Choose…" options={SECTORS} otherLabel="Other (describe your activity)" />
         <Field label="Plan" name="plan" required hint={`${TRIAL_DAYS}-day free trial, then billed monthly by invoice. For more users or an API: ${CONTACT_EMAIL}.`}>
           <select name="plan" defaultValue={defaultPlan} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Plan">

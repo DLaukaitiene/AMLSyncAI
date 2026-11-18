@@ -17,7 +17,7 @@ export default async function PrivacyPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <h1 className="text-2xl font-semibold">Data protection</h1>
-      <p className="text-sm text-muted">AMLR Art. 76 and GDPR. The privacy notice in force is shown to clients in the portal. AMLSyncAI acts as your processor (data processing agreement).</p>
+      <p className="text-sm text-muted">AMLR Art. 76 and GDPR. The privacy notice in force is shown to clients in the portal. AMLSync acts as your processor (data processing agreement).</p>
       {(Object.keys(KINDS) as (keyof typeof KINDS)[]).map((k) => (
         <section key={k} className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
