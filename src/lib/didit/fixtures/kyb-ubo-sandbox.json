@@ -1,0 +1,123 @@
+{
+ "request_id": "69c9e9c1-902b-4d5f-83b7-39420df24ccb",
+ "registry_tier_requested": "ubo",
+ "registry_tier_delivered": "ubo",
+ "kyb_registry": {
+  "uuid": "50334a3e-4b01-4acd-9a08-dc0f77465708",
+  "node_id": "feature_kyb_registry",
+  "status": "Approved",
+  "registry_status": "active",
+  "data_resolved": true,
+  "company_name": "Sandbox Holdings Ltd",
+  "registration_number": "SANDBOX-0001",
+  "country_code": "GB",
+  "region": "",
+  "company_type": "Private Limited Company",
+  "incorporation_date": "2010-01-01",
+  "registered_address": "1 Sandbox Way, Sandbox City",
+  "tax_number": "GB-SANDBOX-VAT-0001",
+  "risk_level": null,
+  "verification_status": null,
+  "is_from_registry": true,
+  "fetch_status": "resolved",
+  "alternative_names": null,
+  "nature_of_business": null,
+  "registered_capital": null,
+  "registered_capital_amount": null,
+  "registered_capital_currency": null,
+  "website": null,
+  "email": null,
+  "phone": null,
+  "legal_entity_identifier": null,
+  "location_of_registration": null,
+  "financial_summary": null,
+  "officers": [
+   {
+    "uuid": "a8f5c040-931f-4aa5-8663-89b208b51398",
+    "name": "Alex Sandbox",
+    "first_name": "Alex",
+    "last_name": "Sandbox",
+    "designation": "Director",
+    "role": "director",
+    "appointment_date": "2010-01-01",
+    "nationality": "GB",
+    "is_active": true,
+    "kyc_status": null,
+    "kyc_session_url": null
+   }
+  ],
+  "beneficial_owners": [
+   {
+    "uuid": "5a654369-b6d2-4243-8af7-bbb551e32151",
+    "name": "Sandbox Group Holdings Ltd",
+    "first_name": null,
+    "last_name": null,
+    "entity_type": "company",
+    "roles": [
+     "shareholder"
+    ],
+    "ownership_min_shares": "60",
+    "ownership_max_shares": "60",
+    "is_active": true,
+    "kyc_status": null,
+    "kyc_session_url": null,
+    "effective_ownership_percent": "60.00"
+   },
+   {
+    "uuid": "4308a872-85e3-482a-831b-d909de7ce522",
+    "name": "Sam Sandbox",
+    "first_name": "Sam",
+    "last_name": "Sandbox",
+    "entity_type": "person",
+    "roles": [
+     "shareholder",
+     "ubo"
+    ],
+    "ownership_min_shares": "40",
+    "ownership_max_shares": "40",
+    "is_active": true,
+    "kyc_status": null,
+    "kyc_session_url": null,
+    "effective_ownership_percent": "40.00"
+   },
+   {
+    "uuid": "c171d42f-d111-4150-a682-72787c273139",
+    "name": "Jordan Sandbox",
+    "first_name": "Jordan",
+    "last_name": "Sandbox",
+    "entity_type": "person",
+    "roles": [
+     "ubo"
+    ],
+    "ownership_min_shares": null,
+    "ownership_max_shares": null,
+    "is_active": true,
+    "kyc_status": null,
+    "kyc_session_url": null,
+    "effective_ownership_percent": "60.00"
+   }
+  ],
+  "addresses": [
+   {
+    "address": "1 Sandbox Way, Sandbox City",
+    "type": "principal_office_address"
+   }
+  ],
+  "industries": null,
+  "accounts": null,
+  "registry_data": {
+   "sandbox": true,
+   "kyb_response_id": "sandbox-kyb-response-c9dfa080-3ea9-4b0b-b3f9-172d5fdacfbe"
+  },
+  "registry_tier_delivered": "ubo",
+  "registry_ownership_status": "delivered",
+  "registry_monitoring": null,
+  "user_provided_data": null,
+  "confirmed_by_user_at": null,
+  "last_console_edit_at": null,
+  "is_editable": true
+ },
+ "vendor_data": "test",
+ "metadata": null,
+ "created_at": "2026-11-18T14:17:18.615525+00:00"
+}

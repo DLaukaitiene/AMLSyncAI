@@ -31,7 +31,7 @@ export class DiditError extends Error {
   }
 }
 
-async function didit<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
+export async function didit<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
   const res = await fetch(`${BASE()}${path}`, {
     method,
     headers: { "x-api-key": process.env.DIDIT_API_KEY ?? "", "content-type": "application/json", accept: "application/json", ...extraHeaders },
@@ -68,18 +68,18 @@ export async function balanceCents(tx: Tx): Promise<number> {
   return (await tx.creditEntry.aggregate({ _sum: { amountCents: true } }))._sum.amountCents ?? 0;
 }
 
-async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string): Promise<string> {
+export async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string, cents = CHECK_PRICE_CENTS): Promise<string> {
   try {
-    await assertCanSpend(tx, firmId, CHECK_PRICE_CENTS);
+    await assertCanSpend(tx, firmId, cents);
   } catch (e) {
     if (e instanceof SpendError) throw new DiditError(e.message);
     throw e;
   }
-  const e = await tx.creditEntry.create({ data: { firmId, amountCents: -CHECK_PRICE_CENTS, kind: "charge", description, clientRef, createdById: userId } });
+  const e = await tx.creditEntry.create({ data: { firmId, amountCents: -cents, kind: "charge", description, clientRef, createdById: userId } });
   return e.id;
 }
 
-async function refund(tx: Tx, firmId: string, chargeId: string, why: string) {
+export async function refund(tx: Tx, firmId: string, chargeId: string, why: string) {
   if (await tx.creditEntry.count({ where: { kind: "refund", reference: chargeId } })) return; // once only
   const c = await tx.creditEntry.findUnique({ where: { id: chargeId } });
   if (!c) return;

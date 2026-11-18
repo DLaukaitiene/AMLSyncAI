@@ -18,6 +18,7 @@ import type { Prisma } from "@prisma/client";
 import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/portal";
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
+import { addPersonFromRegister, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
@@ -447,5 +448,55 @@ export async function diditScreenAction(fileId: string, partyId: string): Promis
     return { message: `Screened with Didit (€3.00): ${r.hits} possible match(es).` };
   } catch (e) {
     return { error: e instanceof DiditError ? e.message : "Screening failed." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Company register check (Didit KYB registry)
+// ---------------------------------------------------------------------------
+
+export async function kybSearchAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const candidates = await searchCompanyRegister(s.firm.id, {
+      country: String(fd.get("country") ?? ""), name: String(fd.get("name") ?? ""), registrationNumber: String(fd.get("registrationNumber") ?? ""),
+    });
+    if (!candidates.length) return { error: "No company found. Check the name, number and country, or record the register extract by hand below." };
+    return { message: `${candidates.length} compan${candidates.length === 1 ? "y" : "ies"} found. Choose the right one.`, data: { candidates, fileId } };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register search failed: ") : "The register search failed." };
+  }
+}
+
+export async function kybRetrieveAction(fileId: string, kybResponseId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await retrieveCompany({ firmId: s.firm.id, userId: s.user.id }, fileId, kybResponseId);
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: r.status === "imported" ? "Register data imported (€12.00). Review the owners below and add them to the structure." : "The register is preparing the ownership data. Use “Refresh” in a few minutes." };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register check failed: ") : "The register check failed." };
+  }
+}
+
+export async function kybRefreshAction(fileId: string, requestId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const r = await refreshCompanyCheck(s.firm.id, requestId);
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: r.imported ? "Register data imported." : "Still being prepared by the register. Try again in a few minutes." };
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message : "Couldn't refresh the register check." };
+  }
+}
+
+export async function kybAddPersonAction(fileId: string, extractId: string, index: number): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    const name = await addPersonFromRegister({ firmId: s.firm.id, userId: s.user.id }, fileId, extractId, index);
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: `${name} added to the ownership structure and screened.` };
+  } catch (e) {
+    return { error: (e as Error).message };
   }
 }

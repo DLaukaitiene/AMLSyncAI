@@ -14,11 +14,15 @@ import {
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
+  kybAddPersonAction,
+  kybRefreshAction,
 } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
+import { formatEur, KYB_PRICE_CENTS } from "@/lib/didit/map";
+import { KybSearch } from "./kyb-panel";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -60,6 +64,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
   if (!data) notFound();
   const { cf, lastRisk, approvals, hasCase, links, documents, didit } = data;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
+  const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
   const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
   const activeLink = links.find((l) => l.status === "SENT" || l.status === "OPENED");
   const r = s.user.roles;
@@ -195,13 +200,55 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         ) : (
           <Card title="Register extract (Art. 22(7), 23(4))">
             {cf.extracts.length ? (
-              <ul className="text-sm">
-                {cf.extracts.map((x) => (
-                  <li key={x.id}>{x.register} · {String((x.data as { extractDate?: string }).extractDate ?? "")}{(x.data as { notes?: string }).notes ? ` · ${(x.data as { notes?: string }).notes}` : ""}</li>
-                ))}
+              <ul className="space-y-3 text-sm">
+                {cf.extracts.map((x) => {
+                  const xd = x.data as { extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
+                  return (
+                    <li key={x.id} className="space-y-2">
+                      <p>
+                        <span className="font-medium">{x.register}</span> · {String(xd.extractDate ?? "")}
+                        {xd.registryStatus && <> · status <span className={/^(active|registered|live)$/i.test(xd.registryStatus) ? "" : "font-semibold text-red-700 dark:text-red-300"}>{xd.registryStatus}</span></>}
+                        {xd.sandbox && " · sandbox"}
+                        {xd.notes ? ` · ${xd.notes}` : ""}
+                      </p>
+                      {xd.provider === "Didit" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
+                      {xd.people?.length ? (
+                        <ul className="divide-y divide-border rounded-lg border border-border" data-testid="register-people">
+                          {xd.people.map((p, i) => {
+                            const canAdd = !p.addedPartyId && ((p.ownershipPct ?? 0) > 0 || (p.roles.includes("ubo") && p.entityType === "person"));
+                            return (
+                              <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                                <span>
+                                  {p.name}
+                                  <span className="text-muted"> · {[p.entityType === "company" ? "company" : null, ...p.roles.filter((r) => r !== "officer").map((r) => (r === "ubo" ? "beneficial owner" : r)), p.designation, p.ownershipPct !== null ? `${p.ownershipPct}% direct` : null, p.effectivePct !== null && p.effectivePct !== p.ownershipPct ? `${p.effectivePct}% effective` : null, p.active ? null : "former"].filter(Boolean).join(" · ")}</span>
+                                </span>
+                                {p.addedPartyId ? <span className="text-xs text-muted">In the structure</span> : canAdd && edit ? <ActionButton action={kybAddPersonAction.bind(null, fileId, x.id, i)}>Add to ownership</ActionButton> : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
-              <p className="text-sm text-muted">No register extract yet. Get the company and BO register extract and compare it with what the client declared.</p>
+              <p className="text-sm text-muted">No register extract yet. Check the company register below, or record an extract you obtained yourself.</p>
+            )}
+            {kybSessions.filter((k) => !k.importedAt).map((k) => (
+              <div key={k.id} className="flex items-center justify-between gap-2 text-sm">
+                <span>Register check of {k.createdAt.toISOString().slice(0, 10)} · {k.status}</span>
+                <ActionButton action={kybRefreshAction.bind(null, fileId, k.diditSessionId)}>Refresh</ActionButton>
+              </div>
+            ))}
+            {edit && diditEnabled() && (
+              <KybSearch
+                fileId={fileId}
+                name={String((cf.party.details as { name?: string }).name ?? cf.party.displayName)}
+                registrationNumber={String((cf.party.details as { registrationNumber?: string }).registrationNumber ?? "")}
+                country={String((cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState)}
+                price={formatEur(KYB_PRICE_CENTS)}
+              />
             )}
             {edit && (
               <ActionForm action={recordExtractAction.bind(null, fileId)}>
@@ -222,7 +269,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
                 </ActionForm>
               </details>
             )}
-            <p className="text-xs text-muted">BRIS and KYB aggregator lookups are not connected yet.</p>
+            
           </Card>
         )}
       </div>
