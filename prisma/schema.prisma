@@ -1111,3 +1111,10 @@ model Invoice {
   @@unique([firmId, period])
   @@index([firmId])
 }
+
+/// Encrypted file bytes when STORAGE_DRIVER=db (small installations / test environments without object storage).
+model Blob {
+  key       String   @id
+  data      Bytes
+  createdAt DateTime @default(now())
+}

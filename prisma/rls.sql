@@ -76,3 +76,7 @@ CREATE POLICY tenant_write ON "ScreeningEntry" FOR ALL USING (EXISTS (
   SELECT 1 FROM "ScreeningList" l WHERE l.id = "listId" AND l."firmId" = current_setting('app.firm_id', true)::uuid))
   WITH CHECK (EXISTS (
   SELECT 1 FROM "ScreeningList" l WHERE l.id = "listId" AND l."firmId" = current_setting('app.firm_id', true)::uuid));
+
+-- File bytes (STORAGE_DRIVER=db) are read and written only by the owner connection.
+ALTER TABLE "Blob" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Blob" FORCE ROW LEVEL SECURITY;

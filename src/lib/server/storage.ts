@@ -1,4 +1,5 @@
 import "server-only";
+import { adminDb } from "./db";
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { Socket } from "node:net";
@@ -13,6 +14,7 @@ import type { Tx } from "./db";
  * for malware, and only served through an authenticated route.
  * Drivers (STORAGE_DRIVER):
  *  - "local" (default): a directory outside the web root (STORAGE_DIR)
+ *  - "db": the Blob table (owner connection only), for serverless test environments
  *  - "s3": any S3-compatible EU bucket — e.g. Supabase Storage's S3 endpoint
  *    (S3_ENDPOINT=https://<project>.supabase.co/storage/v1/s3, S3_REGION,
  *    S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY). Objects are already
@@ -21,6 +23,7 @@ import type { Tx } from "./db";
  */
 const DIR = path.resolve(process.env.STORAGE_DIR ?? ".data/files");
 const s3Enabled = () => process.env.STORAGE_DRIVER === "s3";
+const dbEnabled = () => process.env.STORAGE_DRIVER === "db";
 let s3: S3Client | null = null;
 function s3Client() {
   s3 ??= new S3Client({
@@ -34,6 +37,11 @@ function s3Client() {
 const bucket = () => process.env.S3_BUCKET ?? "amlsyncai-documents";
 
 async function putBytes(key: string, data: Buffer) {
+  if (dbEnabled()) {
+    const bytes = new Uint8Array(data);
+    await adminDb.blob.upsert({ where: { key }, create: { key, data: bytes }, update: { data: bytes } });
+    return;
+  }
   if (s3Enabled()) {
     await s3Client().send(new PutObjectCommand({ Bucket: bucket(), Key: key, Body: data, ContentType: "application/octet-stream" }));
     return;
@@ -44,6 +52,7 @@ async function putBytes(key: string, data: Buffer) {
 }
 
 async function getBytes(key: string): Promise<Buffer> {
+  if (dbEnabled()) return Buffer.from((await adminDb.blob.findUniqueOrThrow({ where: { key } })).data);
   if (s3Enabled()) {
     const r = await s3Client().send(new GetObjectCommand({ Bucket: bucket(), Key: key }));
     return Buffer.from(await r.Body!.transformToByteArray());
@@ -73,6 +82,10 @@ export async function readBlob(firmId: string, key: string): Promise<Buffer> {
 }
 
 export async function deleteBlob(key: string) {
+  if (dbEnabled()) {
+    await adminDb.blob.deleteMany({ where: { key } });
+    return;
+  }
   if (s3Enabled()) {
     await s3Client().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key })).catch(() => {});
     return;

@@ -1,9 +1,13 @@
 import { notFound } from "next/navigation";
 import { adminDb } from "@/lib/server/db";
+import { safeEqual } from "@/lib/server/crypto";
 
 /** Development-only inbox for EMAIL_TRANSPORT=dev. Not available in production. */
-export default async function DevMailbox() {
+/** On a shared test deployment, DEV_MAILBOX_TOKEN must be given as ?token=… */
+export default async function DevMailbox({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_EMAIL !== "1") notFound();
+  const need = process.env.DEV_MAILBOX_TOKEN;
+  if (need && !safeEqual((await searchParams).token ?? "", need)) notFound();
   const mails = await adminDb.devEmail.findMany({ orderBy: { createdAt: "desc" }, take: 50 });
   return (
     <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
