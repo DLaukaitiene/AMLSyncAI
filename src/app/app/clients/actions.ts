@@ -19,6 +19,7 @@ import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/p
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 import { addPersonFromRegister, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
@@ -546,4 +547,45 @@ export async function setDefaultScopeAction(_: ActionState, fd: FormData): Promi
   });
   revalidatePath("/app/firm");
   return { message: scope === "full" ? "New clients get full due diligence." : "New clients start as identification only (outside AMLR scope). Switch a client to full due diligence when an AMLR service starts." };
+}
+
+// ---------------------------------------------------------------------------
+// Ownership tracing per branch: "no further look-through" declarations
+// ---------------------------------------------------------------------------
+
+export async function declareLookThroughAction(fileId: string, entityId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  const reason = String(fd.get("reason") ?? "");
+  const note = String(fd.get("note") ?? "").trim().slice(0, 1000);
+  if (!LOOK_THROUGH_REASONS[reason]) return { error: "Choose why no further look-through is needed.", fieldErrors: { reason: ["Required."] } };
+  if ((reason === "steps-exhausted" || reason === "dispersed") && note.length < 10) return { error: "Describe the basis (source or steps taken).", fieldErrors: { note: ["Describe it."] } };
+  try {
+    await withTenant(s.firm.id, async (tx) => {
+      const cf = await loadClientFile(tx, s.firm.id, fileId);
+      if (!cf.tree.parties.has(entityId)) throw new Error("Not in this client's structure.");
+      const p = await tx.party.findUniqueOrThrow({ where: { id: entityId } });
+      const d = (p.details ?? {}) as Record<string, unknown>;
+      await tx.party.update({ where: { id: entityId }, data: { details: { ...d, lookThrough: { reason, note: note || null, byUserId: s.user.id, at: new Date().toISOString() } } as Prisma.InputJsonValue } });
+      await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Party", objectId: entityId, fields: ["lookThrough"] });
+      await refresh(tx, s.firm.id, fileId);
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Branch closed. The reason is recorded in the file." };
+}
+
+export async function reopenLookThroughAction(fileId: string, entityId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  await withTenant(s.firm.id, async (tx) => {
+    const p = await tx.party.findUniqueOrThrow({ where: { id: entityId } });
+    const rest = { ...((p.details ?? {}) as Record<string, unknown>) };
+    delete rest.lookThrough;
+    await tx.party.update({ where: { id: entityId }, data: { details: rest as Prisma.InputJsonValue } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Party", objectId: entityId, fields: ["lookThrough"] });
+    await refresh(tx, s.firm.id, fileId);
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Branch reopened." };
 }

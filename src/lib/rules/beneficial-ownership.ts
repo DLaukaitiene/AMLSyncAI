@@ -64,6 +64,12 @@ export interface BoResult {
   requiresSmoFallback: boolean;
   /** Chains that end in a legal entity / arrangement with no known owners (gaps to resolve). */
   unresolvedOwners: string[];
+  /**
+   * Every gap in the structure with the share of the client it represents:
+   * entities with no owners recorded, and stakes not accounted for (owners
+   * add up to less than 100%).
+   */
+  openBranches: { entityId: string; gap: "no-owners" | "unaccounted"; unaccountedPct?: number; effectivePct: number }[];
   /** Total direct ownership recorded for any entity above 100% (data error). */
   overAllocated: { entityId: string; totalPct: number }[];
 }
@@ -106,11 +112,24 @@ export function calculateBeneficialOwnership(
   // are cut: a party already on the current path is not revisited.
   const chainsByPerson = new Map<string, { path: string[]; pct: number }[]>();
   const unresolved = new Set<string>();
+  const gapShare = new Map<string, { gap: "no-owners" | "unaccounted"; unaccountedPct?: number; fraction: number }>();
+  const addGap = (key: string, entityId: string, gap: "no-owners" | "unaccounted", fraction: number, unaccountedPct?: number) => {
+    const g = gapShare.get(key) ?? { gap, unaccountedPct, fraction: 0 };
+    g.fraction += fraction;
+    gapShare.set(key, g);
+    void entityId;
+  };
 
   const walk = (entityId: string, fraction: number, path: string[]) => {
     const owners = ownersOf.get(entityId) ?? [];
     if (owners.length === 0 && entityId !== clientId && byId.get(entityId)!.kind !== "natural") {
       unresolved.add(entityId);
+      addGap(`${entityId}|no-owners`, entityId, "no-owners", fraction);
+    }
+    const stated = owners.reduce((sum, l) => sum + l.pct, 0);
+    if (owners.length > 0 && stated < 100 - EPS) {
+      const missing = 100 - stated;
+      addGap(`${entityId}|unaccounted`, entityId, "unaccounted", fraction * (missing / 100), round4(missing));
     }
     for (const link of owners) {
       if (path.includes(link.ownerId)) continue; // cycle
@@ -168,6 +187,7 @@ export function calculateBeneficialOwnership(
     beneficialOwners,
     requiresSmoFallback: beneficialOwners.length === 0,
     unresolvedOwners: [...unresolved],
+    openBranches: [...gapShare.entries()].map(([key, g]) => ({ entityId: key.split("|")[0], gap: g.gap, ...(g.unaccountedPct !== undefined ? { unaccountedPct: g.unaccountedPct } : {}), effectivePct: round4(g.fraction * 100) })),
     overAllocated,
   };
 }

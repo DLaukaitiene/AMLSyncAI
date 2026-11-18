@@ -193,3 +193,29 @@ describe("sanctions ownership aggregation (§11.8)", () => {
     expect(r.controlledBySanctioned).toBe(true);
   });
 });
+
+describe("open branches", () => {
+  it("reports owning companies without owners and unaccounted stakes, with their share of the client", async () => {
+    const { calculateBeneficialOwnership } = await import("./beneficial-ownership");
+    const { traceBranches } = await import("./ownership-branches");
+    const parties = [
+      { id: "C", kind: "legal" as const, name: "Client" },
+      { id: "H", kind: "legal" as const, name: "Holding" },
+      { id: "P", kind: "natural" as const, name: "Person" },
+    ];
+    // Client: Holding 30%, Person 50% → 20% unaccounted; Holding has no owners recorded.
+    const r = calculateBeneficialOwnership("C", parties, [{ ownerId: "H", ownedId: "C", pct: 30 }, { ownerId: "P", ownedId: "C", pct: 50 }]);
+    expect(r.openBranches).toEqual(expect.arrayContaining([
+      { entityId: "H", gap: "no-owners", effectivePct: 30 },
+      { entityId: "C", gap: "unaccounted", unaccountedPct: 20, effectivePct: 20 },
+    ]));
+    // Together 50% open → stays open
+    let t = traceBranches(r.openBranches, new Map(), 25);
+    expect(t.openCount).toBe(2);
+    // Declaring the holding listed leaves 20% → below 25%: closed automatically
+    t = traceBranches(r.openBranches, new Map([["H", "listed"]]), 25);
+    expect(t.openCount).toBe(0);
+    expect(t.branches.find((b) => b.entityId === "C")?.status).toBe("below-threshold");
+    expect(t.branches.find((b) => b.entityId === "H")?.status).toBe("declared");
+  });
+});

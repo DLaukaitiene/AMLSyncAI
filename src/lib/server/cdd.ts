@@ -17,6 +17,7 @@ import { partyCountries, SECTOR_PRODUCT_RISK } from "@/lib/cdd/party";
 import { startRetentionClock } from "./retention";
 import { checkSectoralSanctions } from "@/lib/rules/sectoral-sanctions";
 import { takeScreeningSlots } from "./screening-limits";
+import { traceBranches } from "@/lib/rules/ownership-branches";
 import { checkSatisfied, requiredCheck, type PartyEvidence, type RequiredCheck, type StructureRole } from "@/lib/rules/check-matrix";
 
 import type { CountryProfile } from "@/lib/rules/country-profile";
@@ -182,6 +183,7 @@ export interface ClientFile {
   extracts: Awaited<ReturnType<Tx["registryExtract"]["findMany"]>>;
   approvals: { edd: boolean; pep: boolean };
   smoFallbackOk: boolean;
+  branches: ReturnType<typeof traceBranches> | null;
   checks: { partyId: string; name: string; kind: Party["kind"]; roles: StructureRole[]; required: RequiredCheck; evidence: PartyEvidence; done: boolean }[];
 }
 
@@ -252,6 +254,14 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
   const smoFallbackOk = !!smo && validateSmoFallback({ seniorManagingOfficials: smo.officials, stepsTaken: smo.stepsTaken }).length === 0;
   const checklist = new Set((f.eddChecklist as string[] | null) ?? []);
 
+  // Ownership tracing per branch: declarations close a branch; small leftovers close automatically.
+  const declared = new Map<string, string>();
+  for (const p of tree.parties.values()) {
+    const lt = (det(p).lookThrough ?? null) as { reason?: string } | null;
+    if (lt?.reason) declared.set(p.id, lt.reason);
+  }
+  const branches = bo ? traceBranches(bo.openBranches, declared, bo.thresholdPct) : null;
+
   // Who needs which check (rules/check-matrix): roles from the structure, evidence from the file.
   const roles = new Map<string, StructureRole[]>();
   const addRole = (id: string, r: StructureRole) => roles.set(id, [...new Set([...(roles.get(id) ?? []), r])]);
@@ -290,7 +300,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     role: f.role.toLowerCase() as CddFileState["role"],
     identityVerified: party.kind === "NATURAL" ? verifications.length > 0 : extracts.length > 0,
     hasBearerShares: party.bearerShares || !!d.bearerShares,
-    boResolved: bo ? (bo.beneficialOwners.length > 0 && bo.unresolvedOwners.length === 0) || smoFallbackOk : undefined,
+    boResolved: bo ? (bo.beneficialOwners.length > 0 && (branches?.openCount ?? 0) === 0) || smoFallbackOk : undefined,
     purposeRecorded: !!f.purpose?.trim(),
     riskAssessed: true,
     eddRequired: risk.eddRequired,
@@ -311,7 +321,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     }),
   };
 
-  return { file: f as CddFile, party, tree, bo, sanctions, risk, profile, profileVersion, isPep, state, screening, verifications, extracts, approvals, smoFallbackOk, checks };
+  return { file: f as CddFile, party, tree, bo, sanctions, risk, profile, profileVersion, isPep, state, screening, verifications, extracts, approvals, smoFallbackOk, checks, branches };
 }
 
 /** Stores a new client risk assessment when the result changed (spec §4.3: rule-set version stored). */

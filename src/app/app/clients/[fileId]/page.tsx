@@ -16,6 +16,8 @@ import {
   diditIdvAction, diditRefreshAction, diditScreenAction,
   kybAddPersonAction,
   setScopeAction,
+  declareLookThroughAction,
+  reopenLookThroughAction,
   kybRefreshAction,
 } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
@@ -25,6 +27,7 @@ import { diditEnabled } from "@/lib/server/didit";
 import { CHECK_PRICE_CENTS, formatEur, KYB_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -375,10 +378,51 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
             {cf.bo.candidates.filter((c) => !c.isBeneficialOwner).length > 0 && (
               <p className="text-xs text-muted">Below threshold: {cf.bo.candidates.filter((c) => !c.isBeneficialOwner).map((c) => `${c.name} ${c.effectivePct}%`).join(", ")}</p>
             )}
-            {cf.bo.unresolvedOwners.length > 0 && (
-              <p className="text-sm text-red-700 dark:text-red-300">
-                Find the owners of: {cf.bo.unresolvedOwners.map((id) => cf.tree.parties.get(id)?.displayName).join(", ")}
-              </p>
+            {cf.branches && cf.branches.branches.length > 0 && (
+              <div className="space-y-2" data-testid="ownership-branches">
+                <p className="text-sm font-medium">
+                  Ownership still to trace{cf.branches.openCount ? ` — ${cf.branches.openCount} open branch(es), ${cf.branches.openPct}% of the client` : " — all branches closed"}
+                </p>
+                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+                  {cf.branches.branches.map((b) => {
+                    const name = cf.tree.parties.get(b.entityId)?.displayName ?? "?";
+                    return (
+                      <li key={`${b.entityId}-${b.gap}`} className="space-y-2 px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span>
+                            <span className="font-medium">{name}</span>
+                            <span className="text-muted"> · {b.gap === "no-owners" ? "no owners recorded" : `${b.unaccountedPct}% of its shares not accounted for`} · {b.effectivePct}% of the client</span>
+                          </span>
+                          {b.status === "open" && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Open</span>}
+                          {b.status === "below-threshold" && <span className="text-xs text-muted">Closed: open branches together are below {cf.bo!.thresholdPct}%</span>}
+                          {b.status === "declared" && (
+                            <span className="flex items-center gap-2 text-xs text-muted">
+                              Closed: {LOOK_THROUGH_REASONS[b.reason ?? ""] ?? b.reason}
+                              {edit && <ActionButton action={reopenLookThroughAction.bind(null, fileId, b.entityId)}>Reopen</ActionButton>}
+                            </span>
+                          )}
+                        </div>
+                        {b.status === "open" && edit && (
+                          <details className="rounded border border-border p-2">
+                            <summary className="cursor-pointer text-xs font-medium">No further look-through needed</summary>
+                            <ActionForm action={declareLookThroughAction.bind(null, fileId, b.entityId)} className="mt-2 space-y-2">
+                              <Field label="Reason" name="reason" required>
+                                <select name="reason" defaultValue="" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Reason">
+                                  <option value="" disabled>Choose…</option>
+                                  {Object.entries(LOOK_THROUGH_REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                </select>
+                              </Field>
+                              <Field label="Basis / steps taken" name="note" hint="Source (register, client declaration, stock exchange) or the steps you took." />
+                              <Submit variant="secondary">Close branch</Submit>
+                            </ActionForm>
+                          </details>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {cf.branches.openCount > 0 && <p className="text-xs text-muted">Add the owners of an open branch below, or record why no further look-through is needed.</p>}
+              </div>
             )}
             {cf.sanctions.sanctionedOwnershipPct > 0 && (
               <p className="text-sm">Sanctioned ownership through the structure: {cf.sanctions.sanctionedOwnershipPct}%{cf.sanctions.affected ? " — client is sanctions-affected" : ""}</p>
