@@ -6,13 +6,13 @@ import { adminDb } from "./db";
  * Outbound email. EMAIL_TRANSPORT=dev stores messages in DevEmail (shown at
  * /dev/mailbox) — never in production. Otherwise SMTP_URL is used.
  */
-export async function sendEmail(to: string, subject: string, text: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, text: string, attachments?: { filename: string; content: Buffer; contentType?: string }[]): Promise<void> {
   const transport = process.env.EMAIL_TRANSPORT ?? (process.env.NODE_ENV === "production" ? "smtp" : "dev");
   if (transport === "dev") {
     if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_EMAIL !== "1") {
       throw new Error("Dev email transport is not allowed in production");
     }
-    await adminDb.devEmail.create({ data: { to, subject, text } });
+    await adminDb.devEmail.create({ data: { to, subject, text: attachments?.length ? `${text}\n\n[attachments: ${attachments.map((a) => `${a.filename} (${a.content.length} bytes)`).join(", ")}]` : text } });
     return;
   }
   const url = process.env.SMTP_URL;
@@ -23,6 +23,7 @@ export async function sendEmail(to: string, subject: string, text: string): Prom
       to,
       subject,
       text,
+      ...(attachments?.length ? { attachments } : {}),
     });
   } catch (e) {
     // Never log the recipient or the message (personal data); the provider's error code is enough.

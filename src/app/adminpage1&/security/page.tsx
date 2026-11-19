@@ -35,6 +35,11 @@ export default async function SecurityPage() {
         <Tile label="Two-factor adoption" value={`${users ? Math.round((100 * mfa) / users) : 100}%`} sub={`${users - mfa} user(s) not set up`} href="/adminpage1&/users?mfa=0" />
         <Tile label="Active sessions" value={sessions} sub={`${exports} data export(s) in 7 days`} />
       </Tiles>
+      {a.can("team.manage") && (
+        <Section title="Backups" note="An encrypted copy of the whole database is emailed to operations every Monday. It can only be opened with BACKUP_KEY (keep a copy of the key outside Vercel). Restore steps: scripts/restore-backup.mts.">
+          <a href="/api/admin/backup" className="inline-block rounded-full border border-border px-4 py-2 text-sm hover:border-accent" data-testid="download-backup">Download backup now</a>
+        </Section>
+      )}
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Failed sign-ins by IP (24 h)"><Table head={["IP", "Failures"]} rows={topIps.map((r) => [r.ip ?? "—", r._count])} empty="None." /></Section>
         <Section title="Password spraying (one IP, ≥ 5 accounts, 24 h)"><Table head={["IP", "Accounts"]} rows={spray.map((r) => [r.ip, Number(r.accounts)])} empty="None detected." /></Section>

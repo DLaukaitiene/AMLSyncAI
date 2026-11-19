@@ -1501,3 +1501,16 @@ model ExpertTask {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 }
+
+/// One row per scheduled job run (platform-level, not tenant data): lets operations see failures and missed runs.
+model JobRun {
+  id         String    @id @default(uuid()) @db.Uuid
+  job        String // "daily"
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  failed     String[] // names of the parts that failed
+  summary    Json      @default("{}")
+
+  @@index([job, startedAt])
+}

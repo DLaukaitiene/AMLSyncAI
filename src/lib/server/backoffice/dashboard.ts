@@ -87,6 +87,11 @@ export async function todayData() {
   else if (staleLists.length) alerts.push({ label: `${staleLists.length} sanctions list(s) not refreshed in 24 h`, href: "/adminpage1&/content", severity: "warn", owner: "Content" });
   if (dsrSoon) alerts.push({ label: `${dsrSoon} data subject request(s) due within 7 days`, href: "/adminpage1&/privacy", severity: "warn", owner: "DPO" });
   if (red.length) alerts.push({ label: `${red.length} active firm(s) with a red health score`, href: "/adminpage1&/firms?view=red", severity: "warn", owner: "CS" });
+  // Daily job (re-screening, reminders, invoices): missed or failed runs.
+  const lastRun = await adminDb.jobRun.findFirst({ where: { job: "daily" }, orderBy: { startedAt: "desc" } });
+  if (!lastRun) alerts.push({ label: "The daily job has never run (re-screening, reminders, invoices)", href: "/adminpage1&/security", severity: "warn", owner: "Ops" });
+  else if (Date.now() - lastRun.startedAt.getTime() > 30 * 3_600_000) alerts.push({ label: `The daily job hasn't run since ${lastRun.startedAt.toISOString().slice(0, 16).replace("T", " ")} UTC`, href: "/adminpage1&/security", severity: "bad", owner: "Ops" });
+  else if (!lastRun.ok) alerts.push({ label: `The last daily job had failures: ${lastRun.failed.join(", ") || "it didn't finish"}`, href: "/adminpage1&/security", severity: "bad", owner: "Ops" });
 
   return {
     alerts,

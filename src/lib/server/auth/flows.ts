@@ -62,9 +62,9 @@ export const signupSchema = z.object({
     }
     return c;
   }),
-  sector: z.enum(SECTOR_VALUES, { errorMap: () => ({ message: "Choose your sector" }) }),
+  sector: z.enum(SECTOR_VALUES, { error: "Choose your sector" }),
   sectorOther: z.string().trim().max(200).optional(),
-  plan: z.enum(["solo", "starter"], { errorMap: () => ({ message: "Choose a plan" }) }).default("starter"),
+  plan: z.enum(["solo", "starter"], { error: "Choose a plan" }).default("starter"),
   password: z.string(),
   signupCode: z.string().trim().optional(),
 });

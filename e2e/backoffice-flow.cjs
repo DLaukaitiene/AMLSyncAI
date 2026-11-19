@@ -109,6 +109,14 @@ const backdateApprovals = () => sql(`UPDATE "AdminApproval" SET "createdAt" = no
   if (ok.status() !== 200 || no.status() !== 404) throw new Error(`support role: /admin/support ${ok.status()}, /admin/revenue ${no.status()}`);
   log("Support agent role: support pages yes, revenue no");
 
+  // Backup: Owner downloads an encrypted backup; a support agent can't.
+  await t.goto(BASE + "/adminpage1&/security");
+  const [bk] = await Promise.all([t.waitForEvent("download"), t.getByTestId("download-backup").click()]);
+  const head = require("fs").readFileSync(await bk.path()).subarray(0, 8).toString();
+  if (head !== "AMLSBK01") throw new Error("✘ backup file header: " + head);
+  if ((await f.request.get(BASE + "/api/admin/backup", { maxRedirects: 0 })).status() !== 404) throw new Error("✘ support agent could download a backup");
+  log("encrypted backup downloads for the Owner only");
+
   // Incident with personal data → breach clocks.
   await t.goto(BASE + "/adminpage1&/security");
   await t.getByText("Record an incident").click();

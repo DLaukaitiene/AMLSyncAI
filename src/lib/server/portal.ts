@@ -174,10 +174,10 @@ export const portalNaturalSchema = z.object({
   purpose: z.string().trim().min(5, "Describe what you need the service for").max(1000),
   sourceOfFunds: z.string().trim().min(5, "Describe where the money for this comes from").max(2000),
   sourceOfWealth: t(2000),
-  isPep: z.enum(["yes", "no"], { errorMap: () => ({ message: "Answer this question" }) }),
+  isPep: z.enum(["yes", "no"], { error: "Answer this question" }),
   pepFunction: t(300),
-  isPepFamilyOrAssociate: z.enum(["yes", "no"], { errorMap: () => ({ message: "Answer this question" }) }),
-  actingForOther: z.enum(["yes", "no"], { errorMap: () => ({ message: "Answer this question" }) }),
+  isPepFamilyOrAssociate: z.enum(["yes", "no"], { error: "Answer this question" }),
+  actingForOther: z.enum(["yes", "no"], { error: "Answer this question" }),
   actingForWhom: t(500),
 });
 
