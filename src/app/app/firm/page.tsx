@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { BadgeCheck, BookOpen, Building2, Download, GraduationCap, Handshake, Lock, Megaphone, Scale } from "lucide-react";
+import { Chip } from "@/components/chips";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
@@ -20,17 +22,38 @@ export default async function FirmPage() {
   const edit = can(s.user.roles, "approve.compliance");
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-2xl font-semibold">Firm</h1>
-      <ul className="divide-y divide-border rounded-xl border border-border text-sm">
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/risk-assessment">Business-wide risk assessment</Link><span className="text-muted">{ra ? `v${ra.version} in force` : "not approved yet"}</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/governance">Governance and annual report</Link><span className="text-muted">Art. 11</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/training">Training</Link><span className="text-muted">Art. 12</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/integrity">Integrity and conflicts</Link><span className="text-muted">Art. 13</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/whistleblowing">Whistleblowing channel</Link><span className="text-muted">Art. 14</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/outsourcing">Outsourcing register</Link><span className="text-muted">Art. 18</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/privacy">Privacy notice and DPIA</Link><span className="text-muted">Art. 76, GDPR</span></li>
-        <li className="flex justify-between px-4 py-2"><a className="text-accent underline" href="/api/supervisor-file/firm">Download the firm supervisor file</a><span className="text-muted">PDF + ZIP</span></li>
-        <li className="flex justify-between px-4 py-2"><Link className="text-accent underline" href="/app/firm/policies">Policies and procedures</Link><span className="text-muted">{policy ? `policy v${policy.version}` : "no policy in force"}{procedure ? ` · procedures v${procedure.version}` : ""}</span></li>
+      <h1 className="text-3xl">Firm compliance</h1>
+      <p className="text-sm text-muted">Your firm&apos;s own AMLR obligations. Each part generates its document and keeps the approvals and history for your supervisor.</p>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {[
+          { href: "/app/firm/risk-assessment", icon: Scale, title: "Business-wide risk assessment", note: "Art. 10", status: ra ? `v${ra.version} in force` : "Not approved yet", done: !!ra },
+          { href: "/app/firm/policies", icon: BookOpen, title: "Policies and procedures", note: "Art. 9", status: policy && procedure ? `Policy v${policy.version}, procedures v${procedure.version}` : policy ? "Procedures not approved yet" : "Not approved yet", done: !!policy && !!procedure },
+          { href: "/app/firm/governance", icon: Building2, title: "Governance and annual report", note: "Art. 11" },
+          { href: "/app/firm/training", icon: GraduationCap, title: "Training", note: "Art. 12" },
+          { href: "/app/firm/integrity", icon: BadgeCheck, title: "Integrity and conflicts", note: "Art. 13" },
+          { href: "/app/firm/whistleblowing", icon: Megaphone, title: "Whistleblowing channel", note: "Art. 14" },
+          { href: "/app/firm/outsourcing", icon: Handshake, title: "Outsourcing register", note: "Art. 18" },
+          { href: "/app/firm/privacy", icon: Lock, title: "Privacy notice and DPIA", note: "Art. 76, GDPR" },
+        ].map(({ href, icon: Icon, title, note, status, done }) => (
+          <li key={href}>
+            <Link href={href} className="flex h-full gap-3 rounded-2xl border border-border bg-background p-4 shadow-[var(--shadow)] transition hover:border-accent">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-accent"><Icon aria-hidden className="h-5 w-5" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-semibold">{title}</span>
+                  {done !== undefined && <Chip tone={done ? "green" : "amber"}>{done ? "Done" : "To do"}</Chip>}
+                </span>
+                <span className="block text-xs text-muted">{status ? `${status} · ` : ""}AMLR {note}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+        <li>
+          <a href="/api/supervisor-file/firm" className="flex h-full gap-3 rounded-2xl border border-dashed border-border p-4 transition hover:border-accent">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/15 text-accent"><Download aria-hidden className="h-5 w-5" /></span>
+            <span><span className="block font-semibold">Download the firm supervisor file</span><span className="block text-xs text-muted">Everything a supervisor asks for, as PDF + ZIP</span></span>
+          </a>
+        </li>
       </ul>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Due diligence for new clients</h2>

@@ -83,6 +83,9 @@ export async function createClientAction(_: ActionState, fd: FormData): Promise<
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Party", objectId: party.id, fields: Object.keys(parsed.data) });
     await runScreening(tx, s.firm.id, [party.id]);
     await refresh(tx, s.firm.id, file.id);
+    // Quickest path (market practice): send the client their secure link straight away.
+    const email = (parsed.data as { email?: string }).email;
+    if (fd.get("sendLink") === "on" && email) await createPortalLink(tx, { firmId: s.firm.id, userId: s.user.id }, file.id, email);
     return file.id;
   });
   redirect(`/app/clients/${fileId}`);
