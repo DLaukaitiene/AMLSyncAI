@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/governance";
 import { approvePolicy } from "@/lib/server/firm-docs";
 import { addCalendarDays, toIsoDate } from "@/lib/rules/dates";
+import { reviewStaffScreening, screenStaff } from "@/lib/server/staff-screening";
 
 const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 const ctxOf = (s: { firm: { id: string }; user: { id: string } }) => ({ firmId: s.firm.id, userId: s.user.id });
@@ -77,6 +78,25 @@ export async function integrityAction(_: ActionState, fd: FormData): Promise<Act
   });
   revalidatePath("/app/firm/integrity");
   return { message: r.flagged ? "Declaration recorded. The Compliance Officer will follow up on the points you raised." : "Declaration recorded. Next one is due in 12 months." };
+}
+
+export async function screenStaffAction(_: ActionState, _fd: FormData): Promise<ActionState> {
+  const s = await requireUser("approve.compliance");
+  const r = await withTenant(s.firm.id, (tx) => screenStaff(tx, ctxOf(s)));
+  revalidatePath("/app/firm/integrity");
+  if (r.listsChecked === 0) return { error: "No sanctions lists are loaded yet, so nothing was checked." };
+  return { message: r.possible ? `${r.screened} colleague(s) screened against ${r.listsChecked} list(s): ${r.possible} possible match(es) to review below.` : `${r.screened} colleague(s) screened against ${r.listsChecked} list(s): no matches.` };
+}
+
+export async function reviewStaffScreeningAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("approve.compliance");
+  const outcome = String(fd.get("outcome") ?? "");
+  const note = String(fd.get("note") ?? "").trim();
+  if (outcome !== "cleared" && outcome !== "confirmed") return { error: "Choose an outcome." };
+  if (note.length < 5) return { error: "Give a short reason.", fieldErrors: { note: ["Required."] } };
+  await withTenant(s.firm.id, (tx) => reviewStaffScreening(tx, ctxOf(s), String(fd.get("id")), outcome, note));
+  revalidatePath("/app/firm/integrity");
+  return { message: outcome === "cleared" ? "Recorded as not the same person." : "Recorded as a confirmed match. Restrict this person's access and take advice before they work on client matters." };
 }
 
 export async function whistleblowAction(_: ActionState, fd: FormData): Promise<ActionState> {

@@ -13,7 +13,7 @@ BEGIN
     'CddFile','IdentityVerification','RegistryExtract','ScreeningResult',
     'ClientRiskAssessment','Document','Case','Report','Task','Approval','AuditEvent',
     'EmailDomainVerification','Invitation','PortalLink',
-    'Appointment','TrainingModule','TrainingAssignment','IntegrityDeclaration','WhistleblowingReport','OutsourcingArrangement','AiCall','DiditSession','CreditEntry','Invoice','ScreeningEvent'
+    'Appointment','TrainingModule','TrainingAssignment','IntegrityDeclaration','WhistleblowingReport','OutsourcingArrangement','AiCall','DiditSession','CreditEntry','Invoice','ScreeningEvent','StaffScreening'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

@@ -3,7 +3,8 @@ import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { INTEGRITY_QUESTIONS, isOnePersonFirm } from "@/lib/server/governance";
 import { ActionForm, Field, Submit } from "@/components/form";
-import { integrityAction } from "../records-actions";
+import { integrityAction, reviewStaffScreeningAction, screenStaffAction } from "../records-actions";
+import { latestStaffScreening } from "@/lib/server/staff-screening";
 
 export default async function IntegrityPage() {
   const s = await requireUser();
@@ -13,6 +14,8 @@ export default async function IntegrityPage() {
     mine: await tx.integrityDeclaration.findFirst({ where: { userId: s.user.id }, orderBy: { declaredAt: "desc" } }),
     all: manage ? await tx.integrityDeclaration.findMany({ orderBy: { declaredAt: "desc" }, take: 200 }) : [],
     names: new Map((await tx.user.findMany({ select: { id: true, name: true } })).map((u) => [u.id, u.name])),
+    staff: manage ? await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } }) : [],
+    screening: manage ? await latestStaffScreening(tx) : new Map(),
   }));
   if (data.onePerson) {
     return (
@@ -39,6 +42,50 @@ export default async function IntegrityPage() {
         <Field label="Conflicts of interest (clients, family, financial interests)" name="conflicts" hint="Leave empty if none. Conflicted staff are excluded from that client." />
         <Submit>Make declaration</Submit>
       </ActionForm>
+      {manage && (
+        <section data-testid="staff-screening" className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Staff screening</h2>
+              <p className="text-sm text-muted">Your colleagues&apos; names checked against the sanctions and PEP lists loaded in the app (AMLR Art. 11). Free, and it doesn&apos;t count towards your screening limits. Repeat on joining and when lists change.</p>
+            </div>
+            <ActionForm action={screenStaffAction}><Submit>Screen all staff now</Submit></ActionForm>
+          </div>
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
+            {data.staff.map((u) => {
+              const r = data.screening.get(u.id);
+              const matches = (r?.matches ?? []) as { listName: string; matchedName: string; score: number; reference: string | null }[];
+              const label = !r ? "Not screened yet" : r.status === "clear" ? "No match" : r.status === "possible-match" ? "Possible match: review" : r.status === "cleared" ? "Not the same person (reviewed)" : "Confirmed match";
+              const tone = !r ? "text-muted" : r.status === "possible-match" || r.status === "confirmed" ? "text-red-700 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300";
+              return (
+                <li key={u.id} className="space-y-2 px-4 py-2">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span>{u.name}</span>
+                    <span className={tone}>{label}{r ? ` · ${r.screenedAt.toISOString().slice(0, 10)} · ${r.listsChecked} list(s)` : ""}</span>
+                  </div>
+                  {r && matches.length > 0 && (
+                    <ul className="text-xs text-muted">
+                      {matches.map((m, i) => <li key={i}>{m.listName}: {m.matchedName} ({Math.round(m.score * 100)}%){m.reference ? ` · ref ${m.reference}` : ""}</li>)}
+                    </ul>
+                  )}
+                  {r?.reviewNote && <p className="text-xs text-muted">Review: {r.reviewNote}</p>}
+                  {r?.status === "possible-match" && (
+                    <ActionForm action={reviewStaffScreeningAction} className="space-y-2 rounded-lg border border-border p-3">
+                      <input type="hidden" name="id" value={r.id} />
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2"><input type="radio" name="outcome" value="cleared" /> Not the same person</label>
+                        <label className="flex items-center gap-2"><input type="radio" name="outcome" value="confirmed" /> Confirmed match</label>
+                      </div>
+                      <Field label="Reason" name="note" required hint="E.g. different date of birth and nationality." />
+                      <Submit>Record review</Submit>
+                    </ActionForm>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
       {manage && (
         <section>
           <h2 className="mb-2 text-lg font-semibold">All declarations</h2>

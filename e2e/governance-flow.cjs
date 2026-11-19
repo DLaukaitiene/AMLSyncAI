@@ -21,7 +21,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   // Invite Bob
   await p.goto(BASE + "/app/team");
-  await p.getByLabel("Name *").fill("Bob Buhalteris"); await p.getByLabel("Email *").fill("bob@teise.lt");
+  await p.getByLabel("Name *").fill("Viktor Malenko"); await p.getByLabel("Email *").fill("bob@teise.lt");
   await submit(p, "Send invitation", "Invitation sent");
   const q = await (await b.newContext()).newPage();
   q.on("pageerror", (e) => errors.push(e.message));
@@ -43,6 +43,17 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await submit(q, "Make declaration", "The Compliance Officer will follow up");
   await p.goto(BASE + "/app/firm/integrity"); await p.getByText(/conflict: My brother/).waitFor();
   log("integrity declaration with a conflict is flagged to the CO");
+
+  // Staff screening (free, against the loaded lists): the colleague's name matches the TEST list
+  await submit(p, "Screen all staff now", /2 colleague\(s\) screened against \d+ list\(s\): 1 possible match/);
+  const staff = p.getByTestId("staff-screening");
+  await staff.getByText("Possible match: review").waitFor();
+  await staff.getByRole("radio", { name: "Not the same person" }).check();
+  await staff.getByLabel("Reason *").fill("Different date of birth and nationality (Lithuanian, born 1990).");
+  await submit(p, "Record review"); // the form goes away once reviewed, so wait for the new status
+  await staff.getByText("Not the same person (reviewed)").waitFor();
+  await staff.getByText(/Review: Different date of birth/).waitFor();
+  log("staff screening: possible match found and cleared by the CO with a reason");
 
   // Anonymous whistleblowing
   await q.goto(BASE + "/app/firm/whistleblowing");
@@ -73,10 +84,10 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   // Appoint Bob as compliance officer → removal notice for the previous officer
   await p.goto(BASE + "/app/firm/governance");
   const co = p.locator("section", { hasText: "Compliance officer" }).last();
-  await co.locator("select[name=userId]").selectOption({ label: "Bob Buhalteris" });
+  await co.locator("select[name=userId]").selectOption({ label: "Viktor Malenko" });
   await co.getByLabel("Reason for the change").fill("Workload: owner hands over the function");
   await co.getByRole("button", { name: "Appoint" }).click();
-  await p.getByText(/Bob Buhalteris since/).waitFor();
+  await p.getByText(/Viktor Malenko since/).waitFor();
   await p.goto(BASE + "/app/reports");
   if ((await p.getByText("Notice to supervisor").count()) < 2) throw new Error("expected 2 supervisor notices");
   log("officer change recorded; removal notice drafted (Reports has 2 supervisor notices)");

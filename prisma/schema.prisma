@@ -977,6 +977,22 @@ model TrainingAssignment {
 }
 
 /// Integrity, skills and conflict-of-interest declarations (Art. 13).
+/// Staff screened against the firm's loaded sanctions/PEP lists (AMLR Art. 11 employee checks). Free: no paid provider.
+model StaffScreening {
+  id           String   @id @default(uuid()) @db.Uuid
+  firmId       String   @db.Uuid
+  userId       String   @db.Uuid
+  listsChecked Int
+  matches      Json // [{listName, matchedName, score, reference}]
+  status       String // clear | possible-match | cleared | confirmed
+  reviewNote   String?
+  reviewedById String?  @db.Uuid
+  screenedById String?  @db.Uuid
+  screenedAt   DateTime @default(now())
+
+  @@index([firmId, userId])
+}
+
 model IntegrityDeclaration {
   id         String   @id @default(uuid()) @db.Uuid
   firmId     String   @db.Uuid
