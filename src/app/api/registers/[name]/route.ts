@@ -9,10 +9,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ name: st
   const { name } = await params;
   const reg = REGISTERS.find((r) => r.id === name);
   if (!reg) return new NextResponse("Not found", { status: 404 });
-  const s = await guardExport(req, "/app/registers");
+  const s = await guardExport(req, reg.id === "clients" ? "/app/clients" : "/app/registers");
   if (s instanceof NextResponse) return s;
   const rows = await withTenant(s.firm.id, async (tx) => {
-    const r = await buildRegister(tx, reg.id as RegisterId);
+    const only = reg.id === "clients" ? new URL(req.url).searchParams.getAll("id").filter((x) => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 500) : undefined;
+    const r = await buildRegister(tx, reg.id as RegisterId, only);
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "export", objectType: "Register", objectId: s.firm.id, fields: [reg.id, String(r.length - 1)] });
     return r;
   }, { timeoutMs: 60_000 });

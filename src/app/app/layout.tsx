@@ -6,6 +6,7 @@ import { SuggestFeature } from "@/components/suggest-feature";
 import { AppShell, type NavItem } from "@/components/app-shell";
 import { isPlatformAdmin } from "@/lib/server/feedback";
 import { Announcements } from "@/components/announcements";
+import { SectionTabs } from "@/components/section-tabs";
 
 type Child = { href: string; label: string; icon: string; show?: boolean };
 type Entry = Child & { children?: Child[] };
@@ -101,6 +102,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
     >
       <Announcements firmId={s.firm.id} userId={s.user.id} />
+      <SectionTabs allowed={nav.flatMap((n) => [n.href, ...(n.children ?? []).map((c) => c.href)])} />
       {children}
     </AppShell>
   );

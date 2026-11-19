@@ -13,7 +13,7 @@ export default async function NewClientPage() {
         <p className="text-muted">Create the client and we send them a secure link — they fill in the rest, upload documents and verify their identity. Everything else below is optional. The client is screened at once and the risk is calculated from the data.</p>
       </div>
       <ActionForm action={createClientAction}>
-        <PartyFields />
+        <PartyFields chooser />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="National ID number" name="nationalId" hint="Stored encrypted." autoComplete="off" />
           <Field label="Tax ID" name="taxId" hint="Stored encrypted." autoComplete="off" />

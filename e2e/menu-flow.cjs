@@ -14,7 +14,7 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
     await nav.getByText(label, { exact: true }).first().waitFor();
   }
   log("menu shows the ClearAML-style sections");
-  for (const card of ["Total Clients", "Pending Reviews", "Open Alerts", "High Risk Clients"]) await p.getByText(card, { exact: true }).waitFor();
+  for (const card of ["Total Clients", "Pending Reviews", "Portfolio Health", "High Risk Cases", "Program Status", "Risk Distribution", "Review Queue", "Upcoming Timeline", "Recent Clients", "Quick Actions", "Activity Feed"]) await p.getByText(card, { exact: true }).waitFor();
   log("dashboard metric cards");
 
   // A client whose name is on the TEST list → an open alert
@@ -25,6 +25,43 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   await p.getByLabel("Date of birth").fill("1971-03-03");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Viktor Malenko" }).waitFor();
+
+  const fileUrl = p.url();
+  await p.getByTestId("action-strip").getByRole("link", { name: "Run Screening" }).waitFor();
+  for (const t of ["Overview", "Verification", "Screening results", "Risk reports", "Documents (0)", "Matters (0)", "Activity"]) await p.getByRole("navigation", { name: "Profile tabs" }).getByRole("link", { name: t, exact: true }).waitFor();
+  await p.goto(fileUrl + "?tab=risk");
+  await p.getByTestId("risk-history").waitFor();
+  if (await p.locator("#decision").count()) throw new Error("✘ Risk reports tab should not show the decision card");
+  await p.goto(fileUrl + "?tab=screening");
+  await p.locator("#screening").waitFor();
+  log("client profile: summary header, action strip and tabs (Risk reports shows the history only)");
+
+  await p.goto(BASE + "/app/clients/new");
+  await p.getByText("What are you adding?").waitFor();
+  await p.getByRole("radio", { name: "Trust" }).check();
+  if (await p.getByLabel("Legal form").inputValue() !== "Trust") throw new Error("✘ Trust should preset the legal form");
+  await p.getByLabel("Legal name *").fill("Šeimos fondas");
+  await p.getByRole("button", { name: "Create client" }).click();
+  await p.getByRole("heading", { name: "Šeimos fondas" }).waitFor();
+  await p.getByRole("navigation", { name: "Profile tabs" }).getByRole("link", { name: "Directors / UBOs" }).waitFor();
+  log("Add Client: 'What are you adding?' chooser; a trust gets the Directors / UBOs tab");
+
+  await p.goto(BASE + "/app/clients");
+  if ((await p.getByTestId("client-row").count()) !== 2) throw new Error("✘ expected 2 client rows");
+  await p.locator("select[name=type]").selectOption("entity");
+  await p.getByRole("button", { name: "Apply" }).click();
+  await p.waitForURL(/type=entity/);
+  if ((await p.getByTestId("client-row").count()) !== 1) throw new Error("✘ type filter");
+  await p.getByTestId("client-row").getByText("Not checked").waitFor();
+  await p.goto(BASE + "/app/clients?status=open&sort=name");
+  await p.getByTestId("client-row").filter({ hasText: "Viktor Malenko" }).getByText("Possible match").waitFor();
+  log("Clients: type filter, sort, verification and screening columns");
+
+  await p.goto(BASE + "/app/firm/policies");
+  await p.getByRole("navigation", { name: "Compliance Hub sections" }).getByRole("link", { name: "Business Risk Assessment" }).waitFor();
+  await p.goto(BASE + "/app/billing");
+  await p.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Screening Lists" }).waitFor();
+  log("section tabs on Compliance Hub and Settings pages");
 
   await p.goto(BASE + "/app/monitoring-alerts");
   await p.getByRole("heading", { name: "Monitoring Alerts" }).waitFor();

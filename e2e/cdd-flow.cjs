@@ -13,7 +13,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const { p } = await signupFirm(b, { code: process.env.CODE1, company: "Skaičiai ir partneriai", email: "owner@skaiciai.lt", sector: "ACCOUNTANT" });
   p.on("pageerror", (e) => errors.push(e.message));
   await p.goto(BASE + "/app/clients/new");
-  await p.getByLabel("Company / legal entity").check();
+  await p.getByLabel("Company", { exact: true }).check();
   await p.getByLabel("Legal name *").fill("Baltic Trade UAB");
   await p.getByLabel("Registration number").fill("304000000");
   await p.getByLabel("Country of creation").fill("LT");

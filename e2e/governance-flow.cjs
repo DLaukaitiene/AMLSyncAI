@@ -109,7 +109,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await p.locator("select[name=kind]").selectOption("id");
   await p.locator("input[type=file]").setInputFiles("/tmp/id-card.png");
   await submit(p, "Upload", "Uploaded.");
-  const [dl] = await Promise.all([p.waitForEvent("download"), p.getByRole("link", { name: /Download supervisor file/ }).click()]);
+  const [dl] = await Promise.all([p.waitForEvent("download"), p.getByRole("link", { name: /Download PDF/ }).click()]);
   const zip = unzipSync(fs.readFileSync(await dl.path()));
   const names = Object.keys(zip);
   if (!names.includes("summary.pdf") || !names.includes("data.json") || !names.some((n) => n.startsWith("documents/id-"))) throw new Error("client zip: " + names);

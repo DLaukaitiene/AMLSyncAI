@@ -48,7 +48,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   // Ownership tracing per branch
   await p.locator("select[name=defaultCddScope]").count(); // (firm default stays identification-only; switch this client to full)
   await p.goto(BASE + "/app/clients/new");
-  await p.getByLabel("Company / legal entity").check();
+  await p.getByLabel("Company", { exact: true }).check();
   await p.getByLabel("Legal name *").fill("Šakos UAB");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Šakos UAB" }).waitFor();

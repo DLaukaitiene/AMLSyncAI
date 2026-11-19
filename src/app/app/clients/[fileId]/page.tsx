@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
@@ -54,7 +55,8 @@ function activityText(action: string, objectType: string, fields: string[], who?
   return `${verb[action] ?? action} ${thing[objectType] ?? objectType}${f ? ` (${f})` : ""}`;
 }
 
-function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
+function Card({ title, children, id, hide }: { title: string; children: React.ReactNode; id?: string; hide?: boolean }) {
+  if (hide) return null;
   return (
     <section id={id} className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
       <h2 className="font-semibold">{title}</h2>
@@ -66,8 +68,28 @@ function Card({ title, children, id }: { title: string; children: React.ReactNod
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const area = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
 
-export default async function ClientFilePage({ params }: { params: Promise<{ fileId: string }> }) {
+/** Profile tabs (ClearAML's layout). "Overview" shows the whole file; the others show one part of it. */
+const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "directors", label: "Directors / UBOs", entityOnly: true },
+  { id: "verification", label: "Verification" },
+  { id: "screening", label: "Screening results" },
+  { id: "risk", label: "Risk reports" },
+  { id: "documents", label: "Documents" },
+  { id: "matters", label: "Matters" },
+  { id: "activity", label: "Activity" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+const IN_TAB: Record<string, TabId[]> = {
+  "client-data": [], identity: ["verification"], extract: ["verification", "directors"], documents: ["documents"], ownership: ["directors"],
+  checks: ["directors", "verification"], screening: ["screening"], risk: ["risk"], edd: ["risk"], approvals: ["risk"],
+};
+
+export default async function ClientFilePage({ params, searchParams }: { params: Promise<{ fileId: string }>; searchParams: Promise<{ tab?: string }> }) {
   const { fileId } = await params;
+  const wantedTab = (await searchParams).tab;
+  const tab: TabId = (TABS.find((t) => t.id === wantedTab)?.id ?? "overview") as TabId;
+  const show = (k: string) => tab === "overview" || (IN_TAB[k] ?? []).includes(tab);
   const s = await requireUser("client.view");
   const data = await withTenant(s.firm.id, async (tx) => {
     const exists = await tx.cddFile.findUnique({ where: { id: fileId } });
@@ -87,10 +109,12 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
     });
     const userIds = [...new Set(activity.map((a) => a.userId).filter((x): x is string => !!x))];
     const names = new Map((await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
-    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names };
+    const riskHistory = await tx.clientRiskAssessment.findMany({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" }, take: 50 });
+    const matters = await tx.matterParty.findMany({ where: { partyId: cf.party.id }, include: { matter: { select: { id: true, title: true, status: true, type: true, createdAt: true } } } });
+    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters };
   });
   if (!data) notFound();
-  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names } = data;
+  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters } = data;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
   const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
   const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
@@ -125,27 +149,37 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <p className="text-sm text-muted">{cf.party.kind === "NATURAL" ? "Person" : "Company"} · Client</p>
-        <h1 className="text-2xl font-semibold">{cf.party.displayName}</h1>
-        <p className="flex flex-wrap items-center gap-2 text-sm">
-          <StatusChip status={cf.file.status} ready={!decided && items.length === 0} />
-          <RiskChip level={lastRisk?.final ?? cf.risk.level} />
-          {cf.file.scope === "identification-only" && <Chip tone="grey">Identification only</Chip>}
-          <span className="sr-only">{STATUS[cf.file.status]} · Risk {lastRisk?.final ?? cf.risk.level.toUpperCase()}</span>
-          {lastRisk?.overrideReason ? <span className="text-muted">(calculated {lastRisk.calculated}, overridden)</span> : null}
-          {cf.file.nextRefreshOn && <span className="text-muted">Next refresh {cf.file.nextRefreshOn.toISOString().slice(0, 10)}</span>}
-          {cf.file.retentionUntil && <span className="text-muted">Delete after {cf.file.retentionUntil.toISOString().slice(0, 10)}</span>}
-        </p>
-        {can(r, "approve.compliance") && (
-          <span className="flex flex-wrap gap-4 text-sm">
-            <a className="text-accent underline" href={`/api/supervisor-file/client/${fileId}`}>Download supervisor file (PDF + documents, ZIP)</a>
-            {!hasCase && <a className="text-accent underline" href={`/api/explain/${fileId}`}>Explanation of the decision for the client (Art. 76(5))</a>}
-          </span>
-        )}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <p className="text-sm text-muted">{cf.party.kind === "NATURAL" ? "Individual" : String(d.legalForm ?? "") || "Entity"} · Client · ID {fileId.slice(0, 8)}</p>
+          <h1 className="text-2xl font-semibold">{cf.party.displayName}</h1>
+          <p className="flex flex-wrap items-center gap-2 text-sm">
+            <StatusChip status={cf.file.status} ready={!decided && items.length === 0} />
+            <RiskChip level={lastRisk?.final ?? cf.risk.level} />
+            {cf.file.scope === "identification-only" && <Chip tone="grey">Identification only</Chip>}
+            <span className="sr-only">{STATUS[cf.file.status]} · Risk {lastRisk?.final ?? cf.risk.level.toUpperCase()}</span>
+            {lastRisk?.overrideReason ? <span className="text-muted">(calculated {lastRisk.calculated}, overridden)</span> : null}
+            {cf.file.nextRefreshOn && <span className="text-muted">Next refresh {cf.file.nextRefreshOn.toISOString().slice(0, 10)}</span>}
+            {cf.file.retentionUntil && <span className="text-muted">Delete after {cf.file.retentionUntil.toISOString().slice(0, 10)}</span>}
+          </p>
+          <p className="text-xs text-muted">
+            {cf.party.kind === "NATURAL" && d.birthDate ? <>Born {String(d.birthDate)} · </> : null}Added {cf.file.createdAt.toISOString().slice(0, 10)}
+          </p>
+        </div>
+        <nav aria-label="Actions" className="flex flex-wrap gap-2 text-sm" data-testid="action-strip">
+          <Link href={`/app/clients/${fileId}?tab=screening#screening`} className="rounded-full border border-border px-3 py-1.5 hover:border-accent">Run Screening</Link>
+          <Link href={`/app/clients/${fileId}?tab=verification#identity`} className="rounded-full border border-border px-3 py-1.5 hover:border-accent">{cf.party.kind === "NATURAL" ? "Verify identity" : "Company check"}</Link>
+          {edit && <Link href={`/app/clients/${fileId}?tab=documents#documents`} className="rounded-full border border-border px-3 py-1.5 hover:border-accent">Send secure link</Link>}
+          {can(r, "approve.compliance") && <a className="rounded-full border border-border px-3 py-1.5 hover:border-accent" href={`/api/supervisor-file/client/${fileId}`}>Download PDF<span className="sr-only"> file pack (summary PDF and documents, ZIP)</span></a>}
+        </nav>
       </div>
+      {can(r, "approve.compliance") && !hasCase && (
+        <span className="flex flex-wrap gap-4 text-sm">
+          <a className="text-accent underline" href={`/api/explain/${fileId}`}>Explanation of the decision for the client (Art. 76(5))</a>
+        </span>
+      )}
 
-      <nav aria-label="Progress" className="overflow-x-auto">
+      <nav aria-label="Completion checklist" className="overflow-x-auto">
         <ol className="flex min-w-max gap-2">
           {steps.map((st, i) => (
             <li key={st.label}>
@@ -157,6 +191,51 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           ))}
         </ol>
       </nav>
+
+      <nav aria-label="Profile tabs" className="overflow-x-auto border-b border-border">
+        <ul className="flex min-w-max gap-1">
+          {TABS.filter((t) => !("entityOnly" in t) || cf.party.kind !== "NATURAL").map((t) => (
+            <li key={t.id}>
+              <Link href={t.id === "overview" ? `/app/clients/${fileId}` : `/app/clients/${fileId}?tab=${t.id}`} aria-current={tab === t.id ? "page" : undefined}
+                className={`-mb-px inline-block border-b-2 px-3 py-2 text-sm ${tab === t.id ? "border-accent font-semibold text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
+                {t.label}{t.id === "documents" ? ` (${documents.length})` : t.id === "matters" ? ` (${matters.length})` : ""}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {tab === "risk" && (
+        <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" data-testid="risk-history">
+          <h2 className="font-semibold">Risk assessment history</h2>
+          {riskHistory.length === 0 ? <p className="text-sm text-muted">No assessments yet.</p> : (
+            <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+              {riskHistory.map((ra) => (
+                <li key={ra.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <span className="flex items-center gap-2"><RiskChip level={ra.final} /><span className="text-muted">score {ra.score}{ra.overrideReason ? ` · changed from ${ra.calculated.toLowerCase()}: ${ra.overrideReason}` : ""}</span></span>
+                  <span className="text-muted">{ra.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {tab === "matters" && (
+        <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
+          <div className="flex items-center justify-between"><h2 className="font-semibold">Matters</h2>{can(r, "client.edit") && <Link href="/app/matters/new" className="text-sm text-accent underline">New Matter</Link>}</div>
+          {matters.length === 0 ? <p className="text-sm text-muted">No matters for this client yet.</p> : (
+            <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+              {matters.map((m) => (
+                <li key={m.matter.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <Link href={`/app/matters/${m.matter.id}`} className="font-medium text-accent hover:underline">{m.matter.title}</Link>
+                  <span className="text-muted">{m.matter.status.toLowerCase().replace("_", " ")} · opened {m.matter.createdAt.toISOString().slice(0, 10)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {cf.file.source === "back-book" && cf.file.status === "OPEN" && (
         <p role="note" className="rounded border border-border px-3 py-2 text-sm">
@@ -172,7 +251,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       {!decided && (
-        <Card title={items.length ? "What to do next" : "Ready to decide"}>
+        <Card title={items.length ? "What to do next" : "Ready to decide"} hide={tab !== "overview"}>
           {items.length ? (
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               {items.map((i) => (
@@ -186,7 +265,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Client data" id="client-data">
+        <Card title="Client data" id="client-data" hide={!show("client-data")}>
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             {Object.entries(d).filter(([k]) => k !== "portalDeclaration" && k !== "additionalEddCaseIds").filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0) && typeof v !== "boolean").map(([k, v]) => (
               <div key={k} className="contents">
@@ -206,7 +285,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </Card>
 
         {cf.party.kind === "NATURAL" ? (
-          <Card title="Identity verification (Art. 22)" id="identity">
+          <Card title="Identity verification (Art. 22)" id="identity" hide={!show("identity")}>
             {cf.verifications.length ? (
               <ul className="text-sm">
                 {cf.verifications.map((v) => (
@@ -263,7 +342,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
 
           </Card>
         ) : (
-          <Card title="Register extract (Art. 22(7), 23(4))" id="identity">
+          <Card title="Register extract (Art. 22(7), 23(4))" id="identity" hide={!show("extract")}>
             {cf.extracts.length ? (
               <ul className="space-y-3 text-sm">
                 {cf.extracts.map((x) => {
@@ -352,7 +431,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         )}
       </div>
 
-      <Card title="Client portal and documents">
+      <Card title="Client portal and documents" id="documents" hide={!show("documents")}>
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 text-sm">
             {links.length > 0 && (
@@ -415,7 +494,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       </Card>
 
       {cf.bo && (
-        <Card title="Ownership and beneficial owners (Art. 51–60)" id="ownership">
+        <Card title="Ownership and beneficial owners (Art. 51–60)" id="ownership" hide={!show("ownership")}>
           {cf.tree.links.length === 0 ? (
             <p className="text-sm text-muted">No shareholders or controllers recorded yet.</p>
           ) : (
@@ -543,7 +622,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </Card>
       )}
 
-      <Card title="Checks per person (Art. 20, 22, 58)" id="checks">
+      <Card title="Checks per person (Art. 20, 22, 58)" id="checks" hide={!show("checks")}>
         <p className="text-xs text-muted">What each person or company in the structure needs, from their role. Several roles: the strictest applies. Unknown role: the strictest check.</p>
         <ul className="divide-y divide-border rounded-lg border border-border text-sm" data-testid="checks-per-person">
           {cf.checks.map((c) => (
@@ -564,7 +643,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </ul>
       </Card>
 
-      <Card title="Screening (sanctions, PEP)" id="screening">
+      <Card title="Screening (sanctions, PEP)" id="screening" hide={!show("screening")}>
         <p className="text-xs text-muted">
           Every person and company in the structure is screened. Screening can&apos;t be reduced for low-risk clients. The PEP/RCA data provider is
           not connected yet; record known PEP status on the client data.
@@ -624,7 +703,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         )}
       </Card>
 
-      <Card title={`Risk: ${cf.risk.level} (score ${cf.risk.score})`} id="risk">
+      <Card title={`Risk: ${cf.risk.level} (score ${cf.risk.score})`} id="risk" hide={!show("risk")}>
         {cf.risk.factors.length ? (
           <table className="w-full text-sm">
             <tbody className="divide-y divide-border">
@@ -661,7 +740,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       </Card>
 
       {(cf.risk.eddRequired || cf.state.isPep) && (
-        <Card title="Enhanced due diligence (Art. 34, 42)" id="edd">
+        <Card title="Enhanced due diligence (Art. 34, 42)" id="edd" hide={!show("edd")}>
           {cf.risk.eddRequired && (
             <ActionForm action={eddChecklistAction.bind(null, fileId)} className="space-y-2">
               {EDD_CHECKLIST.map((i) => (
@@ -701,7 +780,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         </Card>
       )}
 
-      <Card title="Scope of due diligence" id="scope">
+      <Card title="Scope of due diligence" id="scope" hide={!show("scope")}>
         {cf.file.scope === "identification-only" ? (
           <p className="text-sm">
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Identification only</span>{" "}
@@ -735,7 +814,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       </Card>
 
       {!decided && can(r, "client.accept") && (
-        <Card title="Decision" id="decision">
+        <Card title="Decision" id="decision" hide={!show("decision")}>
           <div className="grid gap-6 sm:grid-cols-2">
             <ActionForm action={acceptAction.bind(null, fileId)} className="space-y-3">
               <h3 className="text-sm font-semibold">Accept the client</h3>
@@ -767,7 +846,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
-        <Card title="Periodic refresh (Art. 26)">
+        <Card title="Periodic refresh (Art. 26)" hide={!show("refresh")}>
           <p className="text-sm text-muted">
             Due {cf.file.nextRefreshOn?.toISOString().slice(0, 10) ?? "—"}. 30 days before, the client automatically gets a link to confirm nothing changed; screening re-runs in the
             background. You can also refresh now after updating the file.
@@ -777,7 +856,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
-        <Card title="End the relationship">
+        <Card title="End the relationship" hide={!show("end")}>
           <ActionForm action={endAction.bind(null, fileId)} className="max-w-xl space-y-3">
             <input type="hidden" name="kind" value="TERMINATED" />
             <Field label="Reason" name="reason" required hint="e.g. engagement ended, or CDD could no longer be kept up to date." />
@@ -795,7 +874,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       {can(r, "case.raise") && <RaiseSuspicion action={raiseSuspicionAction.bind(null, { partyIds: [cf.party.id], matterIds: [] })} />}
 
       {approvals.length > 0 && (
-        <Card title="Decisions and approvals">
+        <Card title="Decisions and approvals" hide={!show("approvals")}>
           <ul className="text-sm">
             {approvals.map((a) => (
               <li key={a.id}>
@@ -806,7 +885,8 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </ul>
         </Card>
       )}
-      <details className="rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" id="activity">
+      {(tab === "overview" || tab === "activity") && (
+      <details className="rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" id="activity" open={tab === "activity"}>
         <summary className="cursor-pointer font-semibold">Activity ({activity.length})</summary>
         <ol className="mt-3 space-y-1 text-sm">
           {activity.map((a) => (
@@ -819,6 +899,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           {activity.length === 0 && <li className="text-muted">Nothing yet.</li>}
         </ol>
       </details>
+      )}
     </div>
   );
 }

@@ -30,12 +30,12 @@ export function toCsv(rows: (string | number | null | undefined)[][]): string {
   }).join(",")).join("\r\n") + "\r\n";
 }
 
-export async function buildRegister(tx: Tx, id: RegisterId): Promise<(string | number | null)[][]> {
+export async function buildRegister(tx: Tx, id: RegisterId, only?: string[]): Promise<(string | number | null)[][]> {
   const users = new Map((await tx.user.findMany({ select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   const who = (uid: string | null | undefined) => (uid ? users.get(uid) ?? "former user" : "system");
   switch (id) {
     case "clients": {
-      const files = await tx.cddFile.findMany({ where: { role: "CLIENT" }, orderBy: { createdAt: "asc" }, include: { party: true, riskAssessments: { orderBy: { createdAt: "desc" }, take: 1 } } });
+      const files = await tx.cddFile.findMany({ where: { role: "CLIENT", ...(only?.length ? { id: { in: only } } : {}) }, orderBy: { createdAt: "asc" }, include: { party: true, riskAssessments: { orderBy: { createdAt: "desc" }, take: 1 } } });
       return [["Client", "Type", "Status", "Risk", "Scope", "Source", "Onboarded", "Decided", "Next review"],
         ...files.map((f) => [f.party.displayName, f.party.kind === "NATURAL" ? "Individual" : "Entity", STATUS_LABEL[f.status] ?? f.status, f.riskAssessments[0]?.final ?? "", f.scope, f.source, d(f.createdAt), d(f.decidedAt), d(f.nextRefreshOn)])];
     }

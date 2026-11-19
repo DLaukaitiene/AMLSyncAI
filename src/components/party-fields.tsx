@@ -4,12 +4,37 @@ import { useState } from "react";
 import { CountryField, Field } from "./form";
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
-export function PartyFields({ prefix = "", allowLegal = true, compact = false }: { prefix?: string; allowLegal?: boolean; compact?: boolean }) {
+/** "What are you adding?" options on Add Client (ClearAML's wording). */
+const CLIENT_TYPES = [
+  { id: "individual", label: "Individual or sole trader", hint: "A person, including someone trading under their own name", kind: "NATURAL", legalForm: "" },
+  { id: "company", label: "Company", hint: "Private or public limited company", kind: "LEGAL", legalForm: "" },
+  { id: "trust", label: "Trust", hint: "Express trust or similar legal arrangement", kind: "LEGAL", legalForm: "Trust" },
+  { id: "partnership", label: "Partnership", hint: "General or limited partnership", kind: "LEGAL", legalForm: "Partnership" },
+  { id: "other", label: "Other (association, club…)", hint: "Association, foundation, co-operative, public body", kind: "LEGAL", legalForm: "Association" },
+] as const;
+
+export function PartyFields({ prefix = "", allowLegal = true, compact = false, chooser = false }: { prefix?: string; allowLegal?: boolean; compact?: boolean; chooser?: boolean }) {
   const [kind, setKind] = useState<"NATURAL" | "LEGAL">("NATURAL");
+  const [clientType, setClientType] = useState<(typeof CLIENT_TYPES)[number]["id"]>("individual");
+  const legalFormDefault = CLIENT_TYPES.find((t) => t.id === clientType)?.legalForm ?? "";
   const n = (k: string) => prefix + k;
   return (
     <div className="space-y-4">
-      {allowLegal && (
+      {chooser && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1 font-semibold">What are you adding?</legend>
+          <input type="hidden" name={n("kind")} value={kind} />
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {CLIENT_TYPES.map((t) => (
+              <label key={t.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3 text-sm transition ${clientType === t.id ? "border-accent bg-accent/10" : "border-border hover:border-accent"}`}>
+                <input type="radio" name="clientType" aria-label={t.label} value={t.id} checked={clientType === t.id} onChange={() => { setClientType(t.id); setKind(t.kind); }} className="mt-1" />
+                <span><span className="block font-semibold">{t.label}</span><span className="block text-xs text-muted">{t.hint}</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      {allowLegal && !chooser && (
         <div role="radiogroup" aria-label="Type" className="flex gap-4 text-sm">
           {(["NATURAL", "LEGAL"] as const).map((k) => (
             <label key={k} className="flex items-center gap-2">
@@ -19,7 +44,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false }:
           ))}
         </div>
       )}
-      {!allowLegal && <input type="hidden" name={n("kind")} value="NATURAL" />}
+      {!allowLegal && !chooser && <input type="hidden" name={n("kind")} value="NATURAL" />}
       {kind === "NATURAL" ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="First names (all)" name={n("firstNames")} required />
@@ -53,7 +78,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false }:
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Legal name" name={n("name")} required />
-          <Field label="Legal form" name={n("legalForm")} />
+          <Field key={legalFormDefault} label="Legal form" name={n("legalForm")} defaultValue={legalFormDefault} hint={clientType === "trust" ? "Trustees, settlors, protectors and beneficiaries are added as owners and controllers after you save." : undefined} />
           <Field label="Other names" name={n("otherNames")} hint="Trading or previous names — up to 5, separated by commas. All are screened." />
           <Field label="Registration number" name={n("registrationNumber")} />
           <CountryField label="Country of creation" name={n("countryOfCreation")} />
