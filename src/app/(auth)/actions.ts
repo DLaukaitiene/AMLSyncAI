@@ -55,7 +55,8 @@ export async function loginAction(_: ActionState, fd: FormData): Promise<ActionS
   const r = await passwordLogin(String(fd.get("email") ?? ""), String(fd.get("password") ?? ""), ip, userAgent);
   if (!r.ok) return { error: r.error };
   await createSession(r.user, r.user.mfaEnrolled ? "MFA_PENDING" : "MFA_SETUP");
-  redirect(r.user.mfaEnrolled ? "/login/mfa" : "/mfa/setup");
+  const next = safeNext(fd.get("next"), "");
+  redirect(r.user.mfaEnrolled ? `/login/mfa${next ? `?next=${encodeURIComponent(next)}` : ""}` : "/mfa/setup");
 }
 
 export async function mfaAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -67,7 +68,7 @@ export async function mfaAction(_: ActionState, fd: FormData): Promise<ActionSta
   const { ip, userAgent } = await requestMeta();
   await securityEvent({ firmId: s.user.firmId, userId: s.user.id, kind: "login", ip, userAgent });
   await newDeviceCheck(s.user.id, ip, userAgent);
-  redirect("/app");
+  redirect(safeNext(fd.get("next")));
 }
 
 export async function enrollTotpAction(_: ActionState, fd: FormData): Promise<ActionState> {

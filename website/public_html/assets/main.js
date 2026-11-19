@@ -1,5 +1,27 @@
-// AMLSync — small site script (mobile menu, footer year, contact form)
+// AMLSync — small site script (mobile menu, footer year, contact form, audience measurement)
 (function () {
+  // Cookieless audience measurement (no cookies, no IP stored; see privacy.html §3).
+  // Respects Do Not Track and Global Privacy Control.
+  var T = 'https://app.amlsync.com/api/t';
+  var off = navigator.doNotTrack === '1' || navigator.globalPrivacyControl === true;
+  function send(url, obj) {
+    try {
+      var body = JSON.stringify(obj);
+      if (navigator.sendBeacon) navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }));
+      else fetch(url, { method: 'POST', body: body, mode: 'cors', keepalive: true });
+    } catch { /* never break the page */ }
+  }
+  function track(name) {
+    if (off) return;
+    var q = new URLSearchParams(location.search);
+    send(T, { path: location.pathname, ref: name ? '' : document.referrer, us: q.get('utm_source') || '', um: q.get('utm_medium') || '', uc: q.get('utm_campaign') || '', lang: (navigator.language || '').slice(0, 10), name: name || '' });
+  }
+  track();
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href*="app.amlsync.com"]');
+    if (a) track(/signup/.test(a.href) ? 'app_signup_click' : 'app_click');
+  });
+
   // Mobile menu
   var toggle = document.querySelector('.nav-toggle');
   var links = document.querySelector('.nav-links');
@@ -50,6 +72,9 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.success) {
+          // Keep a copy as a lead in AMLSync's own system (no third-party CRM).
+          send('https://app.amlsync.com/api/leads', { name: data.get('name'), company: data.get('company'), email: data.get('email'), need: data.get('need'), message: data.get('message') });
+          track('contact_submit');
           form.reset();
           form.style.display = 'none';
           status.className = 'form-status ok';

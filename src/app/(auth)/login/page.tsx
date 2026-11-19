@@ -6,8 +6,8 @@ import { loginAction } from "../actions";
 
 export const metadata: Metadata = { title: "Sign in · AMLSync App" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string; recovery?: string }> }) {
-  const { reset, recovery } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string; recovery?: string; next?: string }> }) {
+  const { reset, recovery, next } = await searchParams;
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Sign in</h1>
@@ -15,6 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {recovery && <p role="status" className="text-sm">Confirmed. Sign in after {recovery.slice(0, 16).replace("T", " ")} UTC to set up two-factor again.</p>}
       <ActionForm action={loginAction}>
         <Honeypot />
+        {next && <input type="hidden" name="next" value={next} />}
         <PowChallenge purpose="login" />
         <Field label="Email" name="email" type="email" required autoComplete="username" />
         <Field label="Password" name="password" type="password" required autoComplete="current-password" />

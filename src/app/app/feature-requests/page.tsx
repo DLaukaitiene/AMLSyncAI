@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
-import { listRequests, isPlatformAdmin } from "@/lib/server/feedback";
+import { listRequests } from "@/lib/server/feedback";
+import { hasAdminPermission } from "@/lib/server/backoffice/access";
 import { STATUS_LABELS, type Status } from "@/lib/feedback/rules";
 
 export default async function FeatureRequestsPage({ searchParams }: { searchParams: Promise<{ mine?: string; status?: string; q?: string }> }) {
@@ -12,7 +13,7 @@ export default async function FeatureRequestsPage({ searchParams }: { searchPara
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Feature requests</h1>
         <span className="flex gap-4 text-sm">
-          {isPlatformAdmin(s.user.email) && <Link href="/admin/feature-requests" className="text-accent underline">Triage</Link>}
+          {(await hasAdminPermission(s.user.email, "features.triage")) && <Link href="/adminpage1&/feature-requests" className="text-accent underline">Triage</Link>}
           <Link href="/app/feature-requests/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Suggest a feature</Link>
         </span>
       </div>

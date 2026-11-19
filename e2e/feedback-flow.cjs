@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-// Feature requests (spec §4.10, §11.13). Server must run with PLATFORM_ADMIN_EMAILS=triage@amlsyncai-team.lt
+// Feature requests (spec §4.10, §11.13). Server must run with BACKOFFICE_OWNER_EMAIL=triage@amlsyncai-team.lt BACKOFFICE_TEAM=on
 //   CODE1=… CODE2=… CODE3=… node e2e/feedback-flow.cjs
 const { chromium } = require("playwright");
 const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
@@ -68,7 +68,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("11th request in a day refused");
 
   // Triage: regulatory first, status rules, notifications, merge
-  await t.goto(BASE + "/admin/feature-requests");
+  await t.goto(BASE + "/adminpage1&/feature-requests");
   const first = await t.getByTestId("triage-row").first().innerText();
   if (!/regulatory/.test(first) || !/FNTT/.test(first)) throw new Error("regulatory not first: " + first);
   if (/Beta Namai|Alfa Apskaita/.test(await t.locator("main").innerText())) throw new Error("firm names in triage");
@@ -84,7 +84,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("'Not planned' needs a reason; 'Planned' notified requester and voter");
   await t.goto(BASE + "/dev/mailbox");
   for (const who of ["anna@alfa.lt", "bob@beta.lt"]) await t.locator(`article[data-to="${who}"]`, { hasText: "Feature request: Planned" }).first().waitFor();
-  await t.goto(BASE + "/admin/feature-requests");
+  await t.goto(BASE + "/adminpage1&/feature-requests");
   const dup = t.getByTestId("triage-row").filter({ has: t.getByRole("link", { name: /Unique request number 2 about/ }) });
   await dup.getByText("Manage").click();
   await dup.locator("select[name=targetId]").selectOption({ label: "Export the compliance calendar to Outlook" });

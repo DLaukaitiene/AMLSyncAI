@@ -1,4 +1,5 @@
 import "server-only";
+import { backofficeOwner } from "@/lib/backoffice/roles";
 import type { FeatureRequestStatus } from "@prisma/client";
 import { adminDb } from "./db";
 import { appUrl, sendEmail } from "./email";
@@ -14,8 +15,9 @@ import { MAX_REQUESTS_PER_DAY, similarRequests, spamReason, statusChangeProblem,
  * hold no links to tenant records).
  */
 
+/** Owners by configuration. Backoffice roles: src/lib/server/backoffice/access.ts. */
 export function isPlatformAdmin(email: string): boolean {
-  return (process.env.PLATFORM_ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean).includes(email.toLowerCase());
+  return email.toLowerCase() === backofficeOwner();
 }
 
 const visible = { hidden: false, mergedIntoId: null };

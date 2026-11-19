@@ -5,6 +5,7 @@ import { sendEmail, appUrl } from "./email";
 import { hit } from "./rate-limit";
 import { allowedNow, limitMessage, unusualVolume, type LimitKind } from "@/lib/security/screening-caps";
 import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
+import { serviceBlock } from "./invoicing";
 
 /**
  * Takes screening "slots" for the parties a person asked to screen. Returns the
@@ -12,6 +13,8 @@ import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
  * acceptance) until the firm's limit is raised or the window passes.
  */
 export async function takeScreeningSlots(tx: Tx, firmId: string, partyIds: string[], source: "lists" | "didit") {
+  const blocked = await serviceBlock(tx, firmId);
+  if (blocked) return { allowed: [] as string[], notScreened: partyIds.length, message: blocked };
   const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { name: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } });
   const limits = { perMinute: firm.screenLimitMinute, perDay: firm.screenLimitDay, perMonth: firm.screenLimitMonth };
   const now = new Date();
@@ -40,6 +43,6 @@ async function limitReached(firmId: string, firmName: string, kind: LimitKind, l
   await sendEmail(
     OPS_ALERT_EMAIL,
     `AMLSync App: ${firmName} reached its ${kind === "day" ? "daily" : "monthly"} screening limit`,
-    `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/admin/billing")} (firm id ${firmId}).`,
+    `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/adminpage1&/billing")} (firm id ${firmId}).`,
   );
 }

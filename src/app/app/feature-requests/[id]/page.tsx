@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/server/session";
-import { getRequest, isPlatformAdmin } from "@/lib/server/feedback";
+import { getRequest } from "@/lib/server/feedback";
+import { hasAdminPermission } from "@/lib/server/backoffice/access";
 import { STATUS_LABELS, type Status } from "@/lib/feedback/rules";
 import { ActionButton } from "@/components/action-button";
 import { hideCommentAction, voteAction } from "../actions";
@@ -9,7 +10,7 @@ import { CommentForm } from "./comment-form";
 export default async function FeatureRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const s = await requireUser();
-  const team = isPlatformAdmin(s.user.email);
+  const team = await hasAdminPermission(s.user.email, "features.triage");
   const r = await getRequest(s, id, team);
   if (!r) notFound();
   return (

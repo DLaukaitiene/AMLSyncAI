@@ -19,6 +19,8 @@ export function customerOf(f: { name: string; homeState: string; billingName: st
  * OVERDUE_PAUSE_DAYS, or this month's net spend would pass the firm's limit.
  */
 export async function assertCanSpend(tx: Tx, firmId: string, cents: number, today = new Date()): Promise<void> {
+  const blocked = await serviceBlock(tx, firmId);
+  if (blocked) throw new SpendError(blocked);
   const cutoff = addDays(iso(today), -OVERDUE_PAUSE_DAYS);
   const overdue = await tx.invoice.findFirst({ where: { status: "issued", dueOn: { lt: cutoff } }, orderBy: { dueOn: "asc" } });
   if (overdue) throw new SpendError(`Paid checks are paused: invoice ${overdue.number} was due on ${overdue.dueOn}. Once it is paid, checks resume.`);
@@ -31,6 +33,18 @@ export async function assertCanSpend(tx: Tx, firmId: string, cents: number, toda
 }
 
 export class SpendError extends Error {}
+
+/**
+ * Firm status set by AMLSyncAI (Backoffice §6.2): paused, suspended and closed
+ * firms keep read access and their records, but cannot start new checks or screenings.
+ */
+export async function serviceBlock(tx: Tx, firmId: string): Promise<string | null> {
+  const f = await tx.firm.findUnique({ where: { id: firmId }, select: { status: true } });
+  if (!f || f.status === "active") return null;
+  return f.status === "cancelled"
+    ? "This subscription has ended. Your records stay available read-only until their retention period ends."
+    : `New checks and screenings are ${f.status === "paused" ? "paused" : "suspended"} for your firm. Your records stay available. Contact contact@amlsync.com.`;
+}
 
 /**
  * Issues last month's invoices for every firm (idempotent: one invoice per firm and month).

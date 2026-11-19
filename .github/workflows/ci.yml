@@ -32,7 +32,8 @@ jobs:
       SCAN_MODE: basic
       AI_PROVIDER: mock
       CRON_SECRET: ci-cron-secret
-      PLATFORM_ADMIN_EMAILS: triage@amlsyncai-team.lt
+      BACKOFFICE_OWNER_EMAIL: triage@amlsyncai-team.lt
+      BACKOFFICE_TEAM: "on"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

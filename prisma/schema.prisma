@@ -197,7 +197,7 @@ model Firm {
   sectorOther   String?  // description when the sector is OTHER
   defaultCddScope String @default("full") // scope for new client files: full | identification-only
   // Subscription ended: records stay read-only (archive) until archiveUntil, then retention deletes them.
-  status        String    @default("active") // active | cancelled
+  status        String    @default("active") // active | paused | suspended (Backoffice) | cancelled
   cancelledAt   DateTime?
   archiveUntil  String?   // YYYY-MM-DD
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
@@ -216,6 +216,14 @@ model Firm {
   billingEmail    String?
   customFeeCents  Int?     // overrides the plan's list price (custom plans, discounts)
   spendLimitCents Int      @default(30000) // paid checks per calendar month (net); raised on request
+  // status (above) is also set by AMLSyncAI in the Backoffice (§6.2): paused and suspended block new
+  // checks and screenings, read access and retention continue; closing a firm sets cancelled.
+  statusReason    String?
+  statusChangedAt DateTime?
+  // VIES check of vatId (Backoffice §9.3)
+  viesStatus      String?  // valid | invalid | unavailable
+  viesName        String?
+  viesCheckedAt   DateTime?
   createdAt     DateTime @default(now())
 
   offices               Office[]
@@ -1131,4 +1139,316 @@ model Blob {
   key       String   @id
   data      Bytes
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Backoffice (docs/BACKOFFICE_SPEC.md). AMLSyncAI-internal tables: row-level
+// security is enabled without policies (prisma/rls.sql), so the tenant
+// connection can read none of them. They never hold customers' client data.
+// ---------------------------------------------------------------------------
+
+/// AMLSyncAI admin team (§4.1). Emails in PLATFORM_ADMIN_EMAILS are always Owners.
+model AdminMember {
+  email      String    @id
+  roles      String[] // OWNER | OPERATIONS | SUPPORT | FINANCE | SECURITY | CONTENT_EDITOR | CONTENT_REVIEWER | SALES | AUDITOR
+  addedBy    String
+  createdAt  DateTime  @default(now())
+  removedAt  DateTime?
+  reviewedAt DateTime? // quarterly access review (§4.2)
+  reviewedBy String?
+}
+
+/// Append-only, hash-chained log of every admin action (§2.4, §21).
+model AdminAuditEvent {
+  id            BigInt   @id @default(autoincrement())
+  at            DateTime
+  adminEmail    String
+  action        String
+  targetType    String
+  targetId      String?
+  reason        String?
+  details       Json?
+  approverEmail String?
+  prevHash      String
+  hash          String   @unique
+
+  @@index([targetType, targetId])
+  @@index([adminEmail, at])
+}
+
+/// Four-eyes approvals for dangerous actions (§2.5).
+model AdminApproval {
+  id          String    @id @default(uuid()) @db.Uuid
+  action      String // credit.grant | admin.set-roles | firm.close | firms.export
+  payload     Json
+  summary     String
+  reason      String
+  requestedBy String
+  status      String    @default("pending") // pending | executed | rejected | failed | expired
+  decidedBy   String?
+  decidedAt   DateTime?
+  result      String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// Internal notes, tags and account owner per firm (§6.2 Overview).
+model FirmAdminMeta {
+  firmId         String   @id @db.Uuid
+  tags           String[]
+  accountManager String?
+  updatedAt      DateTime @updatedAt
+}
+
+model FirmNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @db.Uuid
+  authorEmail String
+  text        String
+  createdAt   DateTime @default(now())
+
+  @@index([firmId, createdAt])
+}
+
+/// AMLSyncAI's own KYB of a customer firm (§6.2): registry reference, directors, BOs, sanctions screening.
+model FirmKyb {
+  id               String   @id @default(uuid()) @db.Uuid
+  firmId           String   @db.Uuid
+  registryRef      String?
+  directors        String[]
+  beneficialOwners String[]
+  russiaBelarus    String // none | link-found | not-checked (Reg. 833/2014 restrictions [verify])
+  result           String // clear | possible-match | confirmed-hit
+  matches          Json // [{ subject, matchedName, list, score }]
+  decision         String? // cleared | blocked (after review of a possible match)
+  decisionNote     String?
+  checkedBy        String
+  checkedAt        DateTime @default(now())
+
+  @@index([firmId, checkedAt])
+}
+
+/// Incident and personal-data-breach register (§10.3).
+model Incident {
+  id                  String    @id @default(uuid()) @db.Uuid
+  title               String
+  severity            String // sev1 | sev2 | sev3 | sev4
+  status              String    @default("open") // open | contained | resolved | closed
+  personalData        Boolean   @default(false)
+  controllerData      Boolean   @default(false) // AMLSync is controller (visitors, leads, own users): 72-hour DPA clock
+  systems             String[]
+  firmIds             String[]
+  summary             String
+  rootCause           String?
+  detectedAt          DateTime
+  resolvedAt          DateTime?
+  firmsNotifiedAt     DateTime?
+  dpaNotifiedAt       DateTime?
+  dpaNotRequiredReason String?
+  public              Boolean   @default(false) // shown on the public status page
+  publicSummary       String?
+  createdBy           String
+  createdAt           DateTime  @default(now())
+  updates             IncidentUpdate[]
+}
+
+model IncidentUpdate {
+  id          String   @id @default(uuid()) @db.Uuid
+  incidentId  String   @db.Uuid
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  authorEmail String
+  text        String
+  at          DateTime @default(now())
+
+  @@index([incidentId])
+}
+
+/// Data subject requests to AMLSync (§12.2).
+model DataSubjectRequest {
+  id             String    @id @default(uuid()) @db.Uuid
+  receivedOn     String // YYYY-MM-DD
+  requesterName  String
+  requesterEmail String
+  kind           String // access | erasure | rectification | portability | objection | restriction
+  role           String // controller | processor
+  firmId         String?   @db.Uuid // processor requests: the firm it was forwarded to
+  status         String    @default("received") // received | identity-check | in-progress | forwarded | completed | rejected
+  dueOn          String
+  extended       Boolean   @default(false)
+  notes          String?
+  closedAt       DateTime?
+  createdBy      String
+  createdAt      DateTime  @default(now())
+}
+
+/// First-party, cookieless audience measurement (Backoffice §7.5–7.6). No IP, no cookie:
+/// `visitor` is a hash of IP + user agent with a salt that changes every day.
+model WebEvent {
+  id          BigInt   @id @default(autoincrement())
+  at          DateTime @default(now())
+  site        String // web (amlsync.com) | app (app.amlsync.com public pages)
+  kind        String   @default("pageview") // pageview | event
+  name        String? // event name, e.g. contact_submit, app_cta
+  path        String
+  referrer    String? // host only
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  country     String?  @db.Char(2)
+  device      String // desktop | mobile | tablet
+  browser     String
+  lang        String?
+  visitor     String
+  bot         String? // null = human
+
+  @@index([at])
+  @@index([visitor])
+}
+
+/// Leads (light CRM, §7.3) — kept in AMLSync's own database instead of a CRM tool.
+model Lead {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String
+  email      String
+  company    String?
+  country    String?   @db.Char(2)
+  need       String?
+  message    String?
+  source     String // website-form | unfinished-signup | manual
+  stage      String    @default("new") // new | contacted | demo | trial | customer | lost
+  owner      String?
+  nextStep   String?
+  nextStepOn String?
+  lostReason String?
+  firmId     String?   @db.Uuid
+  visitor    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  notes      LeadNote[]
+
+  @@index([email])
+  @@index([stage])
+}
+
+model LeadNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  leadId      String   @db.Uuid
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorEmail String
+  text        String
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+}
+
+/// Support tickets (§16): raised by firm users in the app, answered in the Backoffice.
+model Ticket {
+  id              String    @id @default(uuid()) @db.Uuid
+  number          Int       @unique @default(autoincrement())
+  firmId          String    @db.Uuid
+  userId          String    @db.Uuid
+  subject         String
+  category        String // technical | billing | account | advisory | other
+  priority        String // P1 | P2 | P3
+  status          String    @default("open") // open | waiting-customer | resolved | closed
+  slaDueAt        DateTime
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  csat            Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  messages        TicketMessage[]
+
+  @@index([firmId, createdAt])
+  @@index([status])
+}
+
+model TicketMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  ticketId    String   @db.Uuid
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromTeam    Boolean
+  authorEmail String
+  text        String
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+/// Communications (§18): in-app banner and optional email to a segment of firms.
+model Announcement {
+  id         String    @id @default(uuid()) @db.Uuid
+  title      String
+  body       String
+  level      String    @default("info") // info | warning
+  audience   Json // { country?, plan?, status?, sector? }; {} = all firms
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime?
+  email      Boolean   @default(false)
+  emailState String    @default("none") // none | awaiting-approval | sent
+  emailCount Int       @default(0)
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  dismissals AnnouncementDismissal[]
+}
+
+model AnnouncementDismissal {
+  announcementId String       @db.Uuid
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  userId         String       @db.Uuid
+  at             DateTime     @default(now())
+
+  @@id([announcementId, userId])
+}
+
+/// Vendor unit costs and monthly vendor invoices (§9.5).
+model VendorPrice {
+  id            String   @id @default(uuid()) @db.Uuid
+  vendor        String // didit
+  checkType     String // charge description key, e.g. idv | aml | registry
+  unitCostCents Int
+  validFrom     String // YYYY-MM-DD
+  createdBy     String
+  createdAt     DateTime @default(now())
+}
+
+model VendorInvoice {
+  id          String   @id @default(uuid()) @db.Uuid
+  vendor      String
+  period      String // YYYY-MM
+  amountCents Int
+  reference   String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  @@unique([vendor, period])
+}
+
+/// AMLSync Expert / managed service (§19) under Art. 18 outsourcing agreements.
+model ExpertEngagement {
+  id                 String    @id @default(uuid()) @db.Uuid
+  firmId             String    @db.Uuid
+  scope              String
+  agreementOn        String // YYYY-MM-DD, Art. 18 agreement signed
+  supervisorNotified Boolean   @default(false)
+  hourlyCents        Int?
+  status             String    @default("active") // active | ended
+  createdBy          String
+  createdAt          DateTime  @default(now())
+  tasks              ExpertTask[]
+}
+
+model ExpertTask {
+  id           String           @id @default(uuid()) @db.Uuid
+  engagementId String           @db.Uuid
+  engagement   ExpertEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  title        String
+  dueOn        String?
+  analyst      String?
+  status       String           @default("todo") // todo | in-progress | review | done
+  minutes      Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 }
