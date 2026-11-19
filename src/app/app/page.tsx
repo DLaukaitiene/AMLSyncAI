@@ -11,6 +11,7 @@ import { toIsoDate, addCalendarDays } from "@/lib/rules/dates";
 import { complianceHealth, programStatus } from "@/lib/firm/compliance-health";
 import { TASK_KIND, taskHref } from "@/lib/tasks/labels";
 import { RiskChip, StatusChip } from "@/components/chips";
+import { OBJECT_LABEL } from "@/lib/audit-labels";
 
 /**
  * Dashboard laid out like ClearAML's: alerts feed, metric cards, risk
@@ -310,7 +311,7 @@ export default async function Dashboard() {
             <ul className="mt-2 divide-y divide-border text-sm">
               {data.activity.map((e) => (
                 <li key={String(e.id)} className="flex flex-wrap justify-between gap-2 py-1.5">
-                  <span>{e.userId ? data.userNames.get(e.userId) ?? "Former user" : "System"} <span className="text-muted">{e.action} · {e.objectType}</span></span>
+                  <span>{e.userId ? data.userNames.get(e.userId) ?? "Former user" : "System"} <span className="text-muted">{e.action} · {(OBJECT_LABEL[e.objectType] ?? e.objectType).toLowerCase()}</span></span>
                   <span className="text-muted">{e.at.toISOString().slice(0, 16).replace("T", " ")}</span>
                 </li>
               ))}

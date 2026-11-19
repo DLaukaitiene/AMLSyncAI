@@ -3,10 +3,10 @@ import { Download } from "lucide-react";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
+import { OBJECT_LABEL } from "@/lib/audit-labels";
 
 const PAGE = 50;
 const ACTIONS = ["create", "update", "delete", "view", "export", "approve", "screen", "purge"];
-const OBJECT_LABEL: Record<string, string> = { CddFile: "Client file", Party: "Person / entity", Case: "Case", Report: "FIU report", Matter: "Matter", Document: "Document", IdentityVerification: "Identity verification", ClientRiskAssessment: "Risk assessment", ScreeningResult: "Screening", StaffScreening: "Staff screening", PolicyDocument: "Policy", FirmRiskAssessment: "Business risk assessment", User: "Team member", Firm: "Firm", Register: "Register", CountryProfile: "Country Profile", Approval: "Approval", Invoice: "Invoice", Task: "Task" };
 
 export default async function AuditTrailPage({ searchParams }: { searchParams: Promise<{ action?: string; user?: string; page?: string }> }) {
   const s = await requireUser("securityLog.view");
