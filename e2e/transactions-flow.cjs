@@ -83,6 +83,14 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.getByTestId("client-transactions").getByText("€20,000").waitFor();
   log("client profile Transactions tab");
 
+  // CSV import: one good row (cash → flagged), one row with an unknown payer
+  await p.goto(BASE + "/app/transactions");
+  await p.locator("summary", { hasText: "Import from CSV" }).click();
+  const csvIn = "Data;Suma;Būdas;Klientas;Byla;Aprašymas\n05.11.2026;3.500,00;grynieji;Jonas Pirkėjas;Sale of Vokiečių g. 3;Second instalment\n06.11.2026;100;pavedimas;Nobody;Sale of Vokiečių g. 3;x\n";
+  await p.locator("input[type=file][name=file]").setInputFiles({ name: "bank.csv", mimeType: "text/csv", buffer: Buffer.from(csvIn) });
+  await submit(p, "Import", /1 transaction\(s\) imported, 1 flagged for review\. 1 row\(s\) not imported: line 3: "Nobody" is not a party/);
+  log("CSV import: semicolon file with European numbers imported and flagged; bad row reported with its line");
+
   await p.goto(BASE + "/app/transactions");
   await p.getByText("Threshold settings").click();
   await p.getByLabel("Cash monitoring threshold (EUR)").fill("20000");
@@ -92,7 +100,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("thresholds: cash threshold can't exceed the EU €10,000 limit; saved");
 
   const csv = await (await ctx.request.get(BASE + "/api/registers/transactions", { maxRedirects: 0 })).text();
-  if (!csv.includes("Reservation fee") || !csv.includes("investigated") || !csv.includes("Paid in crypto-assets")) throw new Error("✘ transaction log CSV: " + csv.slice(0, 300));
+  if (!csv.includes("Second instalment") || !csv.includes("Reservation fee") || !csv.includes("investigated") || !csv.includes("Paid in crypto-assets")) throw new Error("✘ transaction log CSV: " + csv.slice(0, 300));
   log("Reports: Transaction Log CSV with flags and reviews");
 
   console.log("page errors:", errors);

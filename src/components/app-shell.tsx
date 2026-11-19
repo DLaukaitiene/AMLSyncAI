@@ -21,6 +21,7 @@ const ICONS: Record<string, LucideIcon> = {
 export interface NavItem { href: string; label: string; icon: string; children?: NavItem[] }
 
 function isActive(path: string, href: string) {
+  if (href === "/app/support" && path.startsWith("/app/help/")) return true;
   return href === "/app" || href === "/app/firm" ? path === href : path === href || path.startsWith(href + "/");
 }
 

@@ -1,17 +1,45 @@
 import Link from "next/link";
+import { HELP_ARTICLES, HELP_TOPICS, searchHelp } from "@/lib/help/articles";
 import { requireUser } from "@/lib/server/session";
 import { adminDb } from "@/lib/server/db";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/server/tickets";
 import { createTicketAction } from "./actions";
 
-export default async function SupportPage() {
+export default async function SupportPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const s = await requireUser();
+  const q = (await searchParams).q?.trim().slice(0, 100) ?? "";
+  const found = q ? searchHelp(q) : [];
   const tickets = await adminDb.ticket.findMany({ where: { firmId: s.firm.id }, orderBy: { createdAt: "desc" }, take: 50, select: { id: true, number: true, subject: true, status: true, createdAt: true, userId: true } });
   return (
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Help Centre</h1>
+        <p className="text-sm text-muted">Guides for every part of the app, and a direct line to the AMLSync team.</p>
+      </div>
+      <form role="search" aria-label="Search help articles" className="flex gap-2">
+        <input name="q" defaultValue={q} placeholder="Search help, e.g. screening, invoice, trust" aria-label="Search help articles" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+        <button className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Search</button>
+      </form>
+      {q ? (
+        <section className="space-y-2" data-testid="help-results">
+          <h2 className="font-semibold">{found.length ? `Results for “${q}”` : `Nothing found for “${q}”. Try other words or send us a request below.`}</h2>
+          <ul className="divide-y divide-border rounded-xl border border-border text-sm">
+            {found.map((a) => <li key={a.slug} className="px-4 py-2"><Link href={`/app/help/${a.slug}`} className="font-medium text-accent hover:underline">{a.title}</Link><span className="block text-muted">{a.summary}</span></li>)}
+          </ul>
+        </section>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2" data-testid="help-topics">
+          {HELP_TOPICS.map((t) => (
+            <section key={t} className="space-y-2 rounded-2xl border border-border p-4">
+              <h2 className="font-semibold">{t}</h2>
+              <ul className="space-y-1 text-sm">{HELP_ARTICLES.filter((a) => a.topic === t).map((a) => <li key={a.slug}><Link href={`/app/help/${a.slug}`} className="text-accent hover:underline">{a.title}</Link></li>)}</ul>
+            </section>
+          ))}
+        </div>
+      )}
+      <div className="space-y-1" id="request">
+        <h2 className="text-lg font-semibold">Contact support</h2>
         <p className="text-sm text-muted">Ask the AMLSync team. We answer blocking problems within 1 hour and other questions within 1 business day. Describe the problem without client names, ID numbers or case details: AMLSync never needs your clients&apos; data to help.</p>
       </div>
       <section className="space-y-2">

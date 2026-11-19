@@ -9,7 +9,8 @@ import { EmptyState } from "@/components/empty-state";
 import { toIsoDate } from "@/lib/rules/dates";
 import type { Flag } from "@/lib/rules/transaction-flags";
 import { clientFileForParties } from "@/lib/server/client-of-party";
-import { logTransactionAction, reviewTransactionAction, thresholdsAction } from "./actions";
+import { importTransactionsAction, logTransactionAction, reviewTransactionAction, thresholdsAction } from "./actions";
+import { TRANSACTION_TEMPLATE } from "@/lib/transactions/import";
 
 /**
  * Transaction Monitoring (ClearAML's layout; AMLR Art. 26): every payment in
@@ -77,8 +78,6 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
         {edit && data.links.length > 0 && (
           <details className="w-full rounded-2xl border border-border p-4 lg:w-auto lg:min-w-[40rem]">
             <summary className="cursor-pointer font-semibold">Log Transaction</summary>
-            {(
-
               <ActionForm action={logTransactionAction} className="mt-3 grid gap-4 sm:grid-cols-2">
                 <Field label="Client and matter" name="link">
                   <select name="link" className={sel} aria-label="Client and matter">{data.links.map((l) => <option key={l.id} value={`${l.matterId}:${l.partyId}`}>{l.party.displayName} — {l.matter.title}</option>)}</select>
@@ -92,7 +91,19 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="occasional" /> Occasional transaction (no ongoing relationship)</label>
                 <div className="sm:col-span-2"><Submit>Record Transaction</Submit></div>
               </ActionForm>
-            )}
+          </details>
+        )}
+        {edit && data.links.length > 0 && (
+          <details className="rounded-2xl border border-border p-4">
+            <summary className="cursor-pointer font-semibold">Import from CSV</summary>
+            <div className="mt-3 space-y-3 text-sm">
+              <p className="text-muted">Payments exported from your accounting software or bank, up to 200 rows. Columns: date, amount, method, client, matter, description, from country, third party. The matter must be open and the client must be a party to it. Every row is checked like a payment entered by hand.</p>
+              <a href={`data:text/csv;charset=utf-8,${encodeURIComponent(TRANSACTION_TEMPLATE)}`} download="transactions-template.csv" className="text-accent underline">Download the template</a>
+              <ActionForm action={importTransactionsAction} className="flex flex-wrap items-end gap-3">
+                <label className="space-y-1"><span className="block font-medium">CSV file</span><input type="file" name="file" accept=".csv,text/csv" className="block text-sm" /></label>
+                <Submit variant="secondary">Import</Submit>
+              </ActionForm>
+            </div>
           </details>
         )}
         {manage && (

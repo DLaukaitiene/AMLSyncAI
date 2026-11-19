@@ -106,6 +106,15 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   }
   log("page headings match the menu");
 
+  await p.goto(BASE + "/app/support");
+  await p.getByTestId("help-topics").getByRole("link", { name: "Transaction Monitoring" }).waitFor();
+  await p.locator("input[name=q][aria-label=\"Search help articles\"]").fill("crypto");
+  await p.getByRole("button", { name: "Search", exact: true }).click();
+  await p.getByTestId("help-results").getByRole("link", { name: "Transaction Monitoring" }).click();
+  await p.getByRole("heading", { name: "Transaction Monitoring", level: 1 }).waitFor();
+  await p.getByText("Tip:").first().waitFor();
+  log("Help Centre: topics, search and article pages");
+
   const anon = await (await b.newContext()).request.get(BASE + "/api/registers/clients", { maxRedirects: 0 });
   if (anon.status() !== 404) throw new Error("✘ signed-out register export should 404, got " + anon.status());
   log("signed-out register export: 404");

@@ -166,7 +166,6 @@ export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 export const KYB_LITE_PRICE_CENTS = 500;
 export const KYB_SHAREHOLDERS_PRICE_CENTS = 800; // only billed when a full request is delivered as Shareholders
 export const KYB_FULL_PRICE_CENTS = 1200;
-export const KYB_PRICE_CENTS = KYB_FULL_PRICE_CENTS;
 export type KybLevel = "lite" | "full";
 /** Didit search tier that sells each level ("search at the tier you intend to buy"). */
 export const KYB_SEARCH_TIER: Record<KybLevel, "basic" | "ubo"> = { lite: "basic", full: "ubo" };
