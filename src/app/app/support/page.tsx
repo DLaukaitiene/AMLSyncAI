@@ -11,7 +11,7 @@ export default async function SupportPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Help & support</h1>
+        <h1 className="text-2xl font-semibold">Help Centre</h1>
         <p className="text-sm text-muted">Ask the AMLSync team. We answer blocking problems within 1 hour and other questions within 1 business day. Describe the problem without client names, ID numbers or case details: AMLSync never needs your clients&apos; data to help.</p>
       </div>
       <section className="space-y-2">

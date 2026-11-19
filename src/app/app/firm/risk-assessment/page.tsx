@@ -28,7 +28,7 @@ export default async function RiskAssessmentPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Business-wide risk assessment</h1>
+        <h1 className="text-2xl font-semibold">Business Risk Assessment</h1>
         <p className="text-sm text-muted">AMLR Art. 10. The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</p>
       </div>
 

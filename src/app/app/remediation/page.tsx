@@ -16,7 +16,7 @@ export default async function RemediationPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Back-book remediation</h1>
+        <h1 className="text-2xl font-semibold">Import Clients</h1>
         <p className="max-w-3xl text-sm text-muted">
           Bring existing client files up to the new CDD standard (AMLR and the AMLA CDD RTS). Import your client list, then work from the top: high-risk
           files first, then the files with the most gaps. A file is remediated when it&apos;s accepted again with nothing open. Remediation deadline: per

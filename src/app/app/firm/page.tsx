@@ -22,7 +22,7 @@ export default async function FirmPage() {
   const edit = can(s.user.roles, "approve.compliance");
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-3xl">Firm compliance</h1>
+      <h1 className="text-3xl">Compliance Hub</h1>
       <p className="text-sm text-muted">Your firm&apos;s own AMLR obligations. Each part generates its document and keeps the approvals and history for your supervisor.</p>
       <ul className="grid gap-3 sm:grid-cols-2">
         {[

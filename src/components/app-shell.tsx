@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Users, Briefcase, CalendarClock, ShieldAlert, Building2, Settings, Lightbulb, ChevronDown, Menu, X,
   UserPlus, List, Upload, FilePlus2, FileText, Scale, BookOpen, GraduationCap, BadgeCheck, Megaphone, Handshake, Lock,
-  Globe2, ListChecks, UsersRound, CreditCard, ScrollText, Archive, LifeBuoy, type LucideIcon,
+  Globe2, ListChecks, UsersRound, CreditCard, ScrollText, Archive, LifeBuoy, ScanFace, BellRing, FileSpreadsheet, History, type LucideIcon,
 } from "lucide-react";
 import { Logo } from "./logo";
 
@@ -15,13 +15,13 @@ const ICONS: Record<string, LucideIcon> = {
   settings: Settings, ideas: Lightbulb, add: UserPlus, list: List, upload: Upload, newMatter: FilePlus2, report: FileText,
   risk: Scale, policies: BookOpen, training: GraduationCap, integrity: BadgeCheck, whistle: Megaphone, outsourcing: Handshake,
   privacy: Lock, country: Globe2, screening: ListChecks, team: UsersRound, billing: CreditCard, security: ScrollText, records: Archive,
-  help: LifeBuoy,
+  help: LifeBuoy, idv: ScanFace, alerts: BellRing, registers: FileSpreadsheet, audit: History,
 };
 
 export interface NavItem { href: string; label: string; icon: string; children?: NavItem[] }
 
 function isActive(path: string, href: string) {
-  return href === "/app" ? path === "/app" : path === href || path.startsWith(href + "/");
+  return href === "/app" || href === "/app/firm" ? path === href : path === href || path.startsWith(href + "/");
 }
 
 function Item({ item, path, onNavigate }: { item: NavItem; path: string; onNavigate: () => void }) {

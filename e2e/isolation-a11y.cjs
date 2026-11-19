@@ -62,7 +62,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   log(`firm A gets nothing from firm B on ${targets.length} id-based pages/routes (all 404)`);
   const fr = await a.request.get(BASE + "/app/feature-requests");
   if (/Victim Firm/.test(await fr.text())) throw new Error("feature request firm name leaked");
-  const lists = ["/app/clients", "/app/matters", "/app/cases", "/app/reports", "/app/calendar", "/app/records", "/app/remediation", "/app/security"];
+  const lists = ["/app/clients", "/app/matters", "/app/cases", "/app/reports", "/app/calendar", "/app/records", "/app/remediation", "/app/security", "/app/identity-verification", "/app/risk-assessments", "/app/monitoring-alerts", "/app/audit-trail"];
   for (const t of lists) if (/Victimclient|Victim matter|Victim Firm/.test(await (await a.request.get(BASE + t)).text())) throw new Error("list leak " + t);
   log(`and none of firm B's data appears in ${lists.length} list pages`);
 
@@ -72,7 +72,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
     "/app", "/app/clients", "/app/clients/new", `/app/clients/${ids.file}`, "/app/matters", "/app/matters/new", `/app/matters/${ids.matter}`,
     "/app/remediation", "/app/calendar", `/app/cases`, `/app/cases/${ids.case}`, "/app/reports", "/app/firm", "/app/firm/risk-assessment", "/app/firm/policies",
     "/app/firm/governance", "/app/firm/training", "/app/firm/privacy", "/app/settings/country-profile", "/app/settings/screening-lists", "/app/team",
-    "/app/records", "/app/security", "/app/feature-requests", "/app/feature-requests/new",
+    "/app/records", "/app/security", "/app/identity-verification", "/app/risk-assessments", "/app/monitoring-alerts", "/app/audit-trail", "/app/registers", "/app/feature-requests", "/app/feature-requests/new",
   ];
   const summary = {};
   let critical = 0;

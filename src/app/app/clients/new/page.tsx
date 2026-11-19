@@ -7,7 +7,7 @@ export default async function NewClientPage() {
   await requireUser("client.edit");
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-3xl">New client</h1>
+      <h1 className="text-3xl">Add Client</h1>
       <div className="rounded-2xl border border-accent/40 bg-brand/10 p-4 text-sm">
         <p className="font-semibold">Quickest way: just the name and an email.</p>
         <p className="text-muted">Create the client and we send them a secure link — they fill in the rest, upload documents and verify their identity. Everything else below is optional. The client is screened at once and the risk is calculated from the data.</p>

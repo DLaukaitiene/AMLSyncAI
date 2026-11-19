@@ -12,7 +12,7 @@ export default async function SecurityLogPage() {
   const now = new Date();
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Security log</h1>
+      <h1 className="text-2xl font-semibold">Security</h1>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">AMLSync support access</h2>
         <p className="text-sm text-muted">AMLSync staff can see nothing unless you approve a time-limited, read-only request. They never see cases, reports or documents.</p>

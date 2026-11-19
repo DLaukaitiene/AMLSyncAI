@@ -80,7 +80,7 @@ export async function integrityAction(_: ActionState, fd: FormData): Promise<Act
   return { message: r.flagged ? "Declaration recorded. The Compliance Officer will follow up on the points you raised." : "Declaration recorded. Next one is due in 12 months." };
 }
 
-export async function screenStaffAction(_: ActionState, _fd: FormData): Promise<ActionState> {
+export async function screenStaffAction(): Promise<ActionState> {
   const s = await requireUser("approve.compliance");
   const r = await withTenant(s.firm.id, (tx) => screenStaff(tx, ctxOf(s)));
   revalidatePath("/app/firm/integrity");

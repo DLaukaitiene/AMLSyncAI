@@ -38,7 +38,11 @@ export default async function Dashboard() {
       pendingScreeningMatches: await tx.screeningResult.count({ where: { decision: "PENDING" } }),
       staleOpenFiles: await tx.cddFile.count({ where: { status: "OPEN", createdAt: { lt: new Date(now.getTime() - 30 * 86_400_000) } } }),
     });
-    return { checklist, version, clients, openMatters, overdue, due30, setup, health };
+    const latest = await tx.cddFile.findMany({ where: { role: "CLIENT", status: { notIn: ["REFUSED", "TERMINATED"] } }, select: { riskAssessments: { orderBy: { createdAt: "desc" }, take: 1, select: { final: true } } } });
+    const highRisk = latest.filter((f) => f.riskAssessments[0]?.final === "HIGH").length;
+    const pendingReviews = await tx.cddFile.count({ where: { role: "CLIENT", status: "OPEN" } });
+    const openAlerts = await tx.screeningResult.count({ where: { decision: "PENDING" } });
+    return { checklist, version, clients, openMatters, overdue, due30, setup, health, highRisk, pendingReviews, openAlerts };
   });
   const missing = data.checklist.filter((c) => c.status === "required-missing" || c.status === "not-yet-reviewed");
   const required = data.checklist.filter((c) => c.status === "required-missing");
@@ -58,12 +62,13 @@ export default async function Dashboard() {
         <h1 className="text-3xl">Dashboard</h1>
         <p className="text-muted">Welcome, {s.user.name.split(" ")[0]}. What would you like to do?</p>
       </div>
+      <h2 className="sr-only">Quick Actions</h2>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { href: "/app/clients/new", icon: UserPlus, title: "Onboard a client", text: "Create the file and send the client a secure link" },
-          { href: "/app/matters/new", icon: FilePlus2, title: "Open a matter", text: "A sale, engagement or transaction" },
-          { href: "/app/calendar", icon: CalendarClock, title: "See what's due", text: "Refreshes, reports and deadlines" },
-          { href: "/app/firm", icon: Building2, title: "Firm compliance", text: "Risk assessment, policies, training" },
+          { href: "/app/clients/new", icon: UserPlus, title: "Add Client", text: "Create the file and send the client a secure link" },
+          { href: "/app/matters/new", icon: FilePlus2, title: "New Matter", text: "A sale, engagement or transaction" },
+          { href: "/app/calendar", icon: CalendarClock, title: "Compliance Calendar", text: "Reviews, reports and deadlines" },
+          { href: "/app/firm", icon: Building2, title: "Compliance Hub", text: "Risk assessment, AML Program, training" },
         ].map(({ href, icon: Icon, title, text }) => (
           <li key={href}>
             <Link href={href} className="flex h-full gap-3 rounded-2xl border border-border bg-background p-4 shadow-[var(--shadow)] transition hover:border-accent">
@@ -113,17 +118,19 @@ export default async function Dashboard() {
           </section>
         );
       })()}
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          ["Active clients", data.clients, "/app/clients"],
-          ["Open matters", data.openMatters, "/app/matters"],
+          ["Total Clients", data.clients, "/app/clients"],
+          ["Pending Reviews", data.pendingReviews, "/app/clients?tab=open"],
+          ["Open Alerts", data.openAlerts, "/app/monitoring-alerts"],
+          ["High Risk Clients", data.highRisk, "/app/risk-assessments?risk=HIGH"],
           ["Overdue", data.overdue, "/app/calendar"],
           ["Due in 30 days", data.due30, "/app/calendar"],
         ].map(([label, value, href]) => (
           <li key={label as string}>
             <Link href={href as string} className="block rounded-2xl border border-border bg-surface p-4 hover:border-accent">
               <span className="block text-sm text-muted">{label}</span>
-              <span className={`block font-[family-name:var(--font-heading)] text-3xl font-extrabold ${label === "Overdue" && (value as number) > 0 ? "text-red-700 dark:text-red-300" : ""}`}>{value}</span>
+              <span className={`block font-[family-name:var(--font-heading)] text-3xl font-extrabold ${(label === "Overdue" || label === "Open Alerts" || label === "High Risk Clients") && (value as number) > 0 ? "text-red-700 dark:text-red-300" : ""}`}>{value}</span>
             </Link>
           </li>
         ))}

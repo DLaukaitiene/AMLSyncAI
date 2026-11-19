@@ -14,58 +14,63 @@ const strip = ({ href, label, icon }: Child): NavItem => ({ href, label, icon })
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await requireUser();
   const r = s.user.roles;
+  // Menu follows ClearAML's structure and names (familiar to users of AML tools); "FIU" replaces "AUSTRAC".
   const entries: Entry[] = [
     { href: "/app", label: "Dashboard", icon: "dashboard" },
     {
       href: "/app/clients", label: "Clients", icon: "clients", show: can(r, "client.view"),
       children: [
-        { href: "/app/clients", label: "All clients", icon: "list" },
-        { href: "/app/clients/new", label: "New client", icon: "add", show: can(r, "client.edit") },
-        { href: "/app/remediation", label: "Import existing clients", icon: "upload", show: can(r, "client.edit") },
+        { href: "/app/clients", label: "All Clients", icon: "list" },
+        { href: "/app/clients/new", label: "Add Client", icon: "add", show: can(r, "client.edit") },
+        { href: "/app/remediation", label: "Import Clients", icon: "upload", show: can(r, "client.edit") },
+        { href: "/app/matters", label: "Matters", icon: "matters" },
       ],
     },
+    { href: "/app/identity-verification", label: "Identity Verification", icon: "idv", show: can(r, "client.view") },
+    { href: "/app/risk-assessments", label: "Risk Assessments", icon: "risk", show: can(r, "client.view") },
+    { href: "/app/monitoring-alerts", label: "Monitoring Alerts", icon: "alerts", show: can(r, "client.view") },
     {
-      href: "/app/matters", label: "Matters", icon: "matters", show: can(r, "client.view"),
+      href: "/app/cases", label: "FIU Reporting", icon: "cases", show: can(r, "case.view"),
       children: [
-        { href: "/app/matters", label: "All matters", icon: "list" },
-        { href: "/app/matters/new", label: "New matter", icon: "newMatter", show: can(r, "client.edit") },
+        { href: "/app/cases", label: "Suspicious Matters", icon: "cases" },
+        { href: "/app/reports", label: "Report Queue", icon: "report" },
       ],
     },
-    { href: "/app/calendar", label: "Compliance calendar", icon: "calendar" },
+    { href: "/app/registers", label: "Reports", icon: "registers", show: can(r, "approve.compliance") },
+    { href: "/app/audit-trail", label: "Audit Trail", icon: "audit", show: can(r, "securityLog.view") },
     {
-      href: "/app/cases", label: "Suspicions & reports", icon: "cases", show: can(r, "case.view"),
-      children: [
-        { href: "/app/cases", label: "Cases", icon: "cases" },
-        { href: "/app/reports", label: "FIU reports", icon: "report" },
-      ],
-    },
-    {
-      href: "/app/firm", label: "Firm compliance", icon: "firm",
+      href: "/app/firm", label: "Compliance Hub", icon: "firm",
       children: [
         { href: "/app/firm", label: "Overview", icon: "list" },
-        { href: "/app/firm/risk-assessment", label: "Risk assessment", icon: "risk" },
-        { href: "/app/firm/policies", label: "Policies & procedures", icon: "policies" },
+        { href: "/app/calendar", label: "Compliance Calendar", icon: "calendar" },
+        { href: "/app/firm/risk-assessment", label: "Business Risk Assessment", icon: "risk" },
+        { href: "/app/firm/policies", label: "AML Program", icon: "policies" },
         { href: "/app/firm/governance", label: "Governance", icon: "firm" },
-        { href: "/app/firm/training", label: "Training", icon: "training" },
-        { href: "/app/firm/integrity", label: "Integrity checks", icon: "integrity" },
-        { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
         { href: "/app/firm/outsourcing", label: "Outsourcing", icon: "outsourcing" },
-        { href: "/app/firm/privacy", label: "Privacy", icon: "privacy" },
+        { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
+        { href: "/app/firm/privacy", label: "Data Protection", icon: "privacy" },
+      ],
+    },
+    { href: "/app/firm/training", label: "My Compliance", icon: "training" },
+    {
+      href: "/app/team", label: "Team", icon: "team",
+      children: [
+        { href: "/app/team", label: "Members", icon: "team" },
+        { href: "/app/firm/integrity", label: "Personnel Due Diligence", icon: "integrity" },
       ],
     },
     {
       href: "/app/settings", label: "Settings", icon: "settings",
       children: [
         { href: "/app/settings/country-profile", label: "Country Profile", icon: "country", show: can(r, "countryProfile.view") },
-        { href: "/app/settings/screening-lists", label: "Screening lists", icon: "screening", show: can(r, "countryProfile.view") },
-        { href: "/app/team", label: "Team", icon: "team" },
+        { href: "/app/settings/screening-lists", label: "Screening Lists", icon: "screening", show: can(r, "countryProfile.view") },
         { href: "/app/billing", label: "Billing", icon: "billing", show: can(r, "approve.compliance") },
-        { href: "/app/security", label: "Security log", icon: "security", show: can(r, "securityLog.view") },
-        { href: "/app/records", label: "Records & retention", icon: "records", show: can(r, "records.purge") },
+        { href: "/app/security", label: "Security", icon: "security", show: can(r, "securityLog.view") },
+        { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },
       ],
     },
-    { href: "/app/feature-requests", label: "Feature requests", icon: "ideas" },
-    { href: "/app/support", label: "Help & support", icon: "help" },
+    { href: "/app/support", label: "Help Centre", icon: "help" },
+    { href: "/app/feature-requests", label: "Feature Requests", icon: "ideas" },
     ...(isPlatformAdmin(s.user.email)
       ? [{
           href: "/adminpage1&", label: "Backoffice", icon: "settings",
@@ -81,7 +86,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       nav={nav}
       firmName={s.firm.name}
-      banner={s.firm.status === "cancelled" ? <>Subscription ended — read-only archive{s.firm.archiveUntil ? ` until ${s.firm.archiveUntil}` : ""}. <a className="underline" href="/app/billing">Download your full export</a></> : s.firm.status === "paused" || s.firm.status === "suspended" ? <>New checks and screenings are {s.firm.status} for your firm. Your records stay available. Questions: <Link className="underline" href="/app/support">Help &amp; support</Link></> : undefined}
+      banner={s.firm.status === "cancelled" ? <>Subscription ended — read-only archive{s.firm.archiveUntil ? ` until ${s.firm.archiveUntil}` : ""}. <a className="underline" href="/app/billing">Download your full export</a></> : s.firm.status === "paused" || s.firm.status === "suspended" ? <>New checks and screenings are {s.firm.status} for your firm. Your records stay available. Questions: <Link className="underline" href="/app/support">Help Centre</Link></> : undefined}
       topRight={
         <>
           <SuggestFeature />

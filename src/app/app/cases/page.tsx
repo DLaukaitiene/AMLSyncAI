@@ -15,7 +15,7 @@ export default async function CasesPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Cases</h1>
+        <h1 className="text-2xl font-semibold">Suspicious Matters</h1>
         <p className="text-sm text-muted">Visible only to the Compliance Officer. Every assessment is kept, including decisions not to report.</p>
       </div>
       <section>

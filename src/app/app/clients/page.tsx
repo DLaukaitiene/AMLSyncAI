@@ -66,7 +66,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         {can(s.user.roles, "client.edit") && (
           <div className="flex gap-2">
             <Link href="/app/remediation" className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-accent">Import existing clients</Link>
-            <Link href="/app/clients/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">New client</Link>
+            <Link href="/app/clients/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Add Client</Link>
           </div>
         )}
       </div>

@@ -17,7 +17,7 @@ export default async function ReportsPage() {
   }));
   return (
     <div className="max-w-4xl space-y-4">
-      <h1 className="text-2xl font-semibold">Reports</h1>
+      <h1 className="text-2xl font-semibold">Report Queue</h1>
       <p className="text-sm text-muted">
         Suspicious transaction reports, threshold and cash reports, register discrepancy reports and sanctions notices. Export the file and upload
         it through the channel in your Country Profile, then record the receipt.

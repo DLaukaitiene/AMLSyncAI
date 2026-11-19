@@ -16,7 +16,7 @@ export default async function PrivacyPage() {
   const edit = can(s.user.roles, "approve.compliance");
   return (
     <div className="max-w-4xl space-y-8">
-      <h1 className="text-2xl font-semibold">Data protection</h1>
+      <h1 className="text-2xl font-semibold">Data Protection</h1>
       <p className="text-sm text-muted">AMLR Art. 76 and GDPR. The privacy notice in force is shown to clients in the portal. AMLSync acts as your processor (data processing agreement). Its suppliers and where they process data: <a className="text-accent underline" href="/subprocessors">sub-processors</a>.</p>
       {(Object.keys(KINDS) as (keyof typeof KINDS)[]).map((k) => (
         <section key={k} className="space-y-3">
