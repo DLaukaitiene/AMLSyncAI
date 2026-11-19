@@ -58,9 +58,14 @@ export default function Home() {
         ))}
       </section>
 
-      <p className="text-sm text-muted">
-        Try the free <Link className="text-accent underline" href="/tools/beneficial-ownership">beneficial ownership calculator</Link>.
-      </p>
+      <section className="flex flex-wrap items-center justify-between gap-6 rounded-3xl border border-border bg-background p-8 shadow-[var(--shadow)] sm:p-10">
+        <div className="max-w-2xl space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-wider text-accent">Free tool</p>
+          <h2 className="text-2xl">Who really owns your client?</h2>
+          <p className="text-muted">Enter who owns what and the Ownership calculator follows every chain to the people with 25% or more, and checks the 50% sanctions rule. No sign-up needed.</p>
+        </div>
+        <Link href="/tools/ownership-calculator" className="rounded-full border border-accent px-5 py-2.5 text-sm font-semibold text-accent hover:bg-accent/10">Open the Ownership calculator</Link>
+      </section>
     </div>
   );
 }
