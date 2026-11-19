@@ -1,8 +1,42 @@
-# AMLSyncAI — Product Specification (v0.11, draft)
+# AMLSyncAI — Product Specification (v0.12, draft)
 
-*Status: draft for discussion · Last updated: 13 November 2026 · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection; v0.10 replaces firm KYB with **automatic company-email verification** (no manual review); v0.11 drops the rule that the email domain must match the company name*
+*Status: draft for discussion · Last updated: 19 November 2026 · v0.12 records the decisions taken while building V1 (§0) · v0.2 incorporated a regulatory gap analysis (REGULATORY_REVIEW.md — not yet in the repository); v0.3 added the **automation layer** (§4A) and the **Australian competitor benchmark** (§10); v0.4 reorganised scope into **releases V1 / V2 / V3** (§4.0); v0.5 made the launch **EU-wide**, added the **other obliged-entity groups** (§2.2) and dropped go-to-market, roadmap, open questions and business targets; v0.6 separates **EU-wide rules from country-specific rules** (§3A); v0.7 aligns the AI section with the releases (§5), adds the **core data model** (§8A) and **non-functional requirements** (§8B), and fixes inconsistencies; v0.8 makes the product **English-only**, ships **general EU rules only** with **firm-configured Country Profiles** (§3A), and adds **done criteria** (§11); v0.9 adds **feature requests** (§4.10) and a full **security** section (§8C) covering firm and user verification and bot protection; v0.10 replaces firm KYB with **automatic company-email verification** (no manual review); v0.11 drops the rule that the email domain must match the company name*
 
 > **Legal note:** Article references are to Regulation (EU) 2024/1624 (AMLR) unless stated. AMLA's technical standards are still final drafts awaiting Commission adoption. Items marked **[verify]** depend on national law or pending standards. Get legal sign-off before any customer-facing compliance claim.
+
+---
+
+## 0. Decisions in v0.12 (19 November 2026)
+
+These override anything below that says otherwise.
+
+**Name and brand.** "AMLSyncAI" is the internal name only. Clients and firms see **AMLSync App**; the company-wide logo is **AMLSYNC / Compliance Services** (same as amlsync.com). The amlsync.com website presents AMLSync App as AMLSync's expansion (page `app.html`, Sign in in every menu).
+
+**Hosting (test phase, €0).** App at **app.amlsync.com** on Vercel Hobby (Frankfurt), database and files on Supabase Free (Frankfurt); amlsync.com stays on Hostinger. Before the first paying client: Vercel Pro or a Hostinger VPS, and Supabase Pro (backups) — each needs the owner's approval to pay. Only production builds run database migrations (previews share the database). Email through Google Workspace (no-reply@amlsync.com alias; SPF, DKIM, DMARC set).
+
+**Access.** Sign-up only with the invitation code, matched exactly. Website and app are English-only.
+
+**Plans and billing.** Solo €49/month (2 users), Starter €149/month (10 users), Professional/Enterprise by contact (contact@amlsync.com); 14-day trial with €15 credit. Postpaid: one VAT invoice per firm per month (series AMS-YYYY-NNNNN), bank transfer within 14 days (Integral Services, MB, Revolut IBAN), 21% Lithuanian VAT or EU reverse charge [verify with accountant]. Paid checks pause when an invoice is 14 days overdue. No payment provider for now.
+
+**Paid checks (Didit, EU).** Identity check €3, PEP/sanctions/adverse-media screening €3, company register check €5 (company and status, Didit Lite) or €12 (full ownership, UBO tier) [prices to confirm]. Charged when sent, refunded on expiry or failure, statement per check for re-billing. Images, video and Didit's report are copied into AMLSync App (AMLA CDD RTS); Didit's copy is deleted at the end of retention. Sandbox until the owner approves a live key (limited-access key for live).
+
+**Screening limits.** Per firm, adjustable by AMLSync: 5 per minute, 30 per day, 100 per month for screenings a person starts (automatic re-screening is not counted). At the limit the firm is told to contact AMLSync (adjusted within 1 business day) and AMLSync is alerted.
+
+**Who needs which check (§4.2).** Required check per person by role: client person → identity check; client entity → register extract; beneficial owner/controller → reasonable measures (identity check when high risk); trustee, nominee → identity check; settlor, protector → reasonable measures; beneficiaries → identify; owning companies → reasonable measures; owners below 25% → screening only; several roles → strictest; unknown role or type → strictest. Enforced at acceptance [verify].
+
+**Ownership tracing per branch.** Gaps (owning entity without owners, stakes not accounted for) are listed with their share of the client; a branch closes when owners are added, with a recorded reason (listed, public body, regulated entity, dispersed, steps exhausted), or automatically when all open branches together stay below 25% [verify reasons].
+
+**Scope.** A client receiving only services outside AMLR can be "identification only" (Compliance Officer, reason code; firm default possible): identification and sanctions screening still apply; AMLR-service matters can't complete; switching back reopens the file [verify reasons].
+
+**Countries and "Other".** Every country field offers all countries plus free text; a typed country is flagged for manual assessment. Dropdowns have "Other (describe)" where real life can fall outside the list (not for roles, risk levels, plans or legal method lists).
+
+**Cancellation.** The firm's records become a read-only archive for the retention period (≥5 years), with a full export; the fee stops on the day of cancellation.
+
+**Sub-processors.** Public register at app.amlsync.com/subprocessors (Supabase, Vercel, Didit, Google Workspace, HIBP; AI provider not in use).
+
+**Backoffice.** AMLSync's own admin (firms, users, revenue, security, privacy, support) at an owner-only address; see BACKOFFICE_SPEC.md.
+
+**UX.** Left navigation with icons and sub-menus; client file with progress steps, status and risk badges, linked to-dos and an activity timeline; client list with filter tabs; getting-started checklist; branded client portal.
 
 ---
 
