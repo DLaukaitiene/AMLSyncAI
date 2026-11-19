@@ -181,8 +181,8 @@ export default async function ClientFilePage({ params, searchParams }: { params:
         </span>
       )}
 
-      <nav aria-label="Completion checklist" className="overflow-x-auto">
-        <ol className="flex min-w-max gap-2">
+      <nav aria-label="Completion checklist">
+        <ol className="flex flex-wrap gap-2">
           {steps.map((st, i) => (
             <li key={st.label}>
               <a href={`#${st.anchor}`} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition hover:border-accent ${st.done ? "border-green-300 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100" : st.na ? "border-border text-muted" : "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"}`}>
@@ -215,7 +215,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               {riskHistory.map((ra) => (
                 <li key={ra.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                   <span className="flex items-center gap-2"><RiskChip level={ra.final} /><span className="text-muted">score {ra.score}{ra.overrideReason ? ` · changed from ${ra.calculated.toLowerCase()}: ${ra.overrideReason}` : ""}</span></span>
-                  <span className="text-muted">{ra.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
+                  <span className="flex items-center gap-3 text-muted">{ra.createdAt.toISOString().slice(0, 16).replace("T", " ")}<a href={`/api/risk-report/${ra.id}`} className="text-accent underline">Download PDF<span className="sr-only"> of the risk assessment of {ra.createdAt.toISOString().slice(0, 10)}</span></a></span>
                 </li>
               ))}
             </ul>

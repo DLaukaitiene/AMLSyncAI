@@ -58,7 +58,9 @@ export async function raiseFromTransaction(tx: Tx, ctx: Ctx, id: string, note: s
     details: [note.trim(), flags.length ? `Flags: ${flags.map((f) => f.text).join("; ")}` : "", t.description ? `Description: ${t.description}` : ""].filter(Boolean).join("\n"),
     attempted: false, amountEUR: Number(t.amountEUR),
   });
-  await reviewTransaction(tx, ctx, id, "investigate", `Internal suspicion report raised. ${note.trim()}`);
+  // The reason goes into the case only (Compliance Officer); the transaction shows a neutral note,
+  // because everyone who can see the client can see it (need-to-know, no tipping-off, Art. 73).
+  await reviewTransaction(tx, ctx, id, "investigate", "Escalated to the Compliance Officer for review.");
   await tx.transaction.update({ where: { id }, data: { caseId } });
   return caseId;
 }

@@ -16,9 +16,10 @@ const GROUPS: { label: string; tabs: { href: string; label: string }[] }[] = [
       { href: "/app/firm/outsourcing", label: "Outsourcing" },
       { href: "/app/firm/whistleblowing", label: "Whistleblowing" },
       { href: "/app/firm/privacy", label: "Data Protection" },
+      { href: "/app/firm/documents", label: "My Firm Compliance" },
     ],
   },
-  { label: "Team", tabs: [{ href: "/app/team", label: "Members" }, { href: "/app/firm/integrity", label: "Personnel Due Diligence" }, { href: "/app/firm/training", label: "Training" }] },
+  { label: "Team", tabs: [{ href: "/app/team", label: "Members" }, { href: "/app/team/responsibilities", label: "Responsibilities" }, { href: "/app/firm/integrity", label: "Personnel Due Diligence" }, { href: "/app/firm/training", label: "Training" }, { href: "/app/team/training-register", label: "Training Register" }] },
   {
     label: "Settings",
     tabs: [

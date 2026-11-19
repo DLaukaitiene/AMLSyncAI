@@ -5,6 +5,8 @@ import { rescreenFirm } from "@/lib/server/screening-lists";
 import { sendPortalReminders, startDueRefreshes } from "@/lib/server/portal";
 import { issueMonthlyInvoices } from "@/lib/server/invoicing";
 import { refreshCompanyCheck } from "@/lib/server/kyb";
+import { withTenant } from "@/lib/server/db";
+import { rescreenStaffIfListsChanged } from "@/lib/server/staff-screening";
 import { hit } from "@/lib/server/rate-limit";
 import { notify } from "@/lib/server/email";
 import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
@@ -33,6 +35,15 @@ export async function GET(req: Request) {
     let newHits = 0;
     for (const f of firms) newHits += (await rescreenFirm(f.id)).newHits;
     return { firms: firms.length, newHits };
+  });
+  await run("staffScreening", async () => {
+    let screened = 0, possible = 0;
+    for (const f of firms) {
+      const r = await withTenant(f.id, (tx) => rescreenStaffIfListsChanged(tx, f.id), { timeoutMs: 60_000 });
+      screened += r.screened;
+      possible += r.possible;
+    }
+    return { screened, possible };
   });
   await run("refresh", async () => {
     let due = 0, sent = 0;

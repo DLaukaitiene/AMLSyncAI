@@ -38,6 +38,7 @@ export interface PillarInput {
   policyInForce: boolean;
   countryProfileRequiredMissing: number;
   complianceOfficerAppointed: boolean;
+  unassignedDuties?: number; // Team → Responsibilities
   overdueRefreshes: number;
   clientsWithoutRiskAssessment: number;
   overdueTraining: number;
@@ -58,10 +59,11 @@ export function programStatus(i: PillarInput): Pillar[] {
     return { id, label, href, score: Math.round(((checks.length - failed.length) / checks.length) * 100), issues: failed };
   };
   return [
-    pillar("governance", "Governance", "/app/firm", [
+    pillar("governance", "Governance", "/app/team/responsibilities", [
       [i.policyInForce, "AML Program not approved"],
       [i.complianceOfficerAppointed, "No Compliance Officer appointed"],
       [i.countryProfileRequiredMissing === 0, `${i.countryProfileRequiredMissing} required Country Profile item(s) missing`],
+      [!i.unassignedDuties, `${i.unassignedDuties} AML dut(ies) with nobody assigned`],
     ]),
     pillar("risk", "Risk", "/app/risk-assessments", [
       [i.riskAssessmentInForce, "Business Risk Assessment not approved"],

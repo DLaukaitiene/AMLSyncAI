@@ -29,6 +29,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const sp = await searchParams;
   const status = (FILTERS as readonly string[]).includes(sp.status ?? "") ? sp.status! : "all";
   const q = sp.q?.trim();
+  if (sp.client && !/^[0-9a-f-]{36}$/i.test(sp.client)) sp.client = undefined;
   const r = s.user.roles;
   const data = await withTenant(s.firm.id, async (tx) => {
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { txCashThresholdEUR: true, txHighValueThresholdEUR: true } });

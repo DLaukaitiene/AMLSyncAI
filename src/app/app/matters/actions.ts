@@ -104,10 +104,12 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
   if (!/^\d{4}-\d{2}-\d{2}$/.test(o.date ?? "")) return { error: "Enter the date.", fieldErrors: { date: ["YYYY-MM-DD"] } };
   const method = ["cash", "bank-transfer", "card", "crypto", "other"].includes(o.method) ? (o.method as "cash") : "bank-transfer";
   const methodStored = o.method === "other" && String(o.methodOther ?? "").trim() ? `other: ${String(o.methodOther).trim().slice(0, 100)}` : method;
-  if (!o.customerId) return { error: "Choose who pays." };
+  if (!o.customerId || !/^[0-9a-f-]{36}$/i.test(o.customerId)) return { error: "Choose who pays." };
 
   return withTenant(s.firm.id, async (tx) => {
     const matter = await tx.matter.findUniqueOrThrow({ where: { id: matterId } });
+    // The payer must be one of this matter's parties.
+    if (!(await tx.matterParty.count({ where: { matterId, partyId: o.customerId } }))) return { error: "The payer must be a party to this matter." };
     // A matter of an office in another member state uses that office's Country Profile.
     const { profile, version } = await currentProfile(tx, s.firm.id, matter.officeId);
     const messages: string[] = [];

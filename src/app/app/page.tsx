@@ -12,6 +12,7 @@ import { complianceHealth, programStatus } from "@/lib/firm/compliance-health";
 import { TASK_KIND, taskHref } from "@/lib/tasks/labels";
 import { RiskChip, StatusChip } from "@/components/chips";
 import { OBJECT_LABEL } from "@/lib/audit-labels";
+import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
 
 /**
  * Dashboard laid out like ClearAML's: alerts feed, metric cards, risk
@@ -34,7 +35,7 @@ export default async function Dashboard() {
       tx.task.count({ where: { ...taskWhere, dueOn: { lt: new Date(today) } } }),
       tx.task.count({ where: { ...taskWhere, dueOn: { gte: new Date(today), lte: new Date(addCalendarDays(today, 30)) } } }),
     ]);
-    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { billingName: true } });
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { billingName: true, responsibilities: true } });
     const users = await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true, name: true, roles: true } });
     const onePerson = await isOnePersonFirm(tx);
     const setup = {
@@ -71,6 +72,7 @@ export default async function Dashboard() {
     const pillars = programStatus({
       riskAssessmentInForce: setup.ra, policyInForce: setup.policy, countryProfileRequiredMissing: cpMissing,
       complianceOfficerAppointed: users.some((u) => u.roles.includes("COMPLIANCE_OFFICER")),
+      unassignedDuties: RESPONSIBILITIES.filter((d) => !((firm.responsibilities as Record<string, string[]>)[d.key] ?? []).some((id) => users.some((u) => u.id === id))).length,
       overdueRefreshes: reviewQueue.length,
       clientsWithoutRiskAssessment: live.filter((f) => !f.riskAssessments[0]).length,
       overdueTraining,

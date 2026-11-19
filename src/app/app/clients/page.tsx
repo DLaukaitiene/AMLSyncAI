@@ -7,6 +7,9 @@ import { can } from "@/lib/auth/permissions";
 import { loadClientFile } from "@/lib/server/cdd";
 import { openCddItems } from "@/lib/rules/gates";
 import { Chip, RiskChip, StatusChip, type Tone } from "@/components/chips";
+import { SelectAll } from "@/components/select-all";
+import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { bulkIdOnlyAction, bulkSendLinksAction } from "./bulk-actions";
 
 /**
  * The client register, laid out like ClearAML's: search, filter dropdowns
@@ -47,7 +50,7 @@ function statusWhere(st: Status, soon: Date, now: Date): Prisma.CddFileWhereInpu
 const READY_CHECK_LIMIT = 60;
 const pick = <T extends readonly { id: string }[]>(list: T, v: string | undefined) => (list.find((x) => x.id === v) ?? list[0]).id as T[number]["id"];
 
-export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ q?: string; tab?: string; status?: string; type?: string; risk?: string; sort?: string }> }) {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ q?: string; tab?: string; status?: string; type?: string; risk?: string; sort?: string; bulk?: string; sent?: string; skipped?: string; n?: string }> }) {
   const s = await requireUser("client.view");
   const sp = await searchParams;
   const q = sp.q?.trim();
@@ -99,6 +102,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     return { files, total, openItems, verification, screening };
   });
   const filtered = status !== "all" || type !== "all" || risk !== "all" || !!q;
+  const bulkMsg = sp.bulk === "links" ? `Secure links sent: ${Number(sp.sent) || 0}. Skipped: ${Number(sp.skipped) || 0} (already decided, no email on file, or a link is already open).`
+    : sp.bulk === "idonly" ? `${Number(sp.n) || 0} client(s) marked identification only.`
+    : sp.bulk === "noreason" ? "Choose why the services are outside AMLR scope." : sp.bulk === "none" ? "Tick at least one client first." : null;
+  const canBulkScope = can(s.user.roles, "gate.override");
   const select = "rounded-lg border border-border bg-background px-3 py-2 text-sm";
   return (
     <div className="space-y-5">
@@ -125,6 +132,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         {filtered && <Link href="/app/clients" className="px-2 py-2 text-sm text-accent underline">Clear</Link>}
       </form>
 
+      {bulkMsg && <p role="status" className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-testid="bulk-result">{bulkMsg}</p>}
+
       {files.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-12 text-center">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/15 text-accent"><Users aria-hidden className="h-6 w-6" /></span>
@@ -142,13 +151,26 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <form method="get" action="/api/registers/clients" className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span><span className="mr-1 inline-block h-3 w-3 rounded-sm bg-red-100 align-middle dark:bg-red-950" /> review overdue <span className="ml-3 mr-1 inline-block h-3 w-3 rounded-sm bg-sky-100 align-middle dark:bg-sky-950" /> review due within 30 days</span>
-            {can(s.user.roles, "approve.compliance") && <button type="submit" className="rounded-full border border-border px-3 py-1.5 text-sm text-foreground hover:border-accent">Export selected (CSV)</button>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-sm" aria-label="Bulk actions" role="group">
+            <span className="text-muted">With selected:</span>
+            {can(s.user.roles, "approve.compliance") && <button type="submit" className="rounded-full border border-border bg-background px-3 py-1.5 hover:border-accent">Export selected (CSV)</button>}
+            {can(s.user.roles, "client.edit") && <button type="submit" formAction={bulkSendLinksAction} formMethod="post" className="rounded-full border border-border bg-background px-3 py-1.5 hover:border-accent">Send secure links</button>}
+            {canBulkScope && (
+              <>
+                <select name="bulkScopeReason" aria-label="Reason the service is outside AMLR scope" defaultValue="" className="max-w-[16rem] rounded-lg border border-border bg-background px-2 py-1.5">
+                  <option value="">Outside AMLR scope because…</option>
+                  {Object.entries(SCOPE_REASONS).filter(([k]) => k !== "other" && k !== "firm-default").map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+                <button type="submit" formAction={bulkIdOnlyAction} formMethod="post" className="rounded-full border border-border bg-background px-3 py-1.5 hover:border-accent">Mark identification only</button>
+              </>
+            )}
           </div>
           <div className="overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-sm">
               <thead className="bg-surface text-left text-muted">
                 <tr>
-                  <th className="w-8 px-3 py-2"><span className="sr-only">Select</span></th>
+                  <th className="w-8 px-3 py-2"><SelectAll name="id" label="Select all clients shown" /></th>
                   <th className="px-3 py-2 font-medium">Name</th>
                   <th className="px-3 py-2 font-medium">Type</th>
                   <th className="px-3 py-2 font-medium">Risk</th>

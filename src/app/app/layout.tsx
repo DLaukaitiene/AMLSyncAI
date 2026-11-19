@@ -51,6 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/firm/outsourcing", label: "Outsourcing", icon: "outsourcing" },
         { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
         { href: "/app/firm/privacy", label: "Data Protection", icon: "privacy" },
+        { href: "/app/firm/documents", label: "My Firm Compliance", icon: "folder" },
       ],
     },
     { href: "/app/firm/training", label: "My Compliance", icon: "training" },
@@ -58,7 +59,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       href: "/app/team", label: "Team", icon: "team",
       children: [
         { href: "/app/team", label: "Members", icon: "team" },
+        { href: "/app/team/responsibilities", label: "Responsibilities", icon: "list" },
         { href: "/app/firm/integrity", label: "Personnel Due Diligence", icon: "integrity" },
+        { href: "/app/team/training-register", label: "Training Register", icon: "training" },
       ],
     },
     {
@@ -91,7 +94,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       banner={s.firm.status === "cancelled" ? <>Subscription ended — read-only archive{s.firm.archiveUntil ? ` until ${s.firm.archiveUntil}` : ""}. <a className="underline" href="/app/billing">Download your full export</a></> : s.firm.status === "paused" || s.firm.status === "suspended" ? <>New checks and screenings are {s.firm.status} for your firm. Your records stay available. Questions: <Link className="underline" href="/app/support">Help Centre</Link></> : undefined}
       topRight={
         <>
-          <SuggestFeature />
+          <span className="hidden sm:inline"><SuggestFeature /></span>
           <span className="hidden text-muted sm:inline" title={r.map((x) => ROLE_LABELS[x]).join(", ")}>
             {s.user.name}
             {s.user.external && <span className="ml-1 rounded border border-border px-1 text-xs">external</span>}

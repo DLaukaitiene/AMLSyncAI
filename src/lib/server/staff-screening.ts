@@ -9,7 +9,7 @@ import { screenSubject } from "@/lib/screening/match";
  * name against the sanctions and PEP lists already loaded in the app. Free —
  * no paid provider is called — and it doesn't count towards client limits.
  */
-export async function screenStaff(tx: Tx, ctx: { firmId: string; userId: string }, userIds?: string[]) {
+export async function screenStaff(tx: Tx, ctx: { firmId: string; userId: string | null }, userIds?: string[]) {
   const lists = await loadLists(tx);
   const users = await tx.user.findMany({ where: { deactivatedAt: null, ...(userIds ? { id: { in: userIds } } : {}) }, select: { id: true, name: true } });
   let possible = 0;
@@ -25,13 +25,41 @@ export async function screenStaff(tx: Tx, ctx: { firmId: string; userId: string 
         matches.push({ listName: list.name, matchedName: m.matchedName, score: Math.round(m.score * 100) / 100, reference: entry?.reference ?? null });
       }
     }
-    if (matches.length) possible++;
+    // A match the Compliance Officer already cleared for this person is carried forward, not raised again.
+    const prev = matches.length ? await tx.staffScreening.findFirst({ where: { userId: u.id, status: "cleared" }, orderBy: { screenedAt: "desc" } }) : null;
+    const key = (m: { listName: string; matchedName: string }) => `${m.listName}|${m.matchedName}`;
+    const prevKeys = new Set(((prev?.matches ?? []) as { listName: string; matchedName: string }[]).map(key));
+    const carried = !!prev && matches.every((m) => prevKeys.has(key(m)));
+    if (matches.length && !carried) possible++;
     const row = await tx.staffScreening.create({
-      data: { firmId: ctx.firmId, userId: u.id, listsChecked: lists.length, matches, status: matches.length ? "possible-match" : "clear", screenedById: ctx.userId },
+      data: {
+        firmId: ctx.firmId, userId: u.id, listsChecked: lists.length, matches, screenedById: ctx.userId,
+        status: !matches.length ? "clear" : carried ? "cleared" : "possible-match",
+        ...(carried ? { reviewNote: `Carried forward: the same match was reviewed on ${prev!.screenedAt.toISOString().slice(0, 10)} (${prev!.reviewNote ?? "not the same person"})`, reviewedById: prev!.reviewedById } : {}),
+      },
     });
     await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "screen", objectType: "StaffScreening", objectId: row.id });
   }
   return { screened: users.length, possible, listsChecked: lists.length };
+}
+
+/**
+ * Daily job: re-screen a firm's staff when a list was loaded or updated since
+ * their last screening (and screen anyone never screened). Multi-person firms
+ * only — a one-person firm has no employees to check (Art. 13).
+ */
+export async function rescreenStaffIfListsChanged(tx: Tx, firmId: string): Promise<{ screened: number; possible: number }> {
+  const users = await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true } });
+  if (users.length < 2) return { screened: 0, possible: 0 };
+  const newest = await tx.screeningList.findFirst({ where: { active: true }, orderBy: { loadedAt: "desc" }, select: { loadedAt: true } });
+  if (!newest) return { screened: 0, possible: 0 };
+  const latest = await latestStaffScreening(tx);
+  const due = users.filter((u) => { const r = latest.get(u.id); return !r || r.screenedAt < newest.loadedAt; }).map((u) => u.id);
+  if (!due.length) return { screened: 0, possible: 0 };
+  // Already-reviewed matches stay reviewed: only screen people whose last result isn't an open possible match.
+  const open = new Set([...latest.values()].filter((r) => r.status === "possible-match").map((r) => r.userId));
+  const r = await screenStaff(tx, { firmId, userId: null }, due.filter((id) => !open.has(id)));
+  return { screened: r.screened, possible: r.possible };
 }
 
 /** The Compliance Officer's decision on a possible match: a false positive, or a confirmed match. */

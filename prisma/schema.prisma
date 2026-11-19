@@ -203,6 +203,7 @@ model Firm {
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
+  responsibilities Json @default("{}") // AML duty → user ids (Team → Responsibilities)
   txCashThresholdEUR      Int @default(3000) // transaction monitoring: cash at or above this is flagged
   txHighValueThresholdEUR Int @default(50000) // any payment at or above this is flagged
   screenLimitMinute Int  @default(5)
@@ -1004,6 +1005,23 @@ model StaffScreening {
   screenedAt   DateTime @default(now())
 
   @@index([firmId, userId])
+}
+
+/// External training events (workshops, seminars, courses) — Team → Training Register.
+model ExternalTraining {
+  id              String   @id @default(uuid()) @db.Uuid
+  firmId          String   @db.Uuid
+  title           String
+  provider        String?
+  type            String // workshop | seminar | online-course | internal-session | conference | other
+  date            DateTime @db.Date
+  durationMinutes Int
+  attendeeIds     String[] @db.Uuid
+  notes           String?
+  createdById     String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  @@index([firmId])
 }
 
 model IntegrityDeclaration {

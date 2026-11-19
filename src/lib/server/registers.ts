@@ -15,7 +15,7 @@ export const REGISTERS = [
   { id: "transactions", pillar: "Monitoring", title: "Transaction Log", text: "Every recorded payment with method, flags, monitoring status and review reasons." },
   { id: "matters", pillar: "Clients", title: "Matters Register", text: "Every matter with type, sector, status and date opened." },
   { id: "suspicious", pillar: "Regulatory", title: "Suspicious Matters", text: "Internal reports and FIU reports: dates, decision and submission reference. No case content." },
-  { id: "training", pillar: "People", title: "Staff Training Register", text: "Training assigned and completed per staff member, with due dates." },
+  { id: "training", pillar: "People", title: "Staff Training Register", text: "In-app training per staff member with due dates, plus external workshops and courses attended." },
   { id: "audit", pillar: "System", title: "Audit Trail", text: "Every recorded action: when, who, what and which fields changed (never the values)." },
 ] as const;
 export type RegisterId = (typeof REGISTERS)[number]["id"];
@@ -26,7 +26,7 @@ const t = (x: Date | null | undefined) => (x ? x.toISOString().slice(0, 19).repl
 export function toCsv(rows: (string | number | null | undefined)[][]): string {
   return rows.map((r) => r.map((v) => {
     let s = v == null ? "" : String(v);
-    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // no spreadsheet formulas
+    if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = "'" + s; // no spreadsheet formulas from text
     return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }).join(",")).join("\r\n") + "\r\n";
 }
@@ -77,8 +77,10 @@ export async function buildRegister(tx: Tx, id: RegisterId, only?: string[]): Pr
     }
     case "training": {
       const as = await tx.trainingAssignment.findMany({ orderBy: { assignedAt: "asc" }, include: { module: { select: { title: true } } } });
-      return [["Staff member", "Module", "Assigned", "Due", "Completed", "Status"],
-        ...as.map((a) => [who(a.userId), a.module.title, d(a.assignedAt), d(a.dueOn), d(a.completedAt), a.completedAt ? "Completed" : a.dueOn < new Date() ? "Overdue" : "Pending"])];
+      const ext = await tx.externalTraining.findMany({ orderBy: { date: "asc" } });
+      return [["Staff member", "Training", "Source", "Assigned / held", "Due", "Completed", "Status", "Provider", "Minutes"],
+        ...as.map((a) => [who(a.userId), a.module.title, "In-app module", d(a.assignedAt), d(a.dueOn), d(a.completedAt), a.completedAt ? "Completed" : a.dueOn < new Date() ? "Overdue" : "Pending", "", ""]),
+        ...ext.flatMap((e) => e.attendeeIds.map((u) => [who(u), e.title, `External: ${e.type}`, d(e.date), "", d(e.date), "Attended", e.provider ?? "", e.durationMinutes]))];
     }
     case "audit": {
       const ev = await tx.auditEvent.findMany({ orderBy: { at: "asc" }, take: 50_000 });

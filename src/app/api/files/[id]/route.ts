@@ -17,6 +17,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     return d;
   });
   if (!doc) return new NextResponse("Not found", { status: 404 });
+  // FIU and supervisor correspondence is for the Owner and Compliance Officer only.
+  if (doc.kind === "firm:authority" && !can(s.user.roles, "approve.compliance")) return new NextResponse("Not found", { status: 404 });
   if (doc.malwareScan !== "clean") return new NextResponse("This file has not passed the malware scan.", { status: 423 });
   const bytes = await readBlob(s.firm.id, doc.storageKey);
   return new NextResponse(new Uint8Array(bytes), {

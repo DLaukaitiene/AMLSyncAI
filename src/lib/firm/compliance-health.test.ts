@@ -20,7 +20,7 @@ describe("programStatus", () => {
   it("scores each pillar by the share of passing checks and lists the issues", () => {
     const ps = programStatus({ ...ok, policyInForce: false, pendingScreeningMatches: 2, overdueTraining: 1, integrityOverdue: 1 });
     const by = Object.fromEntries(ps.map((p) => [p.id, p]));
-    expect(by.governance.score).toBe(67);
+    expect(by.governance.score).toBe(75);
     expect(by.governance.issues).toEqual(["AML Program not approved"]);
     expect(by.monitoring.score).toBe(67);
     expect(programStatus({ ...ok, flaggedTransactions: 2 }).find((p) => p.id === "monitoring")!.issues).toEqual(["2 flagged transaction(s)"]);
