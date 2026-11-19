@@ -52,4 +52,12 @@ async function submit(p, buttonName, expect) {
   }
 }
 
-module.exports = { BASE, totp, lastMail, log, signupFirm, submit };
+// Opens a collapsible <details> section by its summary text. Idempotent: clicking the summary of a
+// section that is already open (e.g. manual recording when no remote ID provider is configured) would close it.
+async function openSection(p, summary) {
+  const s = p.locator("details > summary", { hasText: summary }).first();
+  await s.waitFor();
+  if (!(await s.evaluate((el) => el.parentElement.open))) await s.click();
+}
+
+module.exports = { BASE, totp, lastMail, log, signupFirm, submit, openSection };
