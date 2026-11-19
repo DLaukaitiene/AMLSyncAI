@@ -5,6 +5,7 @@ import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
 import { setupChecklist } from "@/lib/rules/country-profile";
 import { toIsoDate, addCalendarDays } from "@/lib/rules/dates";
+import { complianceHealth } from "@/lib/firm/compliance-health";
 
 export default async function Dashboard() {
   const s = await requireUser();
@@ -25,7 +26,19 @@ export default async function Dashboard() {
       client: (await tx.cddFile.count({ where: { role: "CLIENT" } })) > 0,
       billing: !!firm.billingName,
     };
-    return { checklist: setupChecklist(profile), version, clients, openMatters, overdue, due30, setup };
+    const now = new Date();
+    const checklist = setupChecklist(profile);
+    const health = complianceHealth({
+      riskAssessmentInForce: setup.ra,
+      policyInForce: setup.policy,
+      countryProfileRequiredMissing: checklist.filter((c) => c.status === "required-missing").length,
+      overdueRefreshes: await tx.cddFile.count({ where: { status: { in: ["COMPLETE", "SDD", "EDD"] }, nextRefreshOn: { lt: now } } }),
+      overdueTasks: overdue,
+      overdueTraining: await tx.trainingAssignment.count({ where: { completedAt: null, dueOn: { lt: now } } }),
+      pendingScreeningMatches: await tx.screeningResult.count({ where: { decision: "PENDING" } }),
+      staleOpenFiles: await tx.cddFile.count({ where: { status: "OPEN", createdAt: { lt: new Date(now.getTime() - 30 * 86_400_000) } } }),
+    });
+    return { checklist, version, clients, openMatters, overdue, due30, setup, health };
   });
   const missing = data.checklist.filter((c) => c.status === "required-missing" || c.status === "not-yet-reviewed");
   const required = data.checklist.filter((c) => c.status === "required-missing");
@@ -84,6 +97,22 @@ export default async function Dashboard() {
           </ol>
         </section>
       )}
+      {(() => {
+        const h = data.health;
+        const tone = h.level === "on-track" ? "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950" : h.level === "at-risk" ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950" : "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950";
+        return (
+          <section className={`space-y-2 rounded-2xl border p-5 ${tone}`} aria-labelledby="health">
+            <h2 id="health" className="text-lg">Compliance status: {h.level === "on-track" ? "On track" : h.level === "at-risk" ? "At risk" : "Needs attention"}</h2>
+            {h.reasons.length === 0 ? (
+              <p className="text-sm">Nothing overdue. Your risk assessment and policy are in force.</p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {h.reasons.map((r) => <li key={r.text}><Link className="underline" href={r.href}>{r.text}</Link>{r.serious ? " — fix first" : ""}</li>)}
+              </ul>
+            )}
+          </section>
+        );
+      })()}
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
           ["Active clients", data.clients, "/app/clients"],
