@@ -48,9 +48,9 @@ export default async function Dashboard() {
   const required = data.checklist.filter((c) => c.status === "required-missing");
   const gettingStarted = [
     { done: required.length === 0, title: "Fill in your Country Profile", text: "Your supervisor, FIU and national rules (the EU rules are built in).", href: "/app/settings/country-profile" },
-    { done: data.setup.ra, title: "Approve your firm risk assessment", text: "Answer a few questions; AMLSync App drafts it for you.", href: "/app/firm/risk-assessment" },
-    { done: data.setup.policy, title: "Approve your AML policy and procedures", text: "Generated from your risk assessment — review and approve.", href: "/app/firm/policies" },
-    { done: data.setup.client, title: "Onboard your first client", text: "A name and an email are enough to start.", href: "/app/clients/new" },
+    { done: data.setup.ra, title: "Approve your Business Risk Assessment", text: "Answer a few questions; AMLSync App drafts it for you.", href: "/app/firm/risk-assessment" },
+    { done: data.setup.policy, title: "Approve your AML Program", text: "Generated from your risk assessment — review and approve.", href: "/app/firm/policies" },
+    { done: data.setup.client, title: "Add your first client", text: "A name and an email are enough to start.", href: "/app/clients/new" },
     { done: data.setup.team, title: "Invite your team", text: "Give colleagues their own sign-in and role.", href: "/app/team" },
     { done: data.setup.billing, title: "Add your invoice details", text: "Company name, VAT number and address for your invoices.", href: "/app/billing" },
   ];
