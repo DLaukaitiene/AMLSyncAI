@@ -29,7 +29,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const landing = await linkLanding(token);
   if (!landing) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 rounded-2xl border border-border bg-background p-6 shadow-[var(--shadow)]">
         <h1 className="text-xl font-semibold">This link is no longer valid</h1>
         <p className="text-sm text-muted">It may have expired or been replaced. Contact the firm that sent it for a new link.</p>
       </div>
@@ -37,7 +37,8 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   }
   if (landing.submitted) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 rounded-2xl border border-border bg-background p-6 shadow-[var(--shadow)]">
+        <p aria-hidden className="text-3xl">✓</p>
         <h1 className="text-xl font-semibold">Thank you</h1>
         <p className="text-sm text-muted">{landing.firmName} has received your information and will contact you if anything else is needed.</p>
       </div>
@@ -46,7 +47,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const ctx = await portalContext(token);
   if (!ctx) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 rounded-2xl border border-border bg-background p-6 shadow-[var(--shadow)]">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">{landing.firmName} needs your client information</h1>
           <p className="text-sm text-muted">
@@ -54,6 +55,10 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             code to {landing.maskedEmail}.
           </p>
         </div>
+        <ol className="space-y-1 text-sm">
+          <li><span className="font-semibold">1.</span> Get a one-time code by email</li>
+          <li><span className="font-semibold">2.</span> Enter it below to open your page</li>
+        </ol>
         <ActionForm action={requestCodeAction.bind(null, token)}>
           <Submit variant="secondary">Send me a code</Submit>
         </ActionForm>
@@ -79,14 +84,19 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Your information for {ctx.firmName}</h1>
+        <h1 className="text-2xl">Your information for {ctx.firmName}</h1>
         <p className="text-sm text-muted">
-          Fields marked * are required. You can save and come back later. Only you can see this page; it shows only your own information.
+          It takes about 10 minutes. Fields marked * are required. You can save and come back later. Only you can see this page; it shows only your own information.
         </p>
+        <ol className="flex flex-wrap gap-2 pt-2 text-xs" aria-label="Steps">
+          {[...(natural && diditEnabled() ? [ctx.verified ? "✓ Identity" : "Identity"] : []), "Documents", natural ? "About you" : "The company", "Service and money", "Sign"].map((x, i) => (
+            <li key={x} className="rounded-full border border-border bg-background px-2.5 py-1"><span className="font-semibold">{i + 1}.</span> {x}</li>
+          ))}
+        </ol>
       </div>
 
       {ctx.link.purpose === "refresh" && (
-        <section className="space-y-3 rounded-md border border-accent p-4">
+        <section className="space-y-3 rounded-2xl border border-accent bg-background p-5 shadow-[var(--shadow)]">
           <h2 className="font-semibold">Has anything changed?</h2>
           <p className="text-sm">If your details (name, address, nationality, ownership, the purpose of our work or where your money comes from) are the same as before, confirm it here. Otherwise update the form below.</p>
           <ActionForm action={noChangeAction.bind(null, token)} className="space-y-3">
@@ -98,7 +108,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
       )}
 
       {natural && diditEnabled() && (
-        <section className="space-y-2 rounded-xl border border-border p-4" data-testid="idv">
+        <section className="space-y-2 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" data-testid="idv">
           <h2 className="font-semibold">Verify your identity</h2>
           {ctx.verified ? (
             <p className="text-sm">Done. Your identity has been verified.</p>
@@ -115,7 +125,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
         </section>
       )}
 
-      <section className="space-y-3">
+      <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
         <h2 className="font-semibold">Documents</h2>
         {ctx.eddRequired && <p className="text-sm">Please also upload evidence of the source of the funds{natural ? " and of your wealth" : ""}, e.g. a sale contract, bank statements or an inheritance deed.</p>}
         {ctx.documents.length > 0 && (
@@ -136,7 +146,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
 
       <ActionForm action={saveAction.bind(null, token)} className="space-y-6">
         {natural ? (
-          <section className="space-y-4">
+          <section className="space-y-4 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
             <h2 className="font-semibold">About you</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="First names (all)" name="firstNames" required defaultValue={v("firstNames")} autoComplete="given-name" />
@@ -158,7 +168,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             <Field label="If yes, for whom?" name="actingForWhom" defaultValue={v("actingForWhom")} />
           </section>
         ) : (
-          <section className="space-y-4">
+          <section className="space-y-4 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
             <h2 className="font-semibold">About the company</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Legal name" name="name" required defaultValue={v("name")} />
@@ -175,14 +185,14 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           </section>
         )}
 
-        <section className="space-y-4">
+        <section className="space-y-4 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
           <h2 className="font-semibold">The service and the money</h2>
           <Field label="What do you need the service for?" name="purpose" required defaultValue={v("purpose")} />
           <Field label="Where does the money for this come from?" name="sourceOfFunds" required defaultValue={v("sourceOfFunds")} hint="e.g. salary savings, sale of a flat, business income, mortgage" />
           {natural && ctx.eddRequired && <Field label="How did you build up your wealth overall?" name="sourceOfWealth" defaultValue={v("sourceOfWealth")} />}
         </section>
 
-        <section className="space-y-3">
+        <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
           <h2 className="font-semibold">Declaration</h2>
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" name="confirm" className="mt-1" /> I confirm that the information above and the documents I uploaded are true and complete, and I will tell {ctx.firmName} if anything changes.

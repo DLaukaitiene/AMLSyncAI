@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { ActionState } from "@/components/form";
 import { requireUser, hasRecentMfa } from "@/lib/server/session";
 import { purgeParties } from "@/lib/server/retention";
@@ -15,5 +16,6 @@ export async function purgeAction(_: ActionState, fd: FormData): Promise<ActionS
   const n = await purgeParties(s.firm.id, s.user.id, ids);
   await securityEvent({ firmId: s.firm.id, userId: s.user.id, kind: "retention-purge", details: { count: n } });
   revalidatePath("/app/records");
-  return { message: `${n} client record(s) permanently deleted. The audit log keeps only that a deletion happened.` };
+  // Redirect so the confirmation stays visible even when the list is now empty.
+  redirect(`/app/records?deleted=${n}`);
 }
