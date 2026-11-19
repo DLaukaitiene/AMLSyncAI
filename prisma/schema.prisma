@@ -608,6 +608,8 @@ model Case {
   dueOn       DateTime? @db.Date
   closedAt    DateTime?
   fiuInstruction String? // proceed | stop — recorded during the Art. 71 hold
+  decidedAt   DateTime? // when the Compliance Officer recorded the decision
+  suspicionFormedAt DateTime? // set once on a "report" decision; a DB trigger stops it being changed
   createdById String   @db.Uuid
   createdAt   DateTime @default(now())
 

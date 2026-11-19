@@ -71,6 +71,9 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   await submit(p, "Record decision", /Held until \d{4}-\d{2}-\d{2}/);
   log("CO decision recorded:", await p.getByText(/Held until/).first().innerText());
   const caseUrl = p.url();
+  const times = await p.getByTestId("case-times").innerText();
+  if (!/Suspicion formed \(decision to report\)\s*\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/.test(times)) throw new Error("locked suspicion time missing: " + times);
+  log("suspicion-formed time recorded and shown as locked");
 
   await q.goto(matterUrl);
   await q.getByText(/Transaction on hold pending FIU/).waitFor();

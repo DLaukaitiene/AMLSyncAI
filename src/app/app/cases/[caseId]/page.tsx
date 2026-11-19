@@ -44,6 +44,18 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
         <p className="text-sm">Opened {c.createdAt.toISOString().slice(0, 10)}{c.dueOn ? ` · due ${toIsoDate(c.dueOn)}` : ""}</p>
       </div>
 
+      {(c.decidedAt || c.suspicionFormedAt) && (
+        <section data-testid="case-times" className="rounded-xl border border-border bg-surface p-4 text-sm">
+          <h2 className="font-semibold">Recorded times <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-xs font-normal text-muted">locked</span></h2>
+          <dl className="mt-2 grid gap-1 sm:grid-cols-[14rem_1fr]">
+            <dt className="text-muted">Internal report raised</dt><dd>{fmtTime(c.createdAt)}</dd>
+            {c.suspicionFormedAt && (<><dt className="text-muted">Suspicion formed (decision to report)</dt><dd>{fmtTime(c.suspicionFormedAt)}</dd></>)}
+            {c.decidedAt && (<><dt className="text-muted">Decision recorded</dt><dd>{fmtTime(c.decidedAt)}</dd></>)}
+          </dl>
+          <p className="mt-2 text-xs text-muted">Set by the server clock when the decision was recorded and cannot be edited, so the supervisor can see the report was made promptly (AMLR Art. 69).</p>
+        </section>
+      )}
+
       <section className="space-y-2 rounded-xl border border-border p-4 text-sm">
         <h2 className="font-semibold">Details</h2>
         {parties.length > 0 && (
@@ -144,4 +156,8 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       )}
     </div>
   );
+}
+
+function fmtTime(d: Date) {
+  return d.toISOString().slice(0, 16).replace("T", " ") + " UTC";
 }

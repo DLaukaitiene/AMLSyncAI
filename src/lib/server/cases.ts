@@ -106,6 +106,8 @@ export async function decideSuspicion(tx: Tx, ctx: Ctx, caseId: string, d: { dec
     data: {
       decision: d.decision, status: "decided", privilegeApplies: d.decision === "privilege", contentEnc: writeContent(ctx.firmId, content),
       holdStartedOn: holdEnds ? new Date(today) : null, holdEndsOn: holdEnds ? new Date(holdEnds) : null,
+      // Recorded once by the server clock; a database trigger refuses any later change.
+      decidedAt: new Date(), suspicionFormedAt: d.decision === "report" ? new Date() : null,
     },
   });
   if (d.decision === "report") {
