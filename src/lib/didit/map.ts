@@ -156,14 +156,34 @@ export const TRIAL_CREDIT_CENTS = 1500; // 5 checks for new firms
 export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 
 /**
- * Company register checks through Didit (search free). Two levels [decision: prices]:
- * - company & status (Didit "Lite": identifiers, status, legal form, address, officers);
- * - full ownership (Didit "UBO" tier: plus shareholders and beneficial owners through the chain).
+ * Company register checks through Didit. Two levels offered [decision: prices]:
+ * - company & status (Didit "Lite": identifiers, status, legal form, address, officers; LT cost $2);
+ * - full ownership (Didit "UBO" tier: plus shareholders and beneficial owners; LT cost $9).
+ * Didit bills the tier it actually delivers (registry_tier_delivered), so we do too:
+ * a full-ownership request that comes back as Shareholders or Lite is refunded down.
+ * Didit's $0.50 search fee is absorbed (not passed on) [decision].
  */
 export const KYB_LITE_PRICE_CENTS = 500;
+export const KYB_SHAREHOLDERS_PRICE_CENTS = 800; // only billed when a full request is delivered as Shareholders
 export const KYB_FULL_PRICE_CENTS = 1200;
 export const KYB_PRICE_CENTS = KYB_FULL_PRICE_CENTS;
 export type KybLevel = "lite" | "full";
+/** Didit search tier that sells each level ("search at the tier you intend to buy"). */
+export const KYB_SEARCH_TIER: Record<KybLevel, "basic" | "ubo"> = { lite: "basic", full: "ubo" };
+
+/**
+ * What the firm pays once Didit has answered: never more than what was charged
+ * up front, and the price of the tier actually delivered. Returns null while the
+ * ownership data is still pending (nothing is settled yet).
+ */
+export function kybBilledCents(chargedCents: number, tierDelivered: string | null | undefined, ownershipStatus: string | null | undefined): number | null {
+  const st = (ownershipStatus ?? "").toLowerCase();
+  const tier = (tierDelivered ?? "").toLowerCase();
+  if (st === "pending" || (!tier && st !== "not_held" && st !== "unavailable")) return st === "pending" ? null : chargedCents;
+  if (st === "not_held" || st === "unavailable" || /lite|basic|select/.test(tier)) return Math.min(chargedCents, KYB_LITE_PRICE_CENTS);
+  if (/shareholder/.test(tier)) return Math.min(chargedCents, KYB_SHAREHOLDERS_PRICE_CENTS);
+  return chargedCents;
+}
 
 export interface KybPerson {
   name: string;

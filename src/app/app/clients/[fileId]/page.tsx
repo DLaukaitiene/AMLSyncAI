@@ -16,7 +16,6 @@ import {
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
   kybAddPersonAction,
-  kybRetrieveAction,
   setScopeAction,
   declareLookThroughAction,
   reopenLookThroughAction,
@@ -379,7 +378,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                       {xd.provider === "Didit" && xd.level === "lite" && (
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                           <span>Company and status check — ownership not included.</span>
-                          {edit && xd.kybResponseId && <ActionButton action={kybRetrieveAction.bind(null, fileId, xd.kybResponseId, "full")}>{`Get full ownership (${formatEur(KYB_FULL_PRICE_CENTS)})`}</ActionButton>}
+                          {edit && <span>Need the owners? Search the register again and choose <strong>Full ownership</strong> ({formatEur(KYB_FULL_PRICE_CENTS)}).</span>}
                         </div>
                       )}
                       {xd.provider === "Didit" && xd.level !== "lite" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}

@@ -468,11 +468,12 @@ export async function diditScreenAction(fileId: string, partyId: string): Promis
 export async function kybSearchAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("client.edit");
   try {
+    const level = fd.get("level") === "lite" ? "lite" : "full";
     const candidates = await searchCompanyRegister(s.firm.id, {
-      country: String(fd.get("country") ?? ""), name: String(fd.get("name") ?? ""), registrationNumber: String(fd.get("registrationNumber") ?? ""),
+      country: String(fd.get("country") ?? ""), name: String(fd.get("name") ?? ""), registrationNumber: String(fd.get("registrationNumber") ?? ""), level,
     });
     if (!candidates.length) return { error: "No company found. Check the name, number and country, or record the register extract by hand below." };
-    return { message: `${candidates.length} compan${candidates.length === 1 ? "y" : "ies"} found. Choose the right one.`, data: { candidates, fileId } };
+    return { message: `${candidates.length} compan${candidates.length === 1 ? "y" : "ies"} found. Choose the right one.`, data: { candidates, fileId, level } };
   } catch (e) {
     return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register search failed: ") : "The register search failed." };
   }
@@ -484,7 +485,8 @@ export async function kybRetrieveAction(fileId: string, kybResponseId: string, l
     const r = await retrieveCompany({ firmId: s.firm.id, userId: s.user.id }, fileId, kybResponseId, level);
     revalidatePath(`/app/clients/${fileId}`);
     const price = formatEur(level === "full" ? KYB_FULL_PRICE_CENTS : KYB_LITE_PRICE_CENTS);
-    if (r.status !== "imported") return { message: "The register is preparing the ownership data. Use “Refresh” in a few minutes." };
+    if (r.status !== "imported") return { message: "The register is preparing the ownership data. It usually arrives within a few minutes and is imported automatically: use “Refresh” to check. Don't run the check again (each one is charged)." };
+    if (r.refundedCents) return { message: `Register data imported. The register had no full ownership data for this company, so ${formatEur(r.refundedCents)} was refunded.` };
     return { message: level === "full" ? `Register data imported (${price}). Review the owners below and add them to the structure.` : `Company and status imported (${price}).` };
   } catch (e) {
     return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register check failed: ") : "The register check failed." };

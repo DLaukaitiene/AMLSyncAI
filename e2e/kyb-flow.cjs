@@ -17,6 +17,7 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Sandbox Holdings Ltd" }).waitFor();
   const kyb = p.getByTestId("kyb-search");
+  await kyb.getByRole("radio", { name: /Company and status/ }).check();
   await kyb.getByRole("button", { name: "Search register" }).click();
   await kyb.getByText(/compan(y|ies) found/).waitFor();
   log("register search returned candidates");
@@ -24,9 +25,12 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   await p.getByText("Company register (GB) via Didit").first().waitFor();
   await p.getByText("Company and status check — ownership not included.").waitFor();
   log("level 1 — company and status (€5.00): register extract recorded, no ownership");
-  await p.getByRole("button", { name: "Get full ownership (€12.00)" }).click();
+  await kyb.getByRole("radio", { name: /Full ownership/ }).check();
+  await kyb.getByRole("button", { name: "Search register" }).click();
+  await kyb.getByText(/compan(y|ies) found/).waitFor();
+  await kyb.getByRole("button", { name: "Full ownership (€12.00)" }).first().click();
   await p.getByTestId("register-people").waitFor();
-  log("level 2 — full ownership (€12.00) from the same search: owners listed");
+  log("level 2 — full ownership (€12.00), searched on the UBO tier: owners listed");
   const d = JSON.parse(sql(`SELECT details::text FROM "Party" WHERE "displayName" = 'Sandbox Holdings Ltd'`));
   if (d.registrationNumber !== "SANDBOX-0001" || d.legalForm !== "Private Limited Company") throw new Error("✘ blanks not filled: " + JSON.stringify(d));
   log("blank fields filled from the register (registration number, legal form, address)");

@@ -7,19 +7,32 @@ import { kybRetrieveAction, kybSearchAction } from "../actions";
 
 type Candidate = { id: string; name: string; registrationNumber: string | null; status: string | null; type: string | null; address: string | null };
 
-/** Search the company register (free), then retrieve the right company (paid). */
+/** Choose the level, search the register on that level's tier, then retrieve the right company (paid). */
 export function KybSearch({ fileId, name, registrationNumber, country, litePrice, fullPrice, ownersRecorded }: { fileId: string; name: string; registrationNumber: string; country: string; litePrice: string; fullPrice: string; ownersRecorded: boolean }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(kybSearchAction.bind(null, fileId), null);
   const candidates = ((state?.data as { candidates?: Candidate[] } | undefined)?.candidates ?? []);
+  const searchedLevel = ((state?.data as { level?: "lite" | "full" } | undefined)?.level ?? "full");
   const cls = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
   return (
     <div className="space-y-3 rounded-xl border border-border p-3" data-testid="kyb-search">
       <p className="text-sm font-medium">Check the company register (Didit)</p>
       <p className="text-xs text-muted">
-        Searching is free. Then choose: <strong>Company and status</strong> ({litePrice}) — registration details, status, legal form, address and officers; or <strong>Full ownership</strong> ({fullPrice}) — also the shareholders and beneficial owners through the chain.
-        {ownersRecorded ? " This client's ownership structure is already recorded, so the company and status check is usually enough." : ""}
+        Searching is free. You pay only when you retrieve the company, and only for what the register delivers: if it has no ownership data, a full ownership check is charged as company and status.
       </p>
       <form action={action} className="grid gap-3 sm:grid-cols-3">
+        <fieldset className="space-y-2 sm:col-span-3">
+          <legend className="text-sm font-medium">What do you need?</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className="flex gap-2 rounded-lg border border-border p-2 text-sm">
+              <input type="radio" name="level" value="lite" defaultChecked={ownersRecorded} className="mt-1" />
+              <span><span className="block font-semibold">Company and status ({litePrice})</span><span className="block text-xs text-muted">Registration details, status, legal form, address and officers.{ownersRecorded ? " Enough here: the ownership structure is already recorded." : ""}</span></span>
+            </label>
+            <label className="flex gap-2 rounded-lg border border-border p-2 text-sm">
+              <input type="radio" name="level" value="full" defaultChecked={!ownersRecorded} className="mt-1" />
+              <span><span className="block font-semibold">Full ownership ({fullPrice})</span><span className="block text-xs text-muted">Also the shareholders and beneficial owners through the ownership chain.</span></span>
+            </label>
+          </div>
+        </fieldset>
         <CountryField label="Country of registration" name="country" defaultValue={country} />
         <label className="space-y-1 text-sm"><span className="block font-medium">Company name</span><input name="name" defaultValue={name} className={cls} /></label>
         <label className="space-y-1 text-sm"><span className="block font-medium">Registration number</span><input name="registrationNumber" defaultValue={registrationNumber} className={cls} /></label>
@@ -38,8 +51,9 @@ export function KybSearch({ fileId, name, registrationNumber, country, litePrice
                 <span className="text-muted"> · {[c.registrationNumber, c.type, c.status, c.address].filter(Boolean).join(" · ")}</span>
               </span>
               <span className="flex flex-wrap gap-2">
-                <ActionButton action={kybRetrieveAction.bind(null, fileId, c.id, "lite")} variant={ownersRecorded ? "primary" : "secondary"}>{`Company and status (${litePrice})`}</ActionButton>
-                <ActionButton action={kybRetrieveAction.bind(null, fileId, c.id, "full")} variant={ownersRecorded ? "secondary" : "primary"}>{`Full ownership (${fullPrice})`}</ActionButton>
+                {searchedLevel === "lite"
+                  ? <ActionButton action={kybRetrieveAction.bind(null, fileId, c.id, "lite")} variant="primary">{`Company and status (${litePrice})`}</ActionButton>
+                  : <ActionButton action={kybRetrieveAction.bind(null, fileId, c.id, "full")} variant="primary">{`Full ownership (${fullPrice})`}</ActionButton>}
               </span>
             </li>
           ))}

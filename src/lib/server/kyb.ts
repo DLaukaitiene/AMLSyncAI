@@ -5,7 +5,7 @@ import { audit } from "./audit";
 import { hit } from "./rate-limit";
 import { charge, didit, DiditError, diditEnabled, refund } from "./didit";
 import { loadClientFile, persistRiskIfChanged, runScreening, upsertTask } from "./cdd";
-import { KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, kybInactive, mapKybCompany, type KybCompany, type KybLevel } from "@/lib/didit/map";
+import { KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, KYB_SEARCH_TIER, formatEur, kybBilledCents, kybInactive, mapKybCompany, type KybCompany, type KybLevel } from "@/lib/didit/map";
 import { normalizeCountry } from "@/lib/geo/countries";
 import { toIsoDate } from "@/lib/rules/dates";
 
@@ -19,15 +19,22 @@ import { toIsoDate } from "@/lib/rules/dates";
 
 export interface Candidate { id: string; name: string; registrationNumber: string | null; status: string | null; type: string | null; address: string | null }
 
-export async function searchCompanyRegister(firmId: string, q: { country: string; name?: string; registrationNumber?: string }): Promise<Candidate[]> {
+/**
+ * Each successful search costs $0.50 at Didit (absorbed, not charged to the firm),
+ * so searches are limited per firm and run on the tier the firm intends to buy
+ * — a candidate from one tier's search is retrieved from that tier's endpoint.
+ */
+export const KYB_SEARCHES_PER_DAY = 10;
+export async function searchCompanyRegister(firmId: string, q: { country: string; name?: string; registrationNumber?: string; level?: KybLevel }): Promise<Candidate[]> {
   if (!diditEnabled()) throw new DiditError("Company register checks are not set up for this installation.");
-  if (!(await hit(`kyb-search:${firmId}`, { limit: 30, windowSec: 86_400 }))) throw new DiditError("Too many register searches today. Try again tomorrow or contact contact@amlsync.com.");
+  if (!(await hit(`kyb-search:${firmId}`, { limit: KYB_SEARCHES_PER_DAY, windowSec: 86_400 }))) throw new DiditError(`For your security there is a limit of ${KYB_SEARCHES_PER_DAY} register searches a day. Please reach out to contact@amlsync.com so we can adjust it within 1 business day.`);
   const country = normalizeCountry(q.country);
   if (!country || !/^[A-Z]{2}$/.test(country)) throw new DiditError("Choose the country where the company is registered.");
   if (!q.name?.trim() && !q.registrationNumber?.trim()) throw new DiditError("Enter the company name or registration number.");
   type Resp = { kyb_registry?: { companies?: Record<string, unknown>[]; search_resolved?: boolean } };
   const r = await didit<Resp>("POST", "/v3/kyb/search/", {
     country_code: country,
+    tier: KYB_SEARCH_TIER[q.level ?? "full"],
     ...(q.registrationNumber?.trim() ? { registration_number: q.registrationNumber.trim() } : {}),
     ...(q.name?.trim() ? { name: q.name.trim(), search_type: "contains" } : {}),
   });
@@ -39,7 +46,7 @@ export async function searchCompanyRegister(firmId: string, q: { country: string
 }
 
 /** Retrieves the chosen company at the chosen level, charges the check, imports it when ready. */
-export async function retrieveCompany(ctx: { firmId: string; userId: string }, fileId: string, kybResponseId: string, level: KybLevel = "full"): Promise<{ status: "imported" | "pending"; company?: KybCompany }> {
+export async function retrieveCompany(ctx: { firmId: string; userId: string }, fileId: string, kybResponseId: string, level: KybLevel = "full"): Promise<{ status: "imported" | "pending"; company?: KybCompany; refundedCents?: number }> {
   if (!diditEnabled()) throw new DiditError("Company register checks are not set up for this installation.");
   const pre = await withTenant(ctx.firmId, async (tx) => {
     const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
@@ -67,7 +74,8 @@ export async function retrieveCompany(ctx: { firmId: string; userId: string }, f
     await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "DiditSession", objectId: row.id, fields: ["kyb"] });
     if (!ready || !company) return { status: "pending" as const };
     await importCompany(tx, ctx.firmId, { id: row.id, partyId: pre.partyId, cddFileId: fileId }, company, r.request_id, { level, kybResponseId });
-    return { status: "imported" as const, company };
+    const refunded = await settleKybCharge(tx, ctx.firmId, pre.chargeId, company);
+    return { status: "imported" as const, company, refundedCents: refunded };
   }, { timeoutMs: 60_000 });
 }
 
@@ -83,9 +91,28 @@ export async function refreshCompanyCheck(firmId: string, requestId: string): Pr
   if (company.fetchStatus === "pending") return { status: "In Progress", imported: false };
   return withTenant(firmId, async (tx) => {
     await importCompany(tx, firmId, { id: s.id, partyId: s.partyId, cddFileId: s.cddFileId }, company, requestId);
+    if (s.creditEntryId) await settleKybCharge(tx, firmId, s.creditEntryId, company);
     await tx.diditSession.update({ where: { id: s.id }, data: { status: "Approved" } });
     return { status: "Approved", imported: true };
   }, { timeoutMs: 60_000 });
+}
+
+/**
+ * Didit bills the tier it delivered, not the one requested (e.g. no ownership
+ * data → Lite). Refund the firm the difference, once. Returns the cents refunded.
+ */
+async function settleKybCharge(tx: Tx, firmId: string, chargeId: string, k: KybCompany): Promise<number> {
+  const c = await tx.creditEntry.findUnique({ where: { id: chargeId } });
+  if (!c || (await tx.creditEntry.count({ where: { kind: "refund", reference: chargeId } }))) return 0;
+  const charged = -c.amountCents;
+  const billed = kybBilledCents(charged, k.tierDelivered, k.ownershipStatus);
+  if (billed === null || billed >= charged) return 0;
+  const diff = charged - billed;
+  await tx.creditEntry.create({
+    data: { firmId, amountCents: diff, kind: "refund", reference: chargeId, clientRef: c.clientRef,
+      description: `Refund: the register had no ${billed <= KYB_LITE_PRICE_CENTS ? "ownership data" : "beneficial-owner data"} for this company, so you pay ${formatEur(billed)} instead of ${formatEur(charged)}` },
+  });
+  return diff;
 }
 
 async function importCompany(tx: Tx, firmId: string, s: { id: string; partyId: string; cddFileId: string | null }, k: KybCompany, requestId: string, meta: { level?: KybLevel; kybResponseId?: string } = {}) {
