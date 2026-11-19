@@ -10,6 +10,10 @@
 
 These override anything below that says otherwise.
 
+- **Locked case times.** A "report" decision records when the suspicion was formed and when the decision was made, by the server clock. A database trigger refuses any later change. Both are shown on the case as "locked" (Art. 69 promptness).
+- **Staff screening.** The Owner or Compliance Officer screens all active colleagues against the lists loaded in the app (Integrity page). It's free, doesn't count towards client screening limits, and a possible match needs a reviewed outcome with a reason.
+- **Firm compliance status.** The dashboard shows On track / Needs attention / At risk with the reasons, and the matters register has open / completed / cancelled tabs.
+
 **Name and brand.** "AMLSyncAI" is the internal name only. Clients and firms see **AMLSync App**; the company-wide logo is **AMLSYNC / Compliance Services** (same as amlsync.com). The amlsync.com website presents AMLSync App as AMLSync's expansion (page `app.html`, Sign in in every menu).
 
 **Hosting (test phase, €0).** App at **app.amlsync.com** on Vercel Hobby (Frankfurt), database and files on Supabase Free (Frankfurt); amlsync.com stays on Hostinger. Before the first paying client: Vercel Pro or a Hostinger VPS, and Supabase Pro (backups) — each needs the owner's approval to pay. Only production builds run database migrations (previews share the database). Email through Google Workspace (no-reply@amlsync.com alias; SPF, DKIM, DMARC set).
