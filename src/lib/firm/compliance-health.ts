@@ -44,6 +44,7 @@ export interface PillarInput {
   integrityOverdue: number; // staff without a declaration in the last 12 months (multi-person firms)
   staffScreeningOpen: number; // unreviewed staff possible matches or staff never screened
   pendingScreeningMatches: number;
+  flaggedTransactions?: number;
   staleOpenFiles: number;
   overdueCaseTasks: number; // holds, FIU requests, discrepancy reports past due
   draftReportsOlderThan7Days: number;
@@ -74,6 +75,7 @@ export function programStatus(i: PillarInput): Pillar[] {
     ]),
     pillar("monitoring", "Monitoring", "/app/monitoring-alerts", [
       [i.pendingScreeningMatches === 0, `${i.pendingScreeningMatches} open alert(s)`],
+      [!i.flaggedTransactions, `${i.flaggedTransactions} flagged transaction(s)`],
       [i.staleOpenFiles === 0, `${i.staleOpenFiles} client file(s) open over 30 days`],
     ]),
     pillar("reporting", "Reporting", "/app/cases", [

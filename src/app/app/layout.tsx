@@ -30,6 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/app/identity-verification", label: "Identity Verification", icon: "idv", show: can(r, "client.view") },
     { href: "/app/risk-assessments", label: "Risk Assessments", icon: "risk", show: can(r, "client.view") },
     { href: "/app/monitoring-alerts", label: "Monitoring Alerts", icon: "alerts", show: can(r, "client.view") },
+    { href: "/app/transactions", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
     {
       href: "/app/cases", label: "FIU Reporting", icon: "cases", show: can(r, "case.view"),
       children: [

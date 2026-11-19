@@ -5,8 +5,10 @@ import type { Tx } from "./db";
 export async function clientFileForParties(tx: Tx, partyIds: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (!partyIds.length) return out;
-  const files = await tx.cddFile.findMany({ where: { role: "CLIENT" }, select: { id: true, partyId: true } });
-  const fileOf = new Map(files.map((f) => [f.partyId, f.id]));
+  // Prefer the client file; a matter party (buyer, seller, supplier…) has its own file with another role.
+  const files = await tx.cddFile.findMany({ select: { id: true, partyId: true, role: true }, orderBy: { createdAt: "asc" } });
+  const fileOf = new Map<string, string>();
+  for (const f of files) if (f.role === "CLIENT" || !fileOf.has(f.partyId)) fileOf.set(f.partyId, f.id);
   const links = await tx.ownershipLink.findMany({ select: { ownerId: true, ownedId: true } });
   const up = new Map<string, string[]>();
   for (const l of links) up.set(l.ownerId, [...(up.get(l.ownerId) ?? []), l.ownedId]);

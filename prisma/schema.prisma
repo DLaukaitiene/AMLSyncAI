@@ -203,6 +203,8 @@ model Firm {
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
+  txCashThresholdEUR      Int @default(3000) // transaction monitoring: cash at or above this is flagged
+  txHighValueThresholdEUR Int @default(50000) // any payment at or above this is flagged
   screenLimitMinute Int  @default(5)
   screenLimitDay    Int  @default(30)
   screenLimitMonth  Int  @default(100)
@@ -456,9 +458,20 @@ model Transaction {
   fxRate      Decimal? @db.Decimal(14, 6) // rate recorded at entry (§8B)
   method      String
   occasional  Boolean
+  description String?
+  thirdPartyPayer Boolean @default(false)
+  fromCountry String? // country the funds come from (ISO 3166-1 alpha-2)
+  // Transaction monitoring (Art. 26): pending | flagged | investigated | cleared
+  monitorStatus String   @default("pending")
+  flags       Json     @default("[]") // [{code, text}] from rules/transaction-flags
+  reviewNote  String?
+  reviewedById String?  @db.Uuid
+  reviewedAt  DateTime?
+  caseId      String?  @db.Uuid
   createdAt   DateTime @default(now())
 
   @@index([firmId, customerId, date])
+  @@index([firmId, monitorStatus])
 }
 
 // ---------------------------------------------------------------------------

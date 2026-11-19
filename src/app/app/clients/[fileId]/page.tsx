@@ -76,6 +76,7 @@ const TABS = [
   { id: "screening", label: "Screening results" },
   { id: "risk", label: "Risk reports" },
   { id: "documents", label: "Documents" },
+  { id: "transactions", label: "Transactions" },
   { id: "matters", label: "Matters" },
   { id: "activity", label: "Activity" },
 ] as const;
@@ -111,10 +112,12 @@ export default async function ClientFilePage({ params, searchParams }: { params:
     const names = new Map((await tx.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
     const riskHistory = await tx.clientRiskAssessment.findMany({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" }, take: 50 });
     const matters = await tx.matterParty.findMany({ where: { partyId: cf.party.id }, include: { matter: { select: { id: true, title: true, status: true, type: true, createdAt: true } } } });
-    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters };
+    const transactions = await tx.transaction.findMany({ where: { customerId: cf.party.id }, orderBy: { date: "desc" }, take: 100, include: { matter: { select: { id: true, title: true } } } });
+    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions };
   });
   if (!data) notFound();
-  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters } = data;
+  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions } = data;
+  const flaggedTx = transactions.filter((t) => t.monitorStatus === "flagged").length;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
   const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
   const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
@@ -198,7 +201,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             <li key={t.id}>
               <Link href={t.id === "overview" ? `/app/clients/${fileId}` : `/app/clients/${fileId}?tab=${t.id}`} aria-current={tab === t.id ? "page" : undefined}
                 className={`-mb-px inline-block border-b-2 px-3 py-2 text-sm ${tab === t.id ? "border-accent font-semibold text-foreground" : "border-transparent text-muted hover:text-foreground"}`}>
-                {t.label}{t.id === "documents" ? ` (${documents.length})` : t.id === "matters" ? ` (${matters.length})` : ""}
+                {t.label}{t.id === "documents" ? ` (${documents.length})` : t.id === "matters" ? ` (${matters.length})` : t.id === "transactions" ? (flaggedTx ? ` (${flaggedTx} flagged)` : ` (${transactions.length})`) : ""}
               </Link>
             </li>
           ))}
@@ -214,6 +217,24 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                 <li key={ra.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                   <span className="flex items-center gap-2"><RiskChip level={ra.final} /><span className="text-muted">score {ra.score}{ra.overrideReason ? ` · changed from ${ra.calculated.toLowerCase()}: ${ra.overrideReason}` : ""}</span></span>
                   <span className="text-muted">{ra.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {tab === "transactions" && (
+        <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" data-testid="client-transactions">
+          <div className="flex items-center justify-between"><h2 className="font-semibold">Transactions</h2><Link href={`/app/transactions?client=${cf.party.id}`} className="text-sm text-accent underline">Open in Transaction Monitoring</Link></div>
+          {transactions.length === 0 ? <p className="text-sm text-muted">No transactions recorded for this client. Record them on a matter or with Log Transaction.</p> : (
+            <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+              {transactions.map((t) => (
+                <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                  <span><span className="font-semibold">€{Number(t.amountEUR).toLocaleString("en-IE")}</span> <span className="text-muted">· {t.method} · {t.date.toISOString().slice(0, 10)} · <Link href={`/app/matters/${t.matter.id}`} className="hover:underline">{t.matter.title}</Link></span>
+                    {(t.flags as { text: string }[]).length > 0 && <span className="block text-xs text-red-800 dark:text-red-300">{(t.flags as { text: string }[]).map((f) => f.text).join("; ")}</span>}
+                  </span>
+                  <Chip tone={t.monitorStatus === "flagged" ? "red" : t.monitorStatus === "investigated" ? "amber" : t.monitorStatus === "cleared" ? "green" : "grey"}>{t.monitorStatus === "flagged" ? "Flagged" : t.monitorStatus === "investigated" ? "Investigated" : t.monitorStatus === "cleared" ? "Cleared" : "Pending"}</Chip>
                 </li>
               ))}
             </ul>

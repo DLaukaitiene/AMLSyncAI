@@ -55,6 +55,7 @@ export default async function Dashboard() {
     for (const f of live) if (f.riskAssessments[0]) risk[f.riskAssessments[0].final]++;
     const pendingHits = await tx.screeningResult.findMany({ where: { decision: "PENDING" }, orderBy: { screenedAt: "desc" }, take: 5, include: { party: { select: { displayName: true } } } });
     const openAlerts = await tx.screeningResult.count({ where: { decision: "PENDING" } });
+    const flaggedTx = await tx.transaction.count({ where: { monitorStatus: "flagged" } });
     const staffOpen = seeStaff ? await tx.staffScreening.findMany({ where: { status: "possible-match" }, take: 5 }) : [];
     const checklist = setupChecklist(profile);
     const cpMissing = checklist.filter((c) => c.status === "required-missing").length;
@@ -76,6 +77,7 @@ export default async function Dashboard() {
       integrityOverdue: onePerson ? 0 : users.filter((u) => !declared.has(u.id)).length,
       staffScreeningOpen: (await tx.staffScreening.count({ where: { status: "possible-match" } })) + (onePerson ? 0 : users.filter((u) => !screenedStaff.has(u.id)).length),
       pendingScreeningMatches: openAlerts,
+      flaggedTransactions: flaggedTx,
       staleOpenFiles,
       overdueCaseTasks: await tx.task.count({ where: { status: "OPEN", kind: { in: ["transaction-hold", "fiu-request", "discrepancy-report"] }, dueOn: { lt: new Date(today) } } }),
       draftReportsOlderThan7Days: await tx.report.count({ where: { status: "DRAFT", createdAt: { lt: new Date(now.getTime() - 7 * 86_400_000) } } }),
@@ -86,7 +88,7 @@ export default async function Dashboard() {
       pendingReviews: live.filter((f) => f.status === "OPEN").length,
       portfolioHealth: live.length ? Math.round((accepted.filter((f) => !(f.nextRefreshOn && f.nextRefreshOn < now)).length / live.length) * 100) : null,
       recent: files.slice(0, 5),
-      pendingHits, alertFiles: await clientFileForParties(tx, pendingHits.map((h) => h.partyId)), openAlerts, staffOpen,
+      flaggedTx, pendingHits, alertFiles: await clientFileForParties(tx, pendingHits.map((h) => h.partyId)), openAlerts, staffOpen,
       userNames: new Map(users.map((u) => [u.id, u.name])),
       timeline: await tx.task.findMany({ where: { ...taskWhere, dueOn: { lte: new Date(addCalendarDays(today, 30)) } }, orderBy: { dueOn: "asc" }, take: 8 }),
       activity: seeAudit ? await tx.auditEvent.findMany({ orderBy: { at: "desc" }, take: 8 }) : [],
@@ -107,7 +109,7 @@ export default async function Dashboard() {
   const overall = h.level === "on-track" ? "On track" : h.level === "at-risk" ? "At risk" : "Needs attention";
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
   const card = "rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]";
-  const alertCount = data.openAlerts + data.staffOpen.length;
+  const alertCount = data.openAlerts + data.staffOpen.length + data.flaggedTx;
 
   return (
     <div className="space-y-6">
@@ -139,6 +141,12 @@ export default async function Dashboard() {
                 </li>
               );
             })}
+            {data.flaggedTx > 0 && (
+              <li className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span><span className="font-medium">{data.flaggedTx} transaction(s)</span> <span className="text-muted">· flagged by monitoring rules</span></span>
+                <Link href="/app/transactions?status=flagged" className="rounded-full border border-border px-3 py-1 hover:border-accent">Review</Link>
+              </li>
+            )}
             {data.staffOpen.map((x) => (
               <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span><span className="font-medium">{data.userNames.get(x.userId) ?? "Staff member"}</span> <span className="text-muted">· staff screening: possible match</span></span>

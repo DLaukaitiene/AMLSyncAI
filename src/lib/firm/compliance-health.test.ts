@@ -22,7 +22,8 @@ describe("programStatus", () => {
     const by = Object.fromEntries(ps.map((p) => [p.id, p]));
     expect(by.governance.score).toBe(67);
     expect(by.governance.issues).toEqual(["AML Program not approved"]);
-    expect(by.monitoring.score).toBe(50);
+    expect(by.monitoring.score).toBe(67);
+    expect(programStatus({ ...ok, flaggedTransactions: 2 }).find((p) => p.id === "monitoring")!.issues).toEqual(["2 flagged transaction(s)"]);
     expect(by.people.score).toBe(33);
     expect(by.reporting.score).toBe(100);
   });

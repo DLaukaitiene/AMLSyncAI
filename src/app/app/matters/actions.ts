@@ -18,6 +18,8 @@ import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { toIsoDate } from "@/lib/rules/dates";
 import { encryptField } from "@/lib/server/crypto";
 import { matterHeld } from "@/lib/server/cases";
+import { applyTransactionFlags } from "@/lib/server/transactions";
+import { normalizeCountry } from "@/lib/geo/countries";
 
 const ROLES = ["CLIENT", "BUYER", "SELLER", "LANDLORD", "TENANT", "SUPPLIER", "REPRESENTATIVE", "BENEFICIARY", "OTHER"] as const;
 const TYPES = ["ENGAGEMENT", "PROPERTY_SALE", "LETTING", "GOODS_SALE", "COMPANY_FORMATION", "TRANSACTION", "OTHER"] as const;
@@ -121,7 +123,10 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
       id: t.id, customerId: t.customerId, date: toIsoDate(t.date), amountEUR: Number(t.amountEUR), method: t.method as "cash", occasional: t.occasional,
     }));
     const t = await tx.transaction.create({
-      data: { firmId: s.firm.id, matterId, customerId: o.customerId, date: new Date(o.date), amountEUR: amount, method: methodStored, occasional: o.occasional === "on" },
+      data: {
+        firmId: s.firm.id, matterId, customerId: o.customerId, date: new Date(o.date), amountEUR: amount, method: methodStored, occasional: o.occasional === "on",
+        description: String(o.description ?? "").trim().slice(0, 500) || null, thirdPartyPayer: o.thirdPartyPayer === "on", fromCountry: normalizeCountry(o.fromCountry),
+      },
     });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Transaction", objectId: t.id, fields: ["amountEUR", "method"] });
 
@@ -159,8 +164,11 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
         messages.push(tr.explanation!);
       }
     }
+    const flags = await applyTransactionFlags(tx, { firmId: s.firm.id, userId: s.user.id }, t.id);
+    if (flags.length) messages.push(`Flagged for review in Transaction Monitoring: ${flags.map((f) => f.text).join("; ")}.`);
     revalidatePath(`/app/matters/${matterId}`);
-    return { message: messages.length ? messages.join(" ") : "Transaction recorded. No CDD trigger or report." };
+    revalidatePath("/app/transactions");
+    return { message: messages.length ? messages.join(" ") : "Transaction recorded. No CDD trigger, report or red flag." };
   });
 }
 

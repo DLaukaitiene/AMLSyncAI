@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { openMatterItems, requiredRoles } from "@/lib/rules/gates";
-import { ActionForm, Field, SelectWithOther, Submit } from "@/components/form";
+import { ActionForm, CountryField, Field, SelectWithOther, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { PartyFields } from "@/components/party-fields";
 import { addPartyAction, addTransactionAction, completeMatterAction, matterState } from "../actions";
@@ -85,7 +85,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
         {m.transactions.length ? (
           <ul className="text-sm">
             {m.transactions.map((t) => (
-              <li key={t.id}>{t.date.toISOString().slice(0, 10)} · €{Number(t.amountEUR).toLocaleString("en")} · {t.method}{t.occasional ? " · occasional" : ""} · {m.parties.find((p) => p.partyId === t.customerId)?.party.displayName}</li>
+              <li key={t.id}>{t.date.toISOString().slice(0, 10)} · €{Number(t.amountEUR).toLocaleString("en")} · {t.method}{t.occasional ? " · occasional" : ""} · {m.parties.find((p) => p.partyId === t.customerId)?.party.displayName}{t.monitorStatus === "flagged" ? <> · <Link href="/app/transactions?status=flagged" className="font-semibold text-red-700 underline dark:text-red-300">flagged for review</Link></> : t.monitorStatus !== "pending" ? ` · ${t.monitorStatus}` : ""}</li>
             ))}
           </ul>
         ) : <p className="text-sm text-muted">None yet.</p>}
@@ -97,7 +97,10 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
             <Field label="Date" name="date" type="date" />
             <Field label="Amount (EUR)" name="amountEUR" type="number" inputMode="decimal" />
             <SelectWithOther label="Method" name="method" defaultValue="bank-transfer" otherValue="other" options={[["bank-transfer", "Bank transfer"], ["cash", "Cash"], ["card", "Card"], ["crypto", "Crypto-assets"]]} />
-            <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="occasional" defaultChecked /> Occasional transaction (no ongoing business relationship)</label>
+            <CountryField label="Funds come from (country)" name="fromCountry" />
+            <Field label="Description" name="description" />
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="thirdPartyPayer" /> Paid by someone other than the client</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="occasional" defaultChecked /> Occasional transaction (no ongoing business relationship)</label>
             <div className="sm:col-span-2"><Submit variant="secondary">Record</Submit></div>
           </ActionForm>
         )}

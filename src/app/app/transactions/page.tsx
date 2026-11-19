@@ -1,0 +1,173 @@
+import Link from "next/link";
+import { ArrowLeftRight } from "lucide-react";
+import { requireUser } from "@/lib/server/session";
+import { withTenant } from "@/lib/server/db";
+import { can } from "@/lib/auth/permissions";
+import { ActionForm, CountryField, Field, SelectWithOther, Submit } from "@/components/form";
+import { Chip, type Tone } from "@/components/chips";
+import { EmptyState } from "@/components/empty-state";
+import { toIsoDate } from "@/lib/rules/dates";
+import type { Flag } from "@/lib/rules/transaction-flags";
+import { clientFileForParties } from "@/lib/server/client-of-party";
+import { logTransactionAction, reviewTransactionAction, thresholdsAction } from "./actions";
+
+/**
+ * Transaction Monitoring (ClearAML's layout; AMLR Art. 26): every payment in
+ * one log, red flags raised automatically, and a written reason for every
+ * review decision. Escalation goes to the Compliance Officer as an internal
+ * suspicion report — the CO decides whether to report to the FIU.
+ */
+const STATUS: Record<string, [string, Tone]> = {
+  pending: ["Pending", "grey"], flagged: ["Flagged", "red"], investigated: ["Investigated", "amber"], cleared: ["Cleared", "green"],
+};
+const FILTERS = ["all", "flagged", "pending", "investigated", "cleared"] as const;
+const eur = (n: number) => `€${n.toLocaleString("en-IE", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
+
+export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; client?: string }> }) {
+  const s = await requireUser("client.view");
+  const sp = await searchParams;
+  const status = (FILTERS as readonly string[]).includes(sp.status ?? "") ? sp.status! : "all";
+  const q = sp.q?.trim();
+  const r = s.user.roles;
+  const data = await withTenant(s.firm.id, async (tx) => {
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { txCashThresholdEUR: true, txHighValueThresholdEUR: true } });
+    const parties = await tx.party.findMany({ where: q ? { displayName: { contains: q, mode: "insensitive" } } : {}, select: { id: true, displayName: true } });
+    const all = await tx.transaction.findMany({
+      where: {
+        ...(status !== "all" ? { monitorStatus: status } : {}),
+        ...(sp.client ? { customerId: sp.client } : {}),
+        ...(q ? { OR: [{ customerId: { in: parties.map((p) => p.id) } }, { description: { contains: q, mode: "insensitive" } }] } : {}),
+      },
+      orderBy: { date: "desc" }, take: 300, include: { matter: { select: { id: true, title: true } } },
+    });
+    // Flagged first, then newest.
+    all.sort((a, b) => Number(b.monitorStatus === "flagged") - Number(a.monitorStatus === "flagged"));
+    const sums = await tx.transaction.aggregate({ _sum: { amountEUR: true }, _count: true });
+    const counts = Object.fromEntries((await tx.transaction.groupBy({ by: ["monitorStatus"], _count: true })).map((g) => [g.monitorStatus, g._count]));
+    const names = new Map((await tx.party.findMany({ where: { id: { in: [...new Set(all.map((t) => t.customerId))] } }, select: { id: true, displayName: true } })).map((p) => [p.id, p.displayName]));
+    const links = await tx.matterParty.findMany({ where: { matter: { status: { not: "COMPLETED" } } }, include: { party: { select: { displayName: true } }, matter: { select: { title: true } } }, take: 300 });
+    return { firm, all, sums, counts, names, links, files: await clientFileForParties(tx, all.map((t) => t.customerId)) };
+  });
+  const qs = (st: string) => `/app/transactions?${new URLSearchParams({ ...(st !== "all" ? { status: st } : {}), ...(q ? { q } : {}), ...(sp.client ? { client: sp.client } : {}) })}`;
+  const manage = can(r, "approve.compliance");
+  const edit = can(r, "client.edit");
+  const card = "rounded-2xl border border-border bg-surface p-4";
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl">Transaction Monitoring</h1>
+          <p className="text-sm text-muted">Every payment you record — here or on a matter — is checked against red-flag rules. Each flag needs a review with a written reason (AMLR Art. 26). Escalate anything suspicious to your Compliance Officer.</p>
+        </div>
+      </div>
+
+      <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <li className={card}><span className="block text-sm text-muted">Total volume</span><span className="block font-[family-name:var(--font-heading)] text-2xl font-extrabold">{eur(Number(data.sums._sum.amountEUR ?? 0))}</span><span className="text-xs text-muted">{data.sums._count} transaction(s)</span></li>
+        <li><Link href={qs("flagged")} className={`block h-full ${card} hover:border-accent`}><span className="block text-sm text-muted">Flagged exceptions</span><span className={`block font-[family-name:var(--font-heading)] text-2xl font-extrabold ${data.counts.flagged ? "text-red-700 dark:text-red-300" : ""}`}>{data.counts.flagged ?? 0}</span><span className="text-xs text-muted">Need a review</span></Link></li>
+        <li><Link href={qs("pending")} className={`block h-full ${card} hover:border-accent`}><span className="block text-sm text-muted">Pending reviews</span><span className="block font-[family-name:var(--font-heading)] text-2xl font-extrabold">{data.counts.pending ?? 0}</span><span className="text-xs text-muted">No flag, not yet reviewed</span></Link></li>
+        <li className={card}><span className="block text-sm text-muted">Auto-flagging</span><span className="block text-sm font-semibold">Cash ≥ {eur(data.firm.txCashThresholdEUR)} · any ≥ {eur(data.firm.txHighValueThresholdEUR)}</span><span className="text-xs text-muted">plus splitting, just-below-€10,000, crypto, third-party payer, high-risk country, high-risk or PEP client</span></li>
+      </ul>
+
+      <div className="flex flex-wrap gap-3">
+        {edit && data.links.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted">Transactions belong to a matter. <Link href="/app/matters/new" className="text-accent underline">Open a matter</Link> for the client first, then log its payments here.</p>
+        )}
+        {edit && data.links.length > 0 && (
+          <details className="w-full rounded-2xl border border-border p-4 lg:w-auto lg:min-w-[40rem]">
+            <summary className="cursor-pointer font-semibold">Log Transaction</summary>
+            {(
+
+              <ActionForm action={logTransactionAction} className="mt-3 grid gap-4 sm:grid-cols-2">
+                <Field label="Client and matter" name="link">
+                  <select name="link" className={sel} aria-label="Client and matter">{data.links.map((l) => <option key={l.id} value={`${l.matterId}:${l.partyId}`}>{l.party.displayName} — {l.matter.title}</option>)}</select>
+                </Field>
+                <Field label="Date" name="date" type="date" defaultValue={toIsoDate(new Date())} />
+                <Field label="Amount (EUR)" name="amountEUR" type="number" inputMode="decimal" />
+                <SelectWithOther label="Method" name="method" defaultValue="bank-transfer" otherValue="other" options={[["bank-transfer", "Bank transfer"], ["cash", "Cash"], ["card", "Card"], ["crypto", "Crypto-assets"]]} />
+                <CountryField label="Funds come from (country)" name="fromCountry" />
+                <Field label="Description" name="description" hint="E.g. deposit for the flat at Gedimino pr. 1" />
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="thirdPartyPayer" /> Paid by someone other than the client</label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="occasional" /> Occasional transaction (no ongoing relationship)</label>
+                <div className="sm:col-span-2"><Submit>Record Transaction</Submit></div>
+              </ActionForm>
+            )}
+          </details>
+        )}
+        {manage && (
+          <details className="rounded-2xl border border-border p-4">
+            <summary className="cursor-pointer font-semibold">Threshold settings</summary>
+            <ActionForm action={thresholdsAction} className="mt-3 grid gap-4 sm:grid-cols-2">
+              <Field label="Cash monitoring threshold (EUR)" name="cash" type="number" defaultValue={String(data.firm.txCashThresholdEUR)} hint="Default €3,000: the AMLR cash identification amount (Art. 19(4))." />
+              <Field label="High-value threshold (EUR)" name="high" type="number" defaultValue={String(data.firm.txHighValueThresholdEUR)} />
+              <div className="sm:col-span-2"><Submit variant="secondary">Save thresholds</Submit></div>
+            </ActionForm>
+          </details>
+        )}
+      </div>
+
+      <form className="flex flex-wrap items-center gap-2" role="search" aria-label="Search transactions">
+        <input name="q" defaultValue={q} placeholder="Search client or description" aria-label="Search transactions" className="w-full max-w-xs rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+        <select name="status" defaultValue={status} aria-label="Status" className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+          {FILTERS.map((f) => <option key={f} value={f}>{f === "all" ? "All statuses" : STATUS[f][0]}</option>)}
+        </select>
+        {sp.client && <input type="hidden" name="client" value={sp.client} />}
+        <button className="rounded-full border border-border px-4 py-2 text-sm hover:border-accent">Apply</button>
+        {(q || status !== "all" || sp.client) && <Link href="/app/transactions" className="px-2 text-sm text-accent underline">Clear</Link>}
+      </form>
+
+      {data.all.length === 0 ? (
+        <EmptyState icon={ArrowLeftRight} title="No transactions here" text="Record payments with Log Transaction or on a matter. Cash, high-value and unusual payments are flagged automatically." />
+      ) : (
+        <ul className="space-y-2">
+          {data.all.map((t) => {
+            const flags = (t.flags as unknown as Flag[]) ?? [];
+            const [label, tone] = STATUS[t.monitorStatus] ?? STATUS.pending;
+            const amount = Number(t.amountEUR);
+            const fileId = data.files.get(t.customerId);
+            const orange = (t.method === "cash" && amount >= data.firm.txCashThresholdEUR) || amount >= data.firm.txHighValueThresholdEUR;
+            return (
+              <li key={t.id} className={`rounded-2xl border p-4 text-sm ${t.monitorStatus === "flagged" ? "border-red-300 dark:border-red-800" : "border-border"}`} data-testid="transaction">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <p>
+                      <span className={`font-semibold ${orange ? "text-orange-700 dark:text-orange-300" : ""}`}>{eur(amount)}</span>{" "}
+                      <span className="text-muted">· {t.method}{t.fromCountry ? ` · from ${t.fromCountry}` : ""}{t.thirdPartyPayer ? " · third-party payer" : ""} · {toIsoDate(t.date)}</span>
+                    </p>
+                    <p>
+                      {fileId ? <Link href={`/app/clients/${fileId}?tab=transactions`} className="font-medium text-accent hover:underline">{data.names.get(t.customerId) ?? "Client"}</Link> : <span className="font-medium">{data.names.get(t.customerId) ?? "Client"}</span>}
+                      <span className="text-muted"> · <Link href={`/app/matters/${t.matter.id}`} className="hover:underline">{t.matter.title}</Link></span>
+                    </p>
+                    {t.description && <p className="text-muted">{t.description}</p>}
+                  </div>
+                  <Chip tone={tone}>{label}</Chip>
+                </div>
+                {flags.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-0.5 pl-5 text-red-800 dark:text-red-300">{flags.map((f) => <li key={f.code}>{f.text}</li>)}</ul>
+                )}
+                {t.reviewNote && <p className="mt-2 whitespace-pre-line text-xs text-muted">{t.reviewNote}</p>}
+                {t.caseId && can(r, "case.view") && <p className="mt-1 text-xs"><Link href={`/app/cases/${t.caseId}`} className="text-accent underline">Open the internal report</Link></p>}
+                {edit && t.monitorStatus !== "investigated" && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-accent">Review</summary>
+                    <ActionForm action={reviewTransactionAction.bind(null, t.id)} className="mt-2 space-y-2 rounded-lg border border-border p-3">
+                      <fieldset className="flex flex-wrap gap-4">
+                        <legend className="sr-only">Decision</legend>
+                        {manage && t.monitorStatus !== "cleared" && <label className="flex items-center gap-2"><input type="radio" name="action" value="clear" /> Mark as cleared (legitimate)</label>}
+                        {manage && <label className="flex items-center gap-2"><input type="radio" name="action" value="investigate" /> Mark as investigated</label>}
+                        {t.monitorStatus !== "flagged" && <label className="flex items-center gap-2"><input type="radio" name="action" value="flag" /> Flag for review</label>}
+                        {can(r, "case.raise") && <label className="flex items-center gap-2"><input type="radio" name="action" value="raise" /> Raise internal suspicion report</label>}
+                      </fieldset>
+                      <Field label="Reason" name="note" required hint="At least 20 characters. Kept in the record and the audit trail." />
+                      <Submit variant="secondary">Record decision</Submit>
+                    </ActionForm>
+                  </details>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
