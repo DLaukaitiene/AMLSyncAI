@@ -27,6 +27,7 @@ import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
 import { CHECK_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
+import { FileSectionNav } from "./section-nav";
 import { Chip, RiskChip, StatusChip } from "@/components/chips";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
@@ -54,9 +55,12 @@ function activityText(action: string, objectType: string, fields: string[], who?
   return `${verb[action] ?? action} ${thing[objectType] ?? objectType}${f ? ` (${f})` : ""}`;
 }
 
+/** Short name for the section menu: drops the legal reference ("(Art. 22)") and the score. */
+const navLabel = (title: string) => title.replace(/\s*\((Art|score)[^)]*\)\s*$/, "");
+
 function Card({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
   return (
-    <section id={id} className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
+    <section id={id} data-nav={id ? navLabel(title) : undefined} className="scroll-mt-20 space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
       <h2 className="font-semibold">{title}</h2>
       {children}
     </section>
@@ -145,7 +149,12 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         )}
       </div>
 
-      <nav aria-label="Progress" className="overflow-x-auto">
+      <div className="xl:grid xl:grid-cols-[13rem_minmax(0,1fr)] xl:gap-8">
+      <aside className="hidden xl:block">
+        <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pb-4"><FileSectionNav steps={steps} /></div>
+      </aside>
+      <div id="file-body" className="min-w-0 space-y-6">
+      <nav aria-label="Progress" className="overflow-x-auto xl:hidden">
         <ol className="flex min-w-max gap-2">
           {steps.map((st, i) => (
             <li key={st.label}>
@@ -172,7 +181,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       {!decided && (
-        <Card title={items.length ? "What to do next" : "Ready to decide"}>
+        <Card title={items.length ? "What to do next" : "Ready to decide"} id="next">
           {items.length ? (
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               {items.map((i) => (
@@ -352,7 +361,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
         )}
       </div>
 
-      <Card title="Client portal and documents">
+      <Card title="Client portal and documents" id="portal">
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-3 text-sm">
             {links.length > 0 && (
@@ -767,7 +776,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
-        <Card title="Periodic refresh (Art. 26)">
+        <Card title="Periodic refresh (Art. 26)" id="refresh">
           <p className="text-sm text-muted">
             Due {cf.file.nextRefreshOn?.toISOString().slice(0, 10) ?? "—"}. 30 days before, the client automatically gets a link to confirm nothing changed; screening re-runs in the
             background. You can also refresh now after updating the file.
@@ -777,7 +786,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       )}
 
       {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
-        <Card title="End the relationship">
+        <Card title="End the relationship" id="end">
           <ActionForm action={endAction.bind(null, fileId)} className="max-w-xl space-y-3">
             <input type="hidden" name="kind" value="TERMINATED" />
             <Field label="Reason" name="reason" required hint="e.g. engagement ended, or CDD could no longer be kept up to date." />
@@ -795,7 +804,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
       {can(r, "case.raise") && <RaiseSuspicion action={raiseSuspicionAction.bind(null, { partyIds: [cf.party.id], matterIds: [] })} />}
 
       {approvals.length > 0 && (
-        <Card title="Decisions and approvals">
+        <Card title="Decisions and approvals" id="approvals">
           <ul className="text-sm">
             {approvals.map((a) => (
               <li key={a.id}>
@@ -806,7 +815,7 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           </ul>
         </Card>
       )}
-      <details className="rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" id="activity">
+      <details className="scroll-mt-20 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" id="activity" data-nav="Activity">
         <summary className="cursor-pointer font-semibold">Activity ({activity.length})</summary>
         <ol className="mt-3 space-y-1 text-sm">
           {activity.map((a) => (
@@ -819,6 +828,8 @@ export default async function ClientFilePage({ params }: { params: Promise<{ fil
           {activity.length === 0 && <li className="text-muted">Nothing yet.</li>}
         </ol>
       </details>
+      </div>
+      </div>
     </div>
   );
 }
