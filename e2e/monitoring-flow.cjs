@@ -2,7 +2,7 @@
 // Monitoring and refresh (spec §4.5, §4A.5, §11.8–11.9).   CODE=… CRON_SECRET=… DATABASE_URL=… node e2e/monitoring-flow.cjs
 const { chromium } = require("playwright");
 const { execSync } = require("child_process");
-const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
+const { BASE, log, signupFirm, submit, openSection } = require("./helpers.cjs");
 const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stringify(q)}`).toString().trim();
 
 (async () => {
@@ -20,7 +20,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   await p.getByRole("heading", { name: "Rūta Klientė" }).waitFor();
   const fileUrl = p.url();
   const fileId = fileUrl.split("/").pop();
-  if (await p.getByText("Record a check done another way (in person, eID)").count()) await p.getByText("Record a check done another way (in person, eID)").click();
+  await openSection(p, "Record a check done another way (in person, eID)");
   await p.locator("select[name=method]").selectOption("IN_PERSON");
   await p.getByLabel("Document type").fill("ID card"); await p.getByLabel("Document number").fill("AB1234567");
   await p.getByLabel("Why national eID wasn't used").fill("Met the client in the office");
