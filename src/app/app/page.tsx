@@ -21,6 +21,10 @@ import { ObligationCard } from "@/components/obligations";
 import { AppointInline } from "@/components/appoint-inline";
 import { appointAction } from "@/app/app/firm/records-actions";
 import { setGuideAction } from "./guide-actions";
+import { newsConsentAction } from "./settings/email/actions";
+import { hasSampleData } from "@/lib/server/sample-data";
+import { loadSampleAction, removeSampleAction } from "./sample-actions";
+import { ActionButton } from "@/components/action-button";
 import { screeningUsage } from "@/lib/server/screening-limits";
 import { ScreeningUsage } from "@/components/screening-usage";
 
@@ -108,6 +112,7 @@ export default async function Dashboard() {
       activity: seeAudit ? await tx.auditEvent.findMany({ orderBy: { at: "desc" }, take: 8 }) : [],
       obligations: await firmObligations(tx, s.firm.id, { seeCases }),
       usage: await screeningUsage(tx, s.firm.id),
+      sample: await hasSampleData(tx),
     };
   });
   const missing = data.checklist.filter((c) => c.status === "required-missing" || c.status === "not-yet-reviewed");
@@ -116,7 +121,8 @@ export default async function Dashboard() {
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
   const card = "rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]";
   const alertCount = data.openAlerts + data.staffOpen.length + data.flaggedTx;
-  const guideHidden = !!(await adminDb.user.findUnique({ where: { id: s.user.id }, select: { guideHiddenAt: true } }))?.guideHiddenAt;
+  const me = await adminDb.user.findUnique({ where: { id: s.user.id }, select: { guideHiddenAt: true, newsConsent: true } });
+  const guideHidden = !!me?.guideHiddenAt;
   const ob = data.obligations;
   const sum = obligationSummary(ob.statuses);
   const statusOf = new Map(ob.statuses.map((x) => [x.id, x]));
@@ -152,6 +158,23 @@ export default async function Dashboard() {
         </section>
       ) : (
         <form action={setGuideAction.bind(null, false)} className="text-right"><button type="submit" className="text-sm text-accent underline">Show the dashboard guide</button></form>
+      )}
+
+      {me?.newsConsent === null && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-4 text-sm" data-testid="news-consent">
+          <p><strong>Stay up to date?</strong> May we email you when AML rules change for your firm, and about new AMLSync App features? You can change this any time in Email Settings.</p>
+          <span className="flex gap-2">
+            <form action={newsConsentAction.bind(null, true)}><button type="submit" className="rounded-full bg-brand px-4 py-1.5 font-semibold text-brand-ink hover:brightness-105">Yes, keep me informed</button></form>
+            <form action={newsConsentAction.bind(null, false)}><button type="submit" className="rounded-full border border-border px-4 py-1.5 hover:border-accent">No thanks</button></form>
+          </span>
+        </section>
+      )}
+
+      {seeStaff && (data.sample || data.total === 0) && (
+        <section className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-sm ${data.sample ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950" : "border-dashed border-border"}`} data-testid="sample-data">
+          <p>{data.sample ? <><strong>Sample data is loaded.</strong> The clients and case marked &ldquo;(sample)&rdquo; are made up, so you can try everything safely. Remove them before you add real clients.</> : <><strong>New here?</strong> Load sample data to see how the app works: made-up clients, a company with owners, and a case with payments that raise red flags.</>}</p>
+          {data.sample ? <ActionButton action={removeSampleAction}>Remove sample data</ActionButton> : <ActionButton action={loadSampleAction} variant="primary">Load sample data</ActionButton>}
+        </section>
       )}
 
       {/* Your obligations */}

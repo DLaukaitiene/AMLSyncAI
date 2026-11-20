@@ -12,6 +12,7 @@ import { notify } from "@/lib/server/email";
 import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
 import { createBackup } from "@/lib/server/backup";
 import { sendEmail } from "@/lib/server/email";
+import { sendDueSummaries } from "@/lib/server/summary-email";
 
 export const maxDuration = 300;
 
@@ -62,6 +63,7 @@ export async function GET(req: Request) {
     return { due, sent };
   });
   await run("portalReminders", () => sendPortalReminders());
+  await run("summaries", () => sendDueSummaries());
   await run("invoices", () => issueMonthlyInvoices());
   await run("archivesEnded", async () => {
     // Read-only archives whose retention period ended: AMLSync operations deletes them.

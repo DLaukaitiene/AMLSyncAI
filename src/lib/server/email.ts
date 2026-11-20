@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import { adminDb } from "./db";
+import { renderEmailHtml } from "@/lib/email/template";
 
 /**
  * Outbound email. EMAIL_TRANSPORT=dev stores messages in DevEmail (shown at
@@ -23,6 +24,7 @@ export async function sendEmail(to: string, subject: string, text: string, attac
       to,
       subject,
       text,
+      html: renderEmailHtml(subject, text),
       ...(attachments?.length ? { attachments } : {}),
     });
   } catch (e) {

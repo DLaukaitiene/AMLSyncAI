@@ -274,6 +274,9 @@ model User {
   failedLogins  Int       @default(0)
   lockedUntil   DateTime?
   guideHiddenAt DateTime? // dashboard guide dismissed
+  emailSummary  String    @default("auto") // auto (weekly for Owner/Compliance Officer, off for others) | weekly | monthly | off
+  newsConsent   Boolean? // may AMLSync email AML rule updates and product news? null = not asked yet
+  newsConsentAt DateTime?
   deactivatedAt DateTime?
   createdAt     DateTime  @default(now())
 

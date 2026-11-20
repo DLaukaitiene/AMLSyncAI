@@ -57,6 +57,35 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.getByTestId("dashboard-guide").waitFor();
   log("dashboard guide can be hidden (remembered) and shown again");
 
+  // News consent, email settings, summary email
+  await p.goto(BASE + "/app");
+  await p.getByTestId("news-consent").getByRole("button", { name: "Yes, keep me informed" }).click();
+  await p.reload();
+  if (await p.getByTestId("news-consent").count()) throw new Error("✘ consent question should not show again");
+  await p.goto(BASE + "/app/settings/email");
+  await p.getByLabel("Email me about new AML rules", { exact: false }).isChecked().then((c) => { if (!c) throw new Error("✘ consent not recorded"); });
+  await p.getByLabel("Every month (1st)").check();
+  await submit(p, "Save email settings", "Email settings saved.");
+  await submit(p, "Send me the summary now", "Summary sent to owner@pareigos.lt");
+  const { execSync } = require("child_process");
+  const subj = execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: `SELECT subject FROM "DevEmail" WHERE "to" = 'owner@pareigos.lt' AND subject LIKE '%AMLSync App:%' ORDER BY "createdAt" DESC LIMIT 1` }).toString().trim();
+  if (!/obligation|summary/.test(subj)) throw new Error("✘ summary email: " + subj);
+  log("news consent asked once and recorded; email settings saved; compliance summary email sent");
+
+  // Sample data: load, look, remove
+  await p.goto(BASE + "/app");
+  await submit(p, "Load sample data", "Sample data loaded");
+  await p.goto(BASE + "/app/clients");
+  if ((await p.getByTestId("client-row").count()) !== 3) throw new Error("✘ expected 3 sample clients");
+  await p.goto(BASE + "/app/transactions?status=flagged");
+  if ((await p.getByTestId("transaction").count()) < 2) throw new Error("✘ sample payments should raise flags");
+  await p.goto(BASE + "/app");
+  await p.getByTestId("sample-data").getByText("Sample data is loaded.").waitFor();
+  await submit(p, "Remove sample data", "Sample data removed (4 people and companies)");
+  await p.goto(BASE + "/app/clients");
+  if (await p.getByTestId("client-row").count()) throw new Error("✘ sample clients not removed");
+  log("sample data: loaded (3 clients, flagged payments) and removed in one click");
+
   console.log("page errors:", errors);
   await b.close();
   if (errors.length) process.exit(1);
