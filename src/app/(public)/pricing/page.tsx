@@ -51,7 +51,7 @@ export default async function Pricing() {
           <li>Remote identity check (national eID or ID document with chip, liveness, face match): {eur(pr?.idv)}</li>
           <li>PEP, sanctions and adverse-media screening: {eur(pr?.screen)}</li>
           <li>Company register check — company and status: {eur(pr?.kybLite)}; with full ownership (shareholders and beneficial owners): {eur(pr?.kybFull("LT"))} for Lithuanian companies (registers in other countries may differ)</li>
-          <li>Prices excl. VAT, set from our supplier&apos;s US-dollar price at the European Central Bank&apos;s daily euro rate{pr ? ` (${pr.rate.date})` : ""}, so they can move by a few cents.</li>
+          <li>Prices excl. VAT, set from our supplier&apos;s US-dollar price at the European Central Bank&apos;s daily euro rate{pr ? ` (USD ${pr.rate.usdPerEur.toFixed(4)} per €1, ${pr.rate.date})` : ""}, so they can move by a few cents.</li>
           <li>Not charged if a check expires or fails. Each check has a statement with your client reference, so you can re-bill it.</li>
         </ul>
         <p className="text-sm text-muted">
