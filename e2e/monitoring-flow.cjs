@@ -76,7 +76,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
     await p.goto(BASE + "/app/matters/new");
     await p.getByLabel("Title *").fill(title);
     await p.getByLabel("Price (EUR)").fill(String(price));
-    await p.getByRole("button", { name: "Create matter" }).click();
+    await p.getByRole("button", { name: "Create case" }).click();
     await p.getByRole("heading", { name: title }).waitFor();
     await p.getByText("Add a party").click();
     const d = p.locator("details", { hasText: "Add a party" });
@@ -89,23 +89,30 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   if (!/Review needed: value €250,000 is more than twice/.test(msg)) throw new Error("no review: " + msg);
   log("new matter far above the client's profile → review:", msg);
 
-  // Screening limits (defaults: 5 per minute, 30 per day, 100 per month)
+  // Screening limits (Solo plan: 5 per minute, 30 per day, 100 per month)
   const firmId = sql(`SELECT id FROM "Firm" WHERE name = 'Stebėsena UAB'`);
-  sql(`UPDATE "Firm" SET "screenLimitMinute" = 5, "screenLimitDay" = 30, "screenLimitMonth" = 100 WHERE id = '${firmId}'`);
+  sql(`UPDATE "Firm" SET plan = 'solo', "screenLimitMinute" = 5, "screenLimitDay" = 30, "screenLimitMonth" = 100 WHERE id = '${firmId}'`);
   sql(`DELETE FROM "ScreeningEvent" WHERE "firmId" = '${firmId}'`);
   sql(`INSERT INTO "ScreeningEvent" (id, "firmId", "partyId", source, "createdAt") SELECT gen_random_uuid(), '${firmId}', gen_random_uuid(), 'lists', now() - interval '5 minutes' FROM generate_series(1, 30)`);
   await p.goto(BASE + "/app/clients/new");
   await p.getByLabel("First names (all) *").fill("Over"); await p.getByLabel("Surname *").fill("Limit");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Over Limit" }).waitFor();
+  const overLimitUrl = p.url();
   await p.getByText(/haven't been screened yet/).first().waitFor();
-  await p.getByText(/contact us at contact@amlsync.com/).first().waitFor();
+  await p.getByText(/Request more screenings/).first().waitFor();
   await submit(p, "Screen again now (EU/UN lists, free)", "You've reached your screening limit (30 per day)");
   if (!sql(`SELECT count(*) FROM "SecurityEvent" WHERE "firmId" = '${firmId}' AND kind = 'screening-limit-day'`).match(/^[1-9]/)) throw new Error("no security event");
+  await p.goto(BASE + "/app");
+  await p.getByTestId("screening-usage").getByText(/30 of 30 today/).waitFor();
+  await submit(p, "Request more screenings", "We'll raise your limit within 1 business day");
+  if (!sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject LIKE '%asks for more screenings%'`).match(/^[1-9]/)) throw new Error("✘ no request email to operations");
+  log("limit reached: dashboard shows usage; 'Request more screenings' emails operations");
   const alerts = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject LIKE '%daily screening limit%'`);
   if (alerts !== "1") throw new Error("expected one alert email to AMLSync App, got " + alerts);
   log("30-per-day limit: party left unscreened, acceptance blocked, client told to contact us, one alert to AMLSync App");
   sql(`DELETE FROM "ScreeningEvent" WHERE "firmId" = '${firmId}'`);
+  await p.goto(overLimitUrl);
   await p.getByRole("button", { name: "Screen again now (EU/UN lists, free)", exact: true }).click();
   await p.getByText(/Screened against/).first().waitFor();
   log("after the limit is raised / window passes, screening runs");

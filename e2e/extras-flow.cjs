@@ -73,7 +73,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
     await p.goto(BASE + "/app/matters/new");
     await p.getByLabel("Title *").fill(`Engagement ${office}`);
     if (office !== "head") await p.locator("select[name=officeId]").selectOption({ label: "Warsaw branch (PL)" });
-    await p.getByRole("button", { name: "Create matter" }).click();
+    await p.getByRole("button", { name: "Create case" }).click();
     await p.getByRole("heading", { name: `Engagement ${office}` }).waitFor();
     await p.getByText("Add a party").click();
     const d = p.locator("details", { hasText: "Add a party" });

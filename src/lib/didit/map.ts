@@ -151,7 +151,10 @@ export function autoClear(hit: AmlHitMapped, firmThreshold: number | null): { cl
   return { cleared: false };
 }
 
-export const CHECK_PRICE_CENTS = 300; // €3.00 per paid check (ID check or provider screening), excl. VAT
+export const IDV_PRICE_CENTS = 200; // €2.00 per identity check, excl. VAT [decided 20 Nov 2026]
+export const SCREEN_PRICE_CENTS = 300; // €3.00 per provider screening (PEP, sanctions, adverse media), excl. VAT
+/** @deprecated use IDV_PRICE_CENTS or SCREEN_PRICE_CENTS */
+export const CHECK_PRICE_CENTS = SCREEN_PRICE_CENTS;
 export const TRIAL_CREDIT_CENTS = 1500; // 5 checks for new firms
 export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 

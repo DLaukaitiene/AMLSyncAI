@@ -29,8 +29,8 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await v.goto(BASE + "/app/cases/" + caseId);
   await v.getByRole("radio", { name: "Report to the FIU" }).check();
   await v.getByLabel("Reasons *").fill("Unexplained third-party cash, grounds for suspicion established.");
-  await submit(v, "Record decision", /Decision|Case · decided/);
-  await v.goto(BASE + "/app/matters/new"); await v.getByLabel("Title *").fill("Victim matter"); await v.getByRole("button", { name: "Create matter" }).click();
+  await submit(v, "Record decision", /Decision|Investigation · decided/);
+  await v.goto(BASE + "/app/matters/new"); await v.getByLabel("Title *").fill("Victim matter"); await v.getByRole("button", { name: "Create case" }).click();
   await v.getByRole("heading", { name: "Victim matter" }).waitFor();
   const matterUrl = v.url();
   await v.goto(BASE + "/app/firm/policies"); await submit(v, "Generate new version", /Draft: AML\/CTF policy v1/);

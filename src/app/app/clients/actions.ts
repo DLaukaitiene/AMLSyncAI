@@ -21,7 +21,7 @@ import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } fr
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 import { formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
-import { addPersonFromRegister, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
+import { addPersonFromRegister, buySearchPack, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
@@ -469,7 +469,7 @@ export async function kybSearchAction(fileId: string, _: ActionState, fd: FormDa
   const s = await requireUser("client.edit");
   try {
     const level = fd.get("level") === "lite" ? "lite" : "full";
-    const candidates = await searchCompanyRegister(s.firm.id, {
+    const candidates = await searchCompanyRegister({ firmId: s.firm.id, userId: s.user.id }, {
       country: String(fd.get("country") ?? ""), name: String(fd.get("name") ?? ""), registrationNumber: String(fd.get("registrationNumber") ?? ""), level,
     });
     if (!candidates.length) return { error: "No company found. Check the name, number and country, or record the register extract by hand below." };
@@ -477,6 +477,17 @@ export async function kybSearchAction(fileId: string, _: ActionState, fd: FormDa
   } catch (e) {
     return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: \d+ /, "Register search failed: ") : "The register search failed." };
   }
+}
+
+export async function buySearchPackAction(fileId: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  try {
+    await buySearchPack({ firmId: s.firm.id, userId: s.user.id });
+  } catch (e) {
+    return { error: e instanceof DiditError ? e.message : "Couldn't add the searches." };
+  }
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "5 more searches added. They appear on your next invoice." };
 }
 
 export async function kybRetrieveAction(fileId: string, kybResponseId: string, level: "lite" | "full" = "full"): Promise<ActionState> {

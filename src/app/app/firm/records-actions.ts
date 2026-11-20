@@ -5,7 +5,7 @@ import type { ActionState } from "@/components/form";
 import { requireUser, hasRecentMfa } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import {
-  addOutsourcing, appoint, assignTraining, completeTraining, declareIntegrity, ensureDefaultModule, generateAnnualReport, INTEGRITY_QUESTIONS,
+  addOutsourcing, appoint, assignTraining, completeTraining, declareIntegrity, ensureBuiltInModules, generateAnnualReport, INTEGRITY_QUESTIONS,
   isOnePersonFirm, submitWhistleblowing, updateWhistleblowing,
 } from "@/lib/server/governance";
 import { approvePolicy } from "@/lib/server/firm-docs";
@@ -47,10 +47,11 @@ export async function approveAnnualReportAction(id: string): Promise<ActionState
 export async function assignTrainingAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.compliance");
   const userIds = fd.getAll("userId").map(String);
+  const keys = fd.getAll("module").map(String);
   if (!userIds.length) return { error: "Choose at least one person." };
+  if (!keys.length) return { error: "Choose at least one module." };
   await withTenant(s.firm.id, async (tx) => {
-    const m = await ensureDefaultModule(tx, s.firm.id);
-    await assignTraining(tx, ctxOf(s), m.id, userIds, addCalendarDays(toIsoDate(new Date()), 30));
+    for (const m of await ensureBuiltInModules(tx, s.firm.id, keys)) await assignTraining(tx, ctxOf(s), m.id, userIds, addCalendarDays(toIsoDate(new Date()), 30));
   });
   revalidatePath("/app/firm/training");
   return { message: "Training assigned (due in 30 days)." };

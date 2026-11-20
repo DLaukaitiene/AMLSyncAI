@@ -3,7 +3,7 @@ import type { Tx } from "./db";
 import { securityEvent } from "./audit";
 import { sendEmail, appUrl } from "./email";
 import { hit } from "./rate-limit";
-import { allowedNow, limitMessage, unusualVolume, type LimitKind } from "@/lib/security/screening-caps";
+import { allowedNow, effectiveLimits, limitMessage, unusualVolume, type LimitKind } from "@/lib/security/screening-caps";
 import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
 import { serviceBlock } from "./invoicing";
 
@@ -15,15 +15,8 @@ import { serviceBlock } from "./invoicing";
 export async function takeScreeningSlots(tx: Tx, firmId: string, partyIds: string[], source: "lists" | "didit") {
   const blocked = await serviceBlock(tx, firmId);
   if (blocked) return { allowed: [] as string[], notScreened: partyIds.length, message: blocked };
-  const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { name: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } });
-  const limits = { perMinute: firm.screenLimitMinute, perDay: firm.screenLimitDay, perMonth: firm.screenLimitMonth };
-  const now = new Date();
-  const count = (since: Date) => tx.screeningEvent.count({ where: { createdAt: { gte: since } } });
-  const used = {
-    lastMinute: await count(new Date(now.getTime() - 60_000)),
-    today: await count(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))),
-    thisMonth: await count(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))),
-  };
+  const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { name: true } });
+  const { limits, used } = await screeningUsage(tx, firmId);
   const { allowed, limitedBy } = allowedNow(limits, used, partyIds.length);
   const ok = partyIds.slice(0, allowed);
   if (ok.length) await tx.screeningEvent.createMany({ data: ok.map((partyId) => ({ firmId, partyId, source })) });
@@ -45,4 +38,18 @@ async function limitReached(firmId: string, firmName: string, kind: LimitKind, l
     `AMLSync App: ${firmName} reached its ${kind === "day" ? "daily" : "monthly"} screening limit`,
     `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/adminpage1&/billing")} (firm id ${firmId}).`,
   );
+}
+
+/** The firm's effective limits (plan or raised by AMLSync App) and what it used. */
+export async function screeningUsage(tx: Tx, firmId: string) {
+  const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { plan: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } });
+  const limits = effectiveLimits(firm.plan, { perMinute: firm.screenLimitMinute, perDay: firm.screenLimitDay, perMonth: firm.screenLimitMonth });
+  const now = new Date();
+  const count = (since: Date) => tx.screeningEvent.count({ where: { createdAt: { gte: since } } });
+  const used = {
+    lastMinute: await count(new Date(now.getTime() - 60_000)),
+    today: await count(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))),
+    thisMonth: await count(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))),
+  };
+  return { limits, used };
 }

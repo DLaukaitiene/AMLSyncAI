@@ -1,4 +1,5 @@
 import "server-only";
+import { BUILT_IN_TRAINING } from "@/lib/training/built-in";
 import type { Prisma } from "@prisma/client";
 import type { Tx } from "./db";
 import { audit } from "./audit";
@@ -134,24 +135,14 @@ export async function generateAnnualReport(tx: Tx, ctx: Ctx) {
 // Training (lite, Art. 12)
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_TRAINING = {
-  title: "AML essentials under the EU AML Regulation",
-  minutes: 30,
-  content: [
-    "Why it matters: from 10 July 2027 the EU AML Regulation (EU) 2024/1624 applies directly to our firm. Breaches can lead to fines for the firm and for managers.",
-    "Know your client: before we work for a client we identify and verify them and the people who own or control them (25% or more, or control by other means), understand the purpose of the work and screen everyone against sanctions lists. A client can't be accepted while anything is open.",
-    "Higher risk: politically exposed persons, links with high-risk countries, complex structures, cash and unusual transactions need enhanced due diligence and senior approval.",
-    "Cash: we never accept cash of €10,000 or more (or the lower national limit). Several smaller payments that belong together count as one.",
-    "Suspicion: if something feels wrong, report it to the Compliance Officer at once using 'Report a suspicion'. Don't investigate on your own and don't complete the transaction until told it may go ahead.",
-    "Tipping-off: never tell the client or anyone else that a report has been or may be made.",
-    "Sanctions: a true sanctions match means we stop immediately and make nothing available to the person. The Compliance Officer notifies the authority.",
-    "Records: everything we do is recorded and kept for 5 years after the relationship ends.",
-  ].join("\n\n"),
-};
-
-export async function ensureDefaultModule(tx: Tx, firmId: string) {
-  const m = await tx.trainingModule.findFirst({ orderBy: { createdAt: "asc" } });
-  return m ?? tx.trainingModule.create({ data: { firmId, ...DEFAULT_TRAINING } });
+/** Finds or creates the firm's copy of each built-in module (by title). */
+export async function ensureBuiltInModules(tx: Tx, firmId: string, keys: string[]) {
+  const out = [];
+  for (const m of BUILT_IN_TRAINING.filter((x) => keys.includes(x.key))) {
+    const found = await tx.trainingModule.findFirst({ where: { title: m.title } });
+    out.push(found ?? (await tx.trainingModule.create({ data: { firmId, title: m.title, minutes: m.minutes, content: m.content } })));
+  }
+  return out;
 }
 
 export async function assignTraining(tx: Tx, ctx: Ctx, moduleId: string, userIds: string[], dueOn: string) {

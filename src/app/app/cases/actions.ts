@@ -47,7 +47,7 @@ export async function fiuInstructionAction(caseId: string, _: ActionState, fd: F
   if (note.length < 5) return { error: "Record how and when the FIU instructed you.", fieldErrors: { note: ["Required."] } };
   await withTenant(s.firm.id, (tx) => recordFiuInstruction(tx, { firmId: s.firm.id, userId: s.user.id }, caseId, instruction, note));
   revalidatePath(`/app/cases/${caseId}`);
-  return { message: instruction === "proceed" ? "Hold lifted." : "The matter stays blocked." };
+  return { message: instruction === "proceed" ? "Hold lifted." : "The case stays blocked." };
 }
 
 export async function noteAction(caseId: string, _: ActionState, fd: FormData): Promise<ActionState> {

@@ -28,12 +28,12 @@ export default async function MattersPage({ searchParams }: { searchParams: Prom
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl">Matters</h1>
-          <p className="text-sm text-muted">Engagements, sales, lettings and transactions. Completed and cancelled matters stay here as your register.</p>
+          <h1 className="text-3xl">Cases</h1>
+          <p className="text-sm text-muted">Engagements, sales, lettings and transactions. Completed and cancelled cases stay here as your register.</p>
         </div>
         {can(s.user.roles, "client.edit") && <Link href="/app/matters/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">New matter</Link>}
       </div>
-      <nav aria-label="Filter matters" className="flex flex-wrap gap-2">
+      <nav aria-label="Filter cases" className="flex flex-wrap gap-2">
         {TABS.map((x) => (
           <Link key={x.id} href={x.id === "open" ? "/app/matters" : `/app/matters?tab=${x.id}`} aria-current={tab.id === x.id ? "page" : undefined}
             className={`rounded-full border px-3 py-1.5 text-sm ${tab.id === x.id ? "border-accent bg-accent/10 font-semibold" : "border-border hover:border-accent"}`}>

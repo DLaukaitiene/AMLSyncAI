@@ -5,7 +5,6 @@ import { REPORT_LABELS } from "@/lib/server/cases";
 import { canMarkSubmitted, type CountryProfile } from "@/lib/rules/country-profile";
 import { aiNarrativeAction, narrativeAction, submittedAction } from "@/app/app/cases/actions";
 import { ActionButton } from "./action-button";
-import { aiEnabled } from "@/lib/server/ai";
 
 const KIND: Record<ReportType, Parameters<typeof canMarkSubmitted>[1]> = {
   STR: "str", THRESHOLD: "threshold-report", CASH: "cash-report", DISCREPANCY: "discrepancy-report", SANCTIONS_NOTICE: "sanctions-notice", SUPERVISOR_NOTICE: "supervisor-notice",
@@ -18,12 +17,14 @@ export function ReportBlock({
   aiDrafted,
   profile,
   back,
+  ai = false,
 }: {
   r: { id: string; type: ReportType; status: string; submissionRef: string | null; submittedAt: Date | null; createdAt: Date };
   narrative?: string;
   aiDrafted?: boolean;
   profile: CountryProfile;
   back: string;
+  ai?: boolean;
 }) {
   const gate = canMarkSubmitted(profile, KIND[r.type]);
   return (
@@ -41,7 +42,7 @@ export function ReportBlock({
           <Submit variant="secondary">Save draft</Submit>
         </ActionForm>
       )}
-      {r.type === "STR" && r.status !== "SUBMITTED" && aiEnabled() && <ActionButton action={aiNarrativeAction.bind(null, r.id, back)}>Draft narrative with AI</ActionButton>}
+      {r.type === "STR" && r.status !== "SUBMITTED" && ai && <ActionButton action={aiNarrativeAction.bind(null, r.id, back)}>Draft narrative with AI</ActionButton>}
       {r.status !== "SUBMITTED" && (
         <>
           <a href={`/api/reports/${r.id}`} className="inline-block text-accent underline">Export for upload</a>

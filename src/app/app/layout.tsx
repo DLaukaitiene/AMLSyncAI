@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/clients", label: "All Clients", icon: "list" },
         { href: "/app/clients/new", label: "Add Client", icon: "add", show: can(r, "client.edit") },
         { href: "/app/remediation", label: "Import Clients", icon: "upload", show: can(r, "client.edit") },
-        { href: "/app/matters", label: "Matters", icon: "matters" },
+        { href: "/app/matters", label: "Cases", icon: "matters" },
       ],
     },
     { href: "/app/identity-verification", label: "Identity Verification", icon: "idv", show: can(r, "client.view") },
@@ -36,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     {
       href: "/app/cases", label: "FIU Reporting", icon: "cases", show: can(r, "case.view"),
       children: [
-        { href: "/app/cases", label: "Suspicious Matters", icon: "cases" },
+        { href: "/app/cases", label: "Investigations", icon: "cases" },
         { href: "/app/reports", label: "Report Queue", icon: "report" },
       ],
     },

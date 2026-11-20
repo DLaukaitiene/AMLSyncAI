@@ -13,7 +13,7 @@ export default async function NewMatterPage() {
   }));
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-semibold">New matter</h1>
+      <h1 className="text-2xl font-semibold">New case</h1>
       <ActionForm action={createMatterAction}>
         <Field label="Title" name="title" required hint="e.g. Sale of Gedimino pr. 1-5, Vilnius" />
         <SelectWithOther
@@ -65,7 +65,7 @@ export default async function NewMatterPage() {
             ]}
           />
         </div>
-        <Submit>Create matter</Submit>
+        <Submit>Create case</Submit>
       </ActionForm>
     </div>
   );

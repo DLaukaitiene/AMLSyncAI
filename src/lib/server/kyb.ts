@@ -1,11 +1,14 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
-import { withTenant, type Tx } from "./db";
+import { adminDb, withTenant, type Tx } from "./db";
 import { audit } from "./audit";
 import { hit } from "./rate-limit";
 import { charge, didit, DiditError, diditEnabled, refund } from "./didit";
 import { loadClientFile, persistRiskIfChanged, runScreening, upsertTask } from "./cdd";
 import { KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, KYB_SEARCH_TIER, formatEur, kybBilledCents, kybInactive, mapKybCompany, type KybCompany, type KybLevel } from "@/lib/didit/map";
+import { searchState, SEARCH_PACK } from "@/lib/didit/search-allowance";
+import { notify } from "./email";
+import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
 import { normalizeCountry } from "@/lib/geo/countries";
 import { toIsoDate } from "@/lib/rules/dates";
 
@@ -20,14 +23,33 @@ import { toIsoDate } from "@/lib/rules/dates";
 export interface Candidate { id: string; name: string; registrationNumber: string | null; status: string | null; type: string | null; address: string | null }
 
 /**
- * Each successful search costs $0.50 at Didit (absorbed, not charged to the firm),
- * so searches are limited per firm and run on the tier the firm intends to buy
- * — a candidate from one tier's search is retrieved from that tier's endpoint.
+ * Each successful search costs AMLSync $0.50 at Didit. Searches are free for the
+ * firm up to a run of free searches between orders (rules in didit/search-allowance),
+ * run on the tier the firm intends to buy, and are kept in KybSearch.
  */
-export const KYB_SEARCHES_PER_DAY = 10;
-export async function searchCompanyRegister(firmId: string, q: { country: string; name?: string; registrationNumber?: string; level?: KybLevel }): Promise<Candidate[]> {
+export async function kybSearchStatus(firmId: string) {
+  return withTenant(firmId, async (tx) => {
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { plan: true } });
+    const since = new Date(Date.now() - 90 * 86_400_000);
+    const searches = await tx.kybSearch.findMany({ where: { at: { gte: since } }, orderBy: { at: "desc" }, take: 200 });
+    const orders = (await tx.diditSession.findMany({ where: { kind: "kyb", createdAt: { gte: since } }, select: { createdAt: true } })).map((o) => o.createdAt);
+    const packs = (await tx.creditEntry.findMany({ where: { kind: "charge", clientRef: SEARCH_PACK_REF, createdAt: { gte: since } }, select: { createdAt: true } })).map((p) => p.createdAt);
+    return { state: searchState(firm.plan, searches.map((x) => x.at), orders, packs), recent: searches.slice(0, 8) };
+  });
+}
+export const SEARCH_PACK_REF = "Register searches";
+
+export async function buySearchPack(ctx: { firmId: string; userId: string }) {
+  await withTenant(ctx.firmId, (tx) => charge(tx, ctx.firmId, ctx.userId, `${SEARCH_PACK.searches} extra company register searches`, SEARCH_PACK_REF, SEARCH_PACK.cents));
+}
+
+export async function searchCompanyRegister(ctx: { firmId: string; userId: string }, q: { country: string; name?: string; registrationNumber?: string; level?: KybLevel }): Promise<Candidate[]> {
+  const firmId = ctx.firmId;
   if (!diditEnabled()) throw new DiditError("Company register checks are not set up for this installation.");
-  if (!(await hit(`kyb-search:${firmId}`, { limit: KYB_SEARCHES_PER_DAY, windowSec: 86_400 }))) throw new DiditError(`For your security there is a limit of ${KYB_SEARCHES_PER_DAY} register searches a day. Please reach out to contact@amlsync.com so we can adjust it within 1 business day.`);
+  const st = (await kybSearchStatus(firmId)).state;
+  if (st.blocked) throw new DiditError(searchLimitMessage(st.limit, st.blockedUntil!));
+  // Hard safety net against automated abuse, on top of the free-search rule.
+  if (!(await hit(`kyb-search:${firmId}`, { limit: 30, windowSec: 86_400 }))) throw new DiditError("For your security there is a limit of 30 register searches a day. Please reach out to contact@amlsync.com so we can adjust it within 1 business day.");
   const country = normalizeCountry(q.country);
   if (!country || !/^[A-Z]{2}$/.test(country)) throw new DiditError("Choose the country where the company is registered.");
   if (!q.name?.trim() && !q.registrationNumber?.trim()) throw new DiditError("Enter the company name or registration number.");
@@ -39,10 +61,27 @@ export async function searchCompanyRegister(firmId: string, q: { country: string
     ...(q.name?.trim() ? { name: q.name.trim(), search_type: "contains" } : {}),
   });
   if (r.kyb_registry && r.kyb_registry.search_resolved === false) throw new DiditError("The register is answering slowly. Try the search again in a minute.");
-  return (r.kyb_registry?.companies ?? []).slice(0, 25).map((c) => ({
+  const out = (r.kyb_registry?.companies ?? []).slice(0, 25).map((c) => ({
     id: String(c.kyb_response_id), name: String(c.name ?? ""), registrationNumber: (c.registration_number as string) ?? null,
     status: (c.status as string) ?? null, type: (c.type as string) ?? null, address: (c.registered_address as string) ?? null,
   }));
+  if (out.length) {
+    // Only searches that return companies are charged by Didit, so only those count.
+    await withTenant(firmId, (tx) => tx.kybSearch.create({ data: {
+      firmId, userId: ctx.userId, country, level: q.level ?? "full", query: [q.name?.trim(), q.registrationNumber?.trim()].filter(Boolean).join(" · ").slice(0, 200),
+      results: out.map((c) => ({ name: c.name, registrationNumber: c.registrationNumber, status: c.status })) as unknown as Prisma.InputJsonValue,
+    } }));
+    const after = (await kybSearchStatus(firmId)).state;
+    if (after.blocked) {
+      const firm = await adminDb.firm.findUniqueOrThrow({ where: { id: firmId }, select: { name: true } });
+      await notify(OPS_ALERT_EMAIL, `AMLSync App: ${firm.name} used its free register searches`, `${firm.name} made ${after.limit} company-register searches without ordering a check. Searching is paused until ${after.blockedUntil!.toISOString().slice(0, 10)} unless the firm buys ${SEARCH_PACK.searches} more searches (${formatEur(SEARCH_PACK.cents)}) or orders a check. Firm id ${firmId}.`);
+    }
+  }
+  return out;
+}
+
+export function searchLimitMessage(limit: number, until: Date) {
+  return `You've reached the limit of ${limit} free register searches without ordering a check. Searching is paused until ${until.toISOString().slice(0, 10)}. To continue now, buy ${SEARCH_PACK.searches} more searches for ${formatEur(SEARCH_PACK.cents)}, or order a company check: the count then starts again.`;
 }
 
 /** Retrieves the chosen company at the chosen level, charges the check, imports it when ready. */

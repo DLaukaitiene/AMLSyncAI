@@ -13,7 +13,7 @@ const COLS: Record<keyof Omit<ImportRow, "line">, string[]> = {
   amountEUR: ["amount", "amount eur", "amount (eur)", "suma", "eur"],
   method: ["method", "payment method", "type", "būdas"],
   client: ["client", "customer", "payer", "klientas", "mokėtojas"],
-  matter: ["matter", "file", "engagement", "reference", "byla"],
+  matter: ["case", "matter", "file", "engagement", "reference", "byla"],
   description: ["description", "details", "aprašymas", "paskirtis"],
   fromCountry: ["from country", "country", "šalis"],
   thirdParty: ["third party", "third-party payer", "paid by third party"],
@@ -62,4 +62,4 @@ export function parseTransactionCsv(text: string, maxRows = 500): { rows: Import
   return { rows, errors };
 }
 
-export const TRANSACTION_TEMPLATE = "date,amount,method,client,matter,description,from country,third party\n2026-11-03,4500,cash,Jonas Jonaitis,Sale of Vilniaus g. 1,Reservation fee,LT,no\n";
+export const TRANSACTION_TEMPLATE = "date,amount,method,client,case,description,from country,third party\n2026-11-03,4500,cash,Jonas Jonaitis,Sale of Vilniaus g. 1,Reservation fee,LT,no\n";

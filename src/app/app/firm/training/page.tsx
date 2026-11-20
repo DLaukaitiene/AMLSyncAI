@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
-import { DEFAULT_TRAINING } from "@/lib/server/governance";
+import { modulesForFirm } from "@/lib/training/built-in";
 import { ActionForm, Submit } from "@/components/form";
 import { assignTrainingAction, completeTrainingAction } from "../records-actions";
 
@@ -12,6 +12,7 @@ export default async function TrainingPage() {
     mine: await tx.trainingAssignment.findMany({ where: { userId: s.user.id }, include: { module: true }, orderBy: { assignedAt: "desc" } }),
     all: manage ? await tx.trainingAssignment.findMany({ include: { module: { select: { title: true } } }, orderBy: { assignedAt: "desc" }, take: 300 }) : [],
     users: await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true, name: true } }),
+    sectors: (await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { sectors: true } })).sectors as string[],
   }));
   const names = new Map(data.users.map((u) => [u.id, u.name]));
   return (
@@ -38,8 +39,14 @@ export default async function TrainingPage() {
       </section>
       {manage && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Assign &quot;{DEFAULT_TRAINING.title}&quot;</h2>
-          <ActionForm action={assignTrainingAction} className="space-y-2">
+          <h2 className="text-lg font-semibold">Assign training</h2>
+          <p className="text-sm text-muted">Built-in modules in plain words. Everyone completes them on joining and every year; completion is recorded with a signed attestation.</p>
+          <ActionForm action={assignTrainingAction} className="space-y-3">
+            <fieldset className="space-y-1 text-sm">
+              <legend className="font-medium">Modules</legend>
+              {modulesForFirm(data.sectors).map((m) => <label key={m.key} className="flex items-center gap-2"><input type="checkbox" name="module" value={m.key} defaultChecked /> {m.title} <span className="text-muted">({m.minutes} min)</span></label>)}
+            </fieldset>
+            <p className="text-sm font-medium">People</p>
             <div className="flex flex-wrap gap-4 text-sm">{data.users.map((u) => <label key={u.id} className="flex items-center gap-2"><input type="checkbox" name="userId" value={u.id} defaultChecked /> {u.name}</label>)}</div>
             <Submit variant="secondary">Assign</Submit>
           </ActionForm>

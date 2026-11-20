@@ -33,10 +33,10 @@ export async function createMatterAction(_: ActionState, fd: FormData): Promise<
   const o = formToObject(fd);
   const type = TYPES.find((t) => t === o.type);
   const sector = o.sector;
-  if (!type) return { error: "Choose the matter type.", fieldErrors: { type: ["Required."] } };
-  if (type === "OTHER" && !String(o.typeOther ?? "").trim()) return { error: "Describe the type of matter.", fieldErrors: { typeOther: ["Describe it."] } };
+  if (!type) return { error: "Choose the case type.", fieldErrors: { type: ["Required."] } };
+  if (type === "OTHER" && !String(o.typeOther ?? "").trim()) return { error: "Describe the type of case.", fieldErrors: { typeOther: ["Describe it."] } };
   if (o.goodsCategory === "other" && !String(o.goodsCategoryOther ?? "").trim()) return { error: "Describe the goods category.", fieldErrors: { goodsCategoryOther: ["Describe it."] } };
-  if (!o.title || o.title.trim().length < 3) return { error: "Give the matter a title.", fieldErrors: { title: ["Required."] } };
+  if (!o.title || o.title.trim().length < 3) return { error: "Give the case a title.", fieldErrors: { title: ["Required."] } };
   const details: Record<string, string> = {};
   for (const k of ["property", "price", "financing", "item", "goodsCategory", "goodsCategoryOther", "typeOther", "value", "engagementType", "monthlyRent"]) if (o[k]) details[k] = String(o[k]).slice(0, 500);
   const id = await withTenant(s.firm.id, async (tx) => {
@@ -84,7 +84,7 @@ export async function addPartyAction(matterId: string, _: ActionState, fd: FormD
       partyId = p.id;
     }
     const exists = await tx.matterParty.findFirst({ where: { matterId, partyId, role } });
-    if (exists) return { error: "This party already has that role in the matter." };
+    if (exists) return { error: "This party already has that role in the case." };
     const review = o.existingPartyId ? await compareWithProfile(tx, s.firm.id, matterId, partyId) : null;
     await tx.matterParty.create({ data: { firmId: s.firm.id, matterId, partyId, role, roleOther } });
     const fileId = await ensureFile(tx, s.firm.id, partyId, role);
@@ -209,7 +209,7 @@ export async function completeMatterAction(matterId: string, step: "transfer" | 
     await tx.matter.update({ where: { id: matterId }, data: { details: details as Prisma.InputJsonValue, ...(step === "complete" ? { status: "COMPLETED" } : {}) } });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Matter", objectId: matterId, fields: [step === "complete" ? "status" : "transferApprovedAt", ...(d.overridden ? ["gateOverride"] : [])] });
     revalidatePath(`/app/matters/${matterId}`);
-    return { message: step === "transfer" ? "Funds / property transfer can go ahead." : "Matter completed." };
+    return { message: step === "transfer" ? "Funds / property transfer can go ahead." : "Case completed." };
   });
 }
 
@@ -226,10 +226,10 @@ async function compareWithProfile(tx: Tx, firmId: string, matterId: string, part
   const earlier = await tx.matter.findMany({ where: { id: { not: matterId }, parties: { some: { partyId } } } });
   const reasons: string[] = [];
   const max = Math.max(0, ...earlier.map(value));
-  if (value(matter) > 0 && max > 0 && value(matter) > 2 * max) reasons.push(`value €${value(matter).toLocaleString("en")} is more than twice the largest earlier matter (€${max.toLocaleString("en")})`);
+  if (value(matter) > 0 && max > 0 && value(matter) > 2 * max) reasons.push(`value €${value(matter).toLocaleString("en")} is more than twice the largest earlier case (€${max.toLocaleString("en")})`);
   const party = await tx.party.findUniqueOrThrow({ where: { id: partyId } });
   const declared = (party.details as { sourceOfFunds?: string }).sourceOfFunds;
-  if (value(matter) >= 100_000 && !declared) reasons.push("large matter and no source of funds on file");
+  if (value(matter) >= 100_000 && !declared) reasons.push("large case and no source of funds on file");
   if (!reasons.length) return null;
   await upsertTask(tx, { firmId, kind: "matter-review", objectType: "Matter", objectId: matterId, dueOn: toIsoDate(new Date()), article: "Art. 26" });
   return reasons.join("; ") + ".";

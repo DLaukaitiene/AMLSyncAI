@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CONTACT_EMAIL, PLANS, SELF_SERVE_PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
-import { CHECK_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
+import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
 import { DEFAULT_LIMITS } from "@/lib/security/screening-caps";
 
 export const metadata: Metadata = { title: "Pricing · AMLSync App" };
@@ -43,8 +43,8 @@ export default function Pricing() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Paid checks (all plans)</h2>
         <ul className="list-disc pl-5 text-sm">
-          <li>Remote identity check (national eID or ID document with chip, liveness, face match): {formatEur(CHECK_PRICE_CENTS)}</li>
-          <li>PEP, sanctions and adverse-media screening: {formatEur(CHECK_PRICE_CENTS)}</li>
+          <li>Remote identity check (national eID or ID document with chip, liveness, face match): {formatEur(IDV_PRICE_CENTS)}</li>
+          <li>PEP, sanctions and adverse-media screening: {formatEur(SCREEN_PRICE_CENTS)}</li>
           <li>Company register check — company and status: {formatEur(KYB_LITE_PRICE_CENTS)}; with full ownership (shareholders and beneficial owners): {formatEur(KYB_FULL_PRICE_CENTS)}</li>
           <li>Not charged if a check expires or fails. Each check has a statement with your client reference, so you can re-bill it.</li>
         </ul>

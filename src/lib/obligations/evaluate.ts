@@ -61,7 +61,7 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
     "high-risk": i.highRiskOrPepAwaitingApproval ? s("high-risk", "todo", `${n(i.highRiskOrPepAwaitingApproval, "high-risk or PEP client")} without senior management approval.`)
       : s("high-risk", "done", i.highRiskTotal ? `${n(i.highRiskTotal, "high-risk client")}, all approved.` : "No high-risk clients."),
     deals: i.flaggedTransactions ? s("deals", "overdue", `${n(i.flaggedTransactions, "flagged payment")} to review.`)
-      : s("deals", "done", i.openMatters ? `${n(i.openMatters, "open matter")}; no flagged payments.` : "Record your next deal as a matter."),
+      : s("deals", "done", i.openMatters ? `${n(i.openMatters, "open case")}; no flagged payments.` : "Record your next deal as a case."),
     reviews: i.overdueReviews ? s("reviews", "overdue", `${n(i.overdueReviews, "client review")} overdue.`)
       : i.reviewsDue30 ? s("reviews", "todo", `${n(i.reviewsDue30, "review")} due in the next 30 days.`)
       : s("reviews", "done", "No reviews due."),

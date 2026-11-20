@@ -28,7 +28,7 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
 
   const fileUrl = p.url();
   await p.getByTestId("action-strip").getByRole("link", { name: "Run Screening" }).waitFor();
-  for (const t of ["Overview", "Verification", "Screening results", "Risk reports", "Documents (0)", "Matters (0)", "Activity"]) await p.getByRole("navigation", { name: "Profile tabs" }).getByRole("link", { name: t, exact: true }).waitFor();
+  for (const t of ["Overview", "Verification", "Screening results", "Risk reports", "Documents (0)", "Cases (0)", "Activity"]) await p.getByRole("navigation", { name: "Profile tabs" }).getByRole("link", { name: t, exact: true }).waitFor();
   await p.goto(fileUrl + "?tab=risk");
   await p.getByTestId("risk-history").waitFor();
   if (await p.locator("#decision").count()) throw new Error("✘ Risk reports tab should not show the decision card");
@@ -100,7 +100,7 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   if (bad.status() !== 404) throw new Error("✘ unknown register should 404");
   log("Reports: Client Register and Audit Trail CSV download; unknown register 404");
 
-  for (const [path, h] of [["/app/cases", "Suspicious Matters"], ["/app/reports", "Report Queue"], ["/app/firm", "Compliance Hub"], ["/app/firm/policies", "AML Program"], ["/app/firm/training", "My Compliance"], ["/app/firm/integrity", "Personnel Due Diligence"], ["/app/support", "Help Centre"], ["/app/security", "Security"]]) {
+  for (const [path, h] of [["/app/cases", "Investigations"], ["/app/reports", "Report Queue"], ["/app/firm", "Compliance Hub"], ["/app/firm/policies", "AML Program"], ["/app/firm/training", "My Compliance"], ["/app/firm/integrity", "Personnel Due Diligence"], ["/app/support", "Help Centre"], ["/app/security", "Security"]]) {
     await p.goto(BASE + path);
     await p.getByRole("heading", { name: h, exact: true }).first().waitFor();
   }

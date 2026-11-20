@@ -3,12 +3,14 @@
 import { useActionState } from "react";
 import { CountryField, type ActionState } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
-import { kybRetrieveAction, kybSearchAction } from "../actions";
+import { buySearchPackAction, kybRetrieveAction, kybSearchAction } from "../actions";
 
 type Candidate = { id: string; name: string; registrationNumber: string | null; status: string | null; type: string | null; address: string | null };
 
 /** Choose the level, search the register on that level's tier, then retrieve the right company (paid). */
-export function KybSearch({ fileId, name, registrationNumber, country, litePrice, fullPrice, ownersRecorded }: { fileId: string; name: string; registrationNumber: string; country: string; litePrice: string; fullPrice: string; ownersRecorded: boolean }) {
+type SearchInfo = { blocked: boolean; remaining: number; message: string | null; recent: { at: string; query: string; country: string; results: { name: string; registrationNumber: string | null }[] }[] } | null;
+
+export function KybSearch({ fileId, name, registrationNumber, country, litePrice, fullPrice, ownersRecorded, search }: { fileId: string; name: string; registrationNumber: string; country: string; litePrice: string; fullPrice: string; ownersRecorded: boolean; search?: SearchInfo }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(kybSearchAction.bind(null, fileId), null);
   const candidates = ((state?.data as { candidates?: Candidate[] } | undefined)?.candidates ?? []);
   const searchedLevel = ((state?.data as { level?: "lite" | "full" } | undefined)?.level ?? "full");
@@ -18,7 +20,14 @@ export function KybSearch({ fileId, name, registrationNumber, country, litePrice
       <p className="text-sm font-medium">Check the company register (Didit)</p>
       <p className="text-xs text-muted">
         Searching is free. You pay only when you retrieve the company, and only for what the register delivers: if it has no ownership data, a full ownership check is charged as company and status.
+        {search && !search.blocked ? ` ${search.remaining} free search${search.remaining === 1 ? "" : "es"} left before you order a check.` : ""}
       </p>
+      {search?.blocked && (
+        <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950" data-testid="kyb-search-paused">
+          <p>{search.message}</p>
+          <ActionButton action={buySearchPackAction.bind(null, fileId)} variant="primary">Buy 5 more searches (€2.00)</ActionButton>
+        </div>
+      )}
       <form action={action} className="grid gap-3 sm:grid-cols-3">
         <fieldset className="space-y-2 sm:col-span-3">
           <legend className="text-sm font-medium">What do you need?</legend>
@@ -40,6 +49,13 @@ export function KybSearch({ fileId, name, registrationNumber, country, litePrice
           <button type="submit" disabled={pending} className="rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-accent disabled:opacity-60">{pending ? "Searching…" : "Search register"}</button>
         </div>
       </form>
+      {search && search.recent.length > 0 && (
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted">Your recent searches ({search.recent.length})</summary>
+          <ul className="mt-1 space-y-1">{search.recent.map((r, i) => <li key={i}><span className="text-muted">{r.at} · {r.country} · </span>{r.query}: {r.results.map((c) => c.name + (c.registrationNumber ? ` (${c.registrationNumber})` : "")).join("; ") || "no result"}</li>)}</ul>
+          <p className="mt-1 text-muted">To order one of these, search again: register results can only be ordered right after a search.</p>
+        </details>
+      )}
       {state?.error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{state.error}</p>}
       {state?.message && <p role="status" className="text-sm">{state.message}</p>}
       {candidates.length > 0 && (

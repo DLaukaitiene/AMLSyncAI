@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import Link from "next/link";
+import { aiForFirm } from "@/lib/server/ai";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
@@ -9,7 +10,8 @@ import { ReportBlock } from "@/components/report-block";
 
 export default async function ReportsPage() {
   const s = await requireUser("case.view");
-  const { reports, profile } = await withTenant(s.firm.id, async (tx) => ({
+  const { reports, profile, ai } = await withTenant(s.firm.id, async (tx) => ({
+    ai: await aiForFirm(tx, s.firm.id),
     reports: (await tx.report.findMany({ orderBy: { createdAt: "desc" }, take: 200 })).map((r) => ({
       ...r, ...(({ narrative, aiDrafted }) => ({ narrative, aiDrafted }))(JSON.parse(decryptField(s.firm.id, r.contentEnc)) as { narrative?: string; aiDrafted?: boolean }),
     })),
@@ -26,9 +28,9 @@ export default async function ReportsPage() {
       {reports.map((r) => (
         <div key={r.id} className="space-y-1">
           {(r.caseId || r.matterId) && (
-            <Link className="text-xs text-accent underline" href={r.caseId ? `/app/cases/${r.caseId}` : `/app/matters/${r.matterId}`}>{r.caseId ? "Open case" : "Open matter"}</Link>
+            <Link className="text-xs text-accent underline" href={r.caseId ? `/app/cases/${r.caseId}` : `/app/matters/${r.matterId}`}>{r.caseId ? "Open case" : "Open case"}</Link>
           )}
-          <ReportBlock r={r} narrative={r.narrative} aiDrafted={r.aiDrafted} profile={profile} back="/app/reports" />
+          <ReportBlock r={r} narrative={r.narrative} aiDrafted={r.aiDrafted} profile={profile} back="/app/reports" ai={ai} />
         </div>
       ))}
     </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { aiForFirm } from "@/lib/server/ai";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
@@ -28,8 +29,9 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
     }));
     const users = new Map((await tx.user.findMany({ select: { id: true, name: true } })).map((u) => [u.id, u.name]));
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } });
+    const ai = await aiForFirm(tx, s.firm.id);
     const { profile } = await currentProfile(tx, s.firm.id);
-    return { c, content, parties, matters, reports, users, firm, profile };
+    return { c, content, parties, matters, reports, users, firm, profile, ai };
   });
   if (!data) notFound();
   const { c, content, parties, matters, reports, users, firm, profile } = data;
@@ -39,7 +41,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
   return (
     <div className="max-w-4xl space-y-6">
       <div className="space-y-1">
-        <p className="text-sm text-muted">Case · {c.status}{c.decision ? ` · decision: ${c.decision}` : ""}</p>
+        <p className="text-sm text-muted">Investigation · {c.status}{c.decision ? ` · decision: ${c.decision}` : ""}</p>
         <h1 className="text-2xl font-semibold">{CASE_LABELS[c.type]}</h1>
         <p className="text-sm">Opened {c.createdAt.toISOString().slice(0, 10)}{c.dueOn ? ` · due ${toIsoDate(c.dueOn)}` : ""}</p>
       </div>
@@ -63,7 +65,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
             <span key={p.id}>{i > 0 && ", "}{p.cddFiles[0] ? <Link className="text-accent underline" href={`/app/clients/${p.cddFiles[0].id}`}>{p.displayName}</Link> : p.displayName}</span>
           ))}</p>
         )}
-        {matters.length > 0 && <p>Matters: {matters.map((m) => <Link key={m.id} className="text-accent underline" href={`/app/matters/${m.id}`}>{m.title}</Link>)}</p>}
+        {matters.length > 0 && <p>Cases: {matters.map((m) => <Link key={m.id} className="text-accent underline" href={`/app/matters/${m.id}`}>{m.title}</Link>)}</p>}
         {content.summary && <p><strong>What happened:</strong> {content.summary}</p>}
         {content.details && <p><strong>Why suspicious:</strong> {content.details}</p>}
         {content.amountEUR ? <p><strong>Amount:</strong> €{content.amountEUR.toLocaleString("en")}</p> : null}
@@ -109,7 +111,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
         <section className="space-y-2 rounded-xl border border-border p-4 text-sm">
           <h2 className="font-semibold">Transaction hold (Art. 71)</h2>
           <p>
-            {c.fiuInstruction === "stop" ? "The FIU instructed you not to proceed. The matter stays blocked." :
+            {c.fiuInstruction === "stop" ? "The FIU instructed you not to proceed. The case stays blocked." :
               c.fiuInstruction === "proceed" ? "The FIU allowed the transaction to proceed." :
               holdActive ? `Held until ${toIsoDate(c.holdEndsOn)} (end of the 3rd working day). It may go ahead after that if the FIU gives no instruction.` :
               `The hold ended on ${toIsoDate(c.holdEndsOn)} without an FIU instruction.`}
@@ -151,7 +153,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
       {reports.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-semibold">Reports</h2>
-          {reports.map((r) => <ReportBlock key={r.id} r={r} narrative={r.narrative} aiDrafted={r.aiDrafted} profile={profile} back={`/app/cases/${caseId}`} />)}
+          {reports.map((r) => <ReportBlock key={r.id} r={r} narrative={r.narrative} aiDrafted={r.aiDrafted} profile={profile} back={`/app/cases/${caseId}`} ai={data.ai} />)}
         </section>
       )}
     </div>

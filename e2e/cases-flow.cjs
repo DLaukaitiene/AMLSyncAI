@@ -31,7 +31,7 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   await q.getByLabel("Title *").fill("Sale of Pilies g. 5");
   await q.locator("select[name=type]").selectOption("PROPERTY_SALE");
   await q.getByLabel("Price (EUR)").fill("420000");
-  await q.getByRole("button", { name: "Create matter" }).click();
+  await q.getByRole("button", { name: "Create case" }).click();
   await q.getByRole("heading", { name: "Sale of Pilies g. 5" }).waitFor();
   const matterUrl = q.url();
   for (const [role, f, l] of [["BUYER", "Marius", "Pirkėjas"], ["SELLER", "Ona", "Pardavėja"]]) {
@@ -51,7 +51,7 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   await submit(q, "Send report", "Sent to the Compliance Officer");
   log("staff raised an internal report");
   const nav = await q.getByRole("navigation", { name: "Main" }).innerText();
-  if (/Cases|Reports/.test(nav)) throw new Error("staff sees Cases/Reports");
+  if (/FIU Reporting|Investigations|Report Queue/.test(nav)) throw new Error("staff sees Investigations / Report Queue");
   if ((await q.goto(BASE + "/app/cases")).status() !== 404) throw new Error("staff can open cases");
   if ((await q.goto(BASE + "/app/reports")).status() !== 404) throw new Error("staff can open reports");
   log("staff can't open Cases or Reports afterwards (404)");
@@ -80,7 +80,7 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   log("matter shows the hold");
   await p.goto(matterUrl);
   await p.getByLabel("Override reason (Compliance Officer)").last().fill("Client insists on completing today");
-  await submit(p, "Mark matter completed", /Cannot be overridden/);
+  await submit(p, "Mark case completed", /Cannot be overridden/);
   log("hold can't be overridden");
 
   // STR: export; submitted blocked until FIU channel set
@@ -94,6 +94,8 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   await p.goto(BASE + "/app/settings/country-profile");
   await p.getByLabel("FIU name").fill("FNTT"); await p.getByLabel("FIU reporting channel").fill("https://www.fntt.lt");
   await submit(p, "Save new version", "Saved as version 2");
+  await p.goto(BASE + "/app/firm");
+  await submit(p, "Switch AI drafting on", "AI drafting switched on.");
   await p.goto(caseUrl);
   // AI draft of the narrative (AI_PROVIDER=mock in tests)
   await submit(p, "Draft narrative with AI", "AI draft added");
@@ -137,7 +139,7 @@ const { BASE, log, signupFirm, submit, lastMail, totp } = require("./helpers.cjs
   await p.waitForURL(/\/app\/cases\/[0-9a-f-]{36}$/);
   await p.getByRole("radio", { name: /no grounds for suspicion/ }).check();
   await p.getByLabel("Reasons *").fill("Relative is the co-owner on the title deed; documented, no grounds for suspicion.");
-  await submit(p, "Record decision", "Case · decided · decision: no-report");
+  await submit(p, "Record decision", "Investigation · decided · decision: no-report");
   await p.goto(BASE + "/app/cases");
   if (!(await p.getByText("decided (no-report)").count())) throw new Error("no-report not kept");
   log("'no report' decision kept in the case list");

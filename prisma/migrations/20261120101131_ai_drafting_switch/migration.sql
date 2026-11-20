@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Firm" ADD COLUMN IF NOT EXISTS "aiDrafting" BOOLEAN NOT NULL DEFAULT false;
+

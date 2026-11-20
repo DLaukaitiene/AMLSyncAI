@@ -8,6 +8,17 @@
 export const DEFAULT_LIMITS = { perMinute: 5, perDay: 30, perMonth: 100 } as const;
 
 export interface Limits { perMinute: number; perDay: number; perMonth: number }
+
+/** Limits that come with each plan [decided 20 Nov 2026]. A firm's own limits, raised by AMLSync App, apply when higher. */
+export const PLAN_LIMITS: Record<string, Limits> = {
+  solo: { perMinute: 5, perDay: 30, perMonth: 100 },
+  starter: { perMinute: 10, perDay: 200, perMonth: 500 },
+  custom: { perMinute: 10, perDay: 200, perMonth: 500 },
+};
+export function effectiveLimits(plan: string, firm: Limits): Limits {
+  const p = PLAN_LIMITS[plan] ?? PLAN_LIMITS.starter;
+  return { perMinute: Math.max(p.perMinute, firm.perMinute), perDay: Math.max(p.perDay, firm.perDay), perMonth: Math.max(p.perMonth, firm.perMonth) };
+}
 export interface Used { lastMinute: number; today: number; thisMonth: number }
 export type LimitKind = "minute" | "day" | "month";
 
@@ -24,7 +35,7 @@ export function allowedNow(limits: Limits, used: Used, requested: number): { all
 }
 
 export const LIMIT_MESSAGE =
-  "For your security there is a limit on screenings. Please contact us at contact@amlsync.com and we will adjust your limit within 1 business day.";
+  "For your security there is a limit on screenings. To get more, press \"Request more screenings\" (Settings → Billing) or write to contact@amlsync.com: we adjust your limit within 1 business day.";
 
 export function limitMessage(kind: LimitKind, limits: Limits): string {
   const which = kind === "minute" ? `${limits.perMinute} per minute` : kind === "day" ? `${limits.perDay} per day` : `${limits.perMonth} per month`;

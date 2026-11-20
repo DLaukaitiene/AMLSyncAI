@@ -15,7 +15,7 @@ export default async function CasesPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Suspicious Matters</h1>
+        <h1 className="text-2xl font-semibold">Investigations</h1>
         <p className="text-sm text-muted">Visible only to the Compliance Officer. Every assessment is kept, including decisions not to report.</p>
       </div>
       <section>
@@ -23,7 +23,7 @@ export default async function CasesPage() {
         <CaseList cases={open} />
       </section>
       <section>
-        <h2 className="mb-2 font-semibold">All cases</h2>
+        <h2 className="mb-2 font-semibold">All investigations</h2>
         <CaseList cases={cases} />
       </section>
       <section className="max-w-xl space-y-2">

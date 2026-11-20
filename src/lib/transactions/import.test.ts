@@ -17,7 +17,7 @@ describe("transaction CSV import", () => {
     expect(r.errors.map((e) => e.line)).toEqual([2, 3, 4]);
   });
   it("missing required columns", () => {
-    expect(parseTransactionCsv("date,amount\n2026-01-01,5\n").errors[0].error).toMatch(/client, matter/);
+    expect(parseTransactionCsv("date,amount\n2026-01-01,5\n").errors[0].error).toMatch(/client, case/);
   });
   it("unknown method kept as other", () => {
     expect(parseTransactionCsv("date,amount,method,client,matter\n2026-01-01,5,cheque,A,M\n").rows[0].method).toBe("other: cheque");

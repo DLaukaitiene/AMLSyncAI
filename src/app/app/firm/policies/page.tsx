@@ -6,10 +6,11 @@ import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { acknowledgeAction, aiSectionAction, approvePolicyAction, editSectionAction, generatePoliciesAction } from "../actions";
-import { aiEnabled } from "@/lib/server/ai";
+import { aiForFirm } from "@/lib/server/ai";
 
 export default async function PoliciesPage() {
   const s = await requireUser();
+  const ai = await withTenant(s.firm.id, (tx) => aiForFirm(tx, s.firm.id));
   const docs = await withTenant(s.firm.id, async (tx) => {
     const rows = await tx.policyDocument.findMany({ where: { status: { in: ["DRAFT", "IN_FORCE"] } }, orderBy: [{ kind: "asc" }, { version: "desc" }], include: { acknowledgements: true } });
     const users = await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true, name: true } });
@@ -56,7 +57,7 @@ export default async function PoliciesPage() {
                       defaultValue={sec.blocks.map((b) => ("p" in b ? b.p : "list" in b ? b.list.join("\n") : "")).join("\n\n")} />
                     <Submit variant="secondary">Save section</Submit>
                   </ActionForm>
-                  {aiEnabled() && <ActionButton action={aiSectionAction.bind(null, d.id, sec.id, "/app/firm/policies")}>Improve with AI</ActionButton>}
+                  {ai && <ActionButton action={aiSectionAction.bind(null, d.id, sec.id, "/app/firm/policies")}>Improve with AI</ActionButton>}
                   </div>
                 ))}
               </div>

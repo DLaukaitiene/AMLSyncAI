@@ -148,7 +148,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await q.getByLabel("Title *").fill("Rolex sale");
   await q.locator("select[name=type]").selectOption("GOODS_SALE");
   await q.locator("select[name=goodsCategory]").selectOption("jewellery-watches");
-  await q.getByRole("button", { name: "Create matter" }).click();
+  await q.getByRole("button", { name: "Create case" }).click();
   await q.getByRole("heading", { name: "Rolex sale" }).waitFor();
   const addParty = async (role, first, last) => {
     await q.getByText("Add a party").click();
@@ -185,7 +185,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await pay("2027-08-21", 3000, "cash"); await q.getByText(/Cash payments of €3,000 reach the €3,000 identification threshold/).first().waitFor();
   log("cash €3,000 triggers identification (Art. 19(4))");
   await q.reload();
-  await submit(q, "Mark matter completed", "Not yet:");
+  await submit(q, "Mark case completed", "Not yet:");
   log("matter can't complete while CDD is open");
 
   console.log("page errors:", errors);

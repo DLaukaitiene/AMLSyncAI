@@ -11,14 +11,14 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   await p.goto(BASE + "/app/transactions");
   await p.getByRole("heading", { name: "Transaction Monitoring" }).waitFor();
-  await p.getByRole("link", { name: "Open a matter" }).waitFor();
+  await p.getByRole("link", { name: "Open a case" }).waitFor();
   log("empty Transaction Monitoring page asks for a matter first");
 
   await p.goto(BASE + "/app/matters/new");
   await p.getByLabel("Title *").fill("Sale of Vokiečių g. 3");
   await p.locator("select[name=type]").selectOption("PROPERTY_SALE");
   await p.getByLabel("Price (EUR)").fill("180000");
-  await p.getByRole("button", { name: "Create matter" }).click();
+  await p.getByRole("button", { name: "Create case" }).click();
   await p.getByRole("heading", { name: "Sale of Vokiečių g. 3" }).waitFor();
   await p.getByText("Add a party").click();
   const d = p.locator("details", { hasText: "Add a party" });

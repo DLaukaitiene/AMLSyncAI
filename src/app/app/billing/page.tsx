@@ -1,6 +1,8 @@
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
-import { CHECK_PRICE_CENTS, formatEur } from "@/lib/didit/map";
+import { screeningUsage } from "@/lib/server/screening-limits";
+import { ScreeningUsage } from "@/components/screening-usage";
+import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur } from "@/lib/didit/map";
 import { buildInvoice, vatTreatment } from "@/lib/billing/invoice";
 import { customerOf } from "@/lib/server/invoicing";
 import { CONTACT_EMAIL, monthlyFeeFor, planOf } from "@/lib/billing/plans";
@@ -11,11 +13,12 @@ import { StepUpLink } from "@/components/step-up";
 
 export default async function BillingPage() {
   const s = await requireUser("approve.compliance");
-  const { open, entries, invoices, firm } = await withTenant(s.firm.id, async (tx) => ({
+  const { open, entries, invoices, firm, usage } = await withTenant(s.firm.id, async (tx) => ({
     open: await tx.creditEntry.findMany({ where: { invoiceId: null } }),
     entries: await tx.creditEntry.findMany({ orderBy: { createdAt: "desc" }, take: 300 }),
     invoices: await tx.invoice.findMany({ orderBy: { seq: "desc" } }),
     firm: await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } }),
+    usage: await screeningUsage(tx, s.firm.id),
   }));
   const customer = customerOf(firm);
   const now = new Date();
@@ -33,11 +36,12 @@ export default async function BillingPage() {
         {plan.monthlyCents !== null && <> · {formatEur(firm.customFeeCents ?? plan.monthlyCents)} per month excl. VAT</>}
         {plan.users !== null && <> · up to {plan.users} users</>}
         {firm.trialEndsOn && firm.trialEndsOn > now.toISOString().slice(0, 10) && <> · <strong>free trial until {firm.trialEndsOn}</strong></>}
-        <span className="block text-xs text-muted">To change plan, or for more users: {CONTACT_EMAIL}. Screening limits: {firm.screenLimitMinute} per minute, {firm.screenLimitDay} per day, {firm.screenLimitMonth} per month — contact us to raise them (within 1 business day).</span>
+        <span className="block text-xs text-muted">To change plan, or for more users: {CONTACT_EMAIL}.</span>
       </div>
+      <ScreeningUsage limits={usage.limits} used={usage.used} />
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Next invoice so far (excl. VAT)</span><span className="text-2xl font-semibold" data-testid="next-invoice">{formatEur(draft.netCents)}</span><span className="block text-xs text-muted">{draft.carryCents > 0 ? `${formatEur(draft.carryCents)} credit left` : "Invoiced on the 1st of each month"}</span></div>
-        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{formatEur(CHECK_PRICE_CENTS)}</span><span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>
+        <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{formatEur(IDV_PRICE_CENTS)} / {formatEur(SCREEN_PRICE_CENTS)}</span><span className="block text-xs text-muted">identity check / provider screening</span><span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>
         <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Monthly limit for paid checks</span><span className="text-2xl font-semibold">{formatEur(firm.spendLimitCents)}</span><span className="block text-xs text-muted">Contact AMLSync to raise it</span></div>
       </div>
       <p className="text-sm text-muted">

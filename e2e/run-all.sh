@@ -4,7 +4,7 @@
 #   npx tsx scripts/load-list.mts amlsync e2e/fixtures/test-sanctions.csv "TEST sanctions list" 2026-11-13
 set -euo pipefail
 cd "$(dirname "$0")/.."
-reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "WebEvent","Lead","Ticket","Announcement","VendorPrice","VendorInvoice","ExpertEngagement","AdminMember","AdminApproval","FirmAdminMeta","FirmNote","FirmKyb","Incident","DataSubjectRequest","Firm","User","Session","EmailToken","DevEmail","RateLimitBucket","SecurityEvent","Invitation","FeatureRequest","SupportGrant","DiditSession","CreditEntry","Invoice","ScreeningEvent","Blob","PortalLink","Appointment","TrainingModule","AiCall","IntegrityDeclaration","StaffScreening","ExternalTraining" CASCADE' >/dev/null 2>&1; }
+reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "WebEvent","Lead","Ticket","Announcement","VendorPrice","VendorInvoice","ExpertEngagement","AdminMember","AdminApproval","FirmAdminMeta","FirmNote","FirmKyb","Incident","DataSubjectRequest","Firm","User","Session","EmailToken","DevEmail","RateLimitBucket","SecurityEvent","Invitation","FeatureRequest","SupportGrant","DiditSession","CreditEntry","Invoice","ScreeningEvent","Blob","PortalLink","Appointment","TrainingModule","AiCall","IntegrityDeclaration","StaffScreening","ExternalTraining","KybSearch" CASCADE' >/dev/null 2>&1; }
 LOG=$(mktemp)
 exec > >(tee "$LOG") 2>&1
 code() { npx tsx scripts/create-signup-code.mts 1 1 e2e; }

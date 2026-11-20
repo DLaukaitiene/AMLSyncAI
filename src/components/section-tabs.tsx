@@ -30,7 +30,7 @@ const GROUPS: { label: string; tabs: { href: string; label: string }[] }[] = [
       { href: "/app/records", label: "Records & Retention" },
     ],
   },
-  { label: "FIU Reporting", tabs: [{ href: "/app/cases", label: "Suspicious Matters" }, { href: "/app/reports", label: "Report Queue" }] },
+  { label: "FIU Reporting", tabs: [{ href: "/app/cases", label: "Investigations" }, { href: "/app/reports", label: "Report Queue" }] },
 ];
 
 export function SectionTabs({ allowed }: { allowed: string[] }) {

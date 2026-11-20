@@ -129,3 +129,13 @@ export async function generatePrivacyAction(kind: "privacy-notice" | "dpia"): Pr
   revalidatePath("/app/firm/privacy");
   return { message: "Draft generated." };
 }
+
+export async function setAiDraftingAction(on: boolean): Promise<ActionState> {
+  const s = await requireUser("approve.compliance");
+  await withTenant(s.firm.id, async (tx) => {
+    await tx.firm.update({ where: { id: s.firm.id }, data: { aiDrafting: on } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["aiDrafting"] });
+  });
+  revalidatePath("/app/firm");
+  return { message: on ? "AI drafting switched on." : "AI drafting switched off." };
+}

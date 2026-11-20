@@ -81,7 +81,7 @@ The coloured steps at the top show what is done (green) and what is still open (
 - Download PDF: the full file pack for the supervisor.
 
 ## Tabs
-Overview shows the whole file. The other tabs show one part: Directors / UBOs, Verification, Screening results, Risk reports (with a PDF of each assessment), Documents, Transactions, Matters and Activity.
+Overview shows the whole file. The other tabs show one part: Directors / UBOs, Verification, Screening results, Risk reports (with a PDF of each assessment), Documents, Transactions, Cases and Activity.
 
 ## Accepting the client
 When nothing is left in "What to do next", review the file and accept the client in the Decision section.`,
@@ -125,10 +125,10 @@ A confirmed sanctions match blocks the client and starts the steps for notifying
   {
     slug: "transaction-monitoring", topic: "Screening and monitoring", title: "Transaction Monitoring",
     summary: "Recording payments, red flags and reviews.",
-    body: `Every payment you record, on a matter or with Log Transaction, is checked against red-flag rules.
+    body: `Every payment you record, on a case or with Log Transaction, is checked against red-flag rules.
 
 ## Recording payments
-- Log Transaction: choose the client and matter, then the date, amount, method, country the money comes from, and whether someone else paid.
+- Log Transaction: choose the client and case, then the date, amount, method, country the money comes from, and whether someone else paid.
 - Import from CSV: upload payments from your accounting software or bank (download the template first).
 
 ## Red flags
@@ -142,8 +142,8 @@ Click Review on a transaction and choose: mark as cleared, mark as investigated,
   {
     slug: "suspicious-matters", topic: "Reporting", title: "Reporting a suspicion",
     summary: "Internal reports, the Compliance Officer's decision and FIU reports.",
-    body: `1. Anyone can report a suspicion: on a matter, use "Report a suspicion to the Compliance Officer", or on a transaction, "Raise internal suspicion report".
-2. The Compliance Officer opens FIU Reporting → Suspicious Matters and decides: report to the FIU, don't report (with reasons), or legal privilege applies.
+    body: `1. Anyone can report a suspicion: on a case, use "Report a suspicion to the Compliance Officer", or on a transaction, "Raise internal suspicion report".
+2. The Compliance Officer opens FIU Reporting → Investigations and decides: report to the FIU, don't report (with reasons), or legal privilege applies.
 3. A decision to report creates a draft in the Report Queue. Complete it, submit it to your FIU and record the reference.
 
 The time the suspicion was formed and the decision time are recorded and can't be changed.
@@ -153,7 +153,7 @@ The time the suspicion was formed and the decision time are recorded and can't b
   {
     slug: "reports", topic: "Reporting", title: "Reports for your supervisor",
     summary: "Audit-ready registers and the full export.",
-    body: `Reports has registers you can download as CSV (opens in Excel): Client Register, Risk Register, Identity Verification Register, Screening Alerts, Transaction Log, Matters Register, Suspicious Matters, Staff Training Register and Audit Trail.
+    body: `Reports has registers you can download as CSV (opens in Excel): Client Register, Risk Register, Identity Verification Register, Screening Alerts, Transaction Log, Cases Register, Investigations, Staff Training Register and Audit Trail.
 
 Before an inspection, start with the Client Register, Risk Register, Staff Training Register and Audit Trail.
 

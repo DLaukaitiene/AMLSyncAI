@@ -6,7 +6,7 @@ import { encryptField } from "./crypto";
 import { storeDocument } from "./storage";
 import { loadClientFile, persistRiskIfChanged, upsertTask } from "./cdd";
 import { appUrl } from "./email";
-import { autoClear, CHECK_PRICE_CENTS, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
+import { autoClear, IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
 import { toIsoDate } from "@/lib/rules/dates";
 import { assertCanSpend, SpendError } from "./invoicing";
 import { takeScreeningSlots } from "./screening-limits";
@@ -68,7 +68,7 @@ export async function balanceCents(tx: Tx): Promise<number> {
   return (await tx.creditEntry.aggregate({ _sum: { amountCents: true } }))._sum.amountCents ?? 0;
 }
 
-export async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string, cents = CHECK_PRICE_CENTS): Promise<string> {
+export async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string, cents = SCREEN_PRICE_CENTS): Promise<string> {
   try {
     await assertCanSpend(tx, firmId, cents);
   } catch (e) {
@@ -108,7 +108,7 @@ export async function createIdvSession(
   }
   if (person.kind !== "NATURAL") throw new DiditError("Identity checks are for people. For a company, check its representatives and owners.");
   const d = person.details as Record<string, unknown>;
-  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Identity check (document / eID, chip, liveness, face match)", person.displayName);
+  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Identity check (document / eID, chip, liveness, face match)", person.displayName, IDV_PRICE_CENTS);
   let created: { session_id: string; url: string; status: string };
   try {
     created = await didit("POST", "/v3/session/", {
@@ -287,7 +287,7 @@ export async function screenWithDidit(tx: Tx, ctx: { firmId: string; userId: str
   const d = (p.details ?? {}) as Record<string, unknown>;
   const slot = await takeScreeningSlots(tx, ctx.firmId, [partyId], "didit");
   if (slot.message) throw new DiditError(slot.message);
-  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Screening: PEP, sanctions, adverse media", p.displayName);
+  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Screening: PEP, sanctions, adverse media", p.displayName, SCREEN_PRICE_CENTS);
   type AmlResp = { request_id: string; aml?: Record<string, unknown> } & Record<string, unknown>;
   let r: AmlResp;
   try {

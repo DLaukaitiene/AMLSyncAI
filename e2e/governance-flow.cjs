@@ -70,9 +70,11 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await p.goto(BASE + "/app/firm/training");
   await submit(p, "Assign", "Training assigned");
   await q.goto(BASE + "/app/firm/training");
-  await q.getByLabel("I completed this training and understood it").check();
-  await submit(q, "Complete", /completed \d{4}/);
-  log("training assigned and completed with attestation");
+  for (const t of ["AML essentials under the EU AML Regulation", "Spotting and reporting suspicious activity", "Sanctions and politically exposed persons (PEPs)"]) await q.getByText(t).first().waitFor();
+  await q.getByLabel("I completed this training and understood it").first().check();
+  await q.getByRole("button", { name: "Complete", exact: true }).first().click();
+  await q.getByText(/completed \d{4}/).first().waitFor();
+  log("built-in training modules assigned; one completed with attestation");
 
   // Outsourcing without notice → draft supervisor notice
   await p.goto(BASE + "/app/firm/outsourcing");

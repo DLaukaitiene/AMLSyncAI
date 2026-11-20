@@ -82,7 +82,7 @@ export function openCddItems(f: CddFileState): GateItem[] {
   if (f.boResolved === false) items.push({ id: "beneficial-owners", message: "Identify the beneficial owners or record the senior managing officials.", article: "Art. 20(1)(b), 22(2)" });
   if (!f.purposeRecorded) items.push({ id: "purpose", message: "Record the purpose and intended nature of the relationship.", article: "Art. 25" });
   if (!f.riskAssessed) items.push({ id: "risk", message: "Complete the client risk assessment.", article: "Art. 20(2)" });
-  if (f.unscreenedParties) items.push({ id: "unscreened", message: `${f.unscreenedParties} person(s) or companies in the structure haven't been screened yet. Use "Screen again now". If your screening limit was reached, contact us at contact@amlsync.com and we will adjust it within 1 business day.`, article: "Art. 20(1)(d)" });
+  if (f.unscreenedParties) items.push({ id: "unscreened", message: `${f.unscreenedParties} person(s) or companies in the structure haven't been screened yet. Use "Screen again now". If your screening limit was reached, press \"Request more screenings\" on the Dashboard or write to contact@amlsync.com: we adjust it within 1 business day.`, article: "Art. 20(1)(d)" });
   if (f.openScreeningMatches > 0) items.push({ id: "screening", message: `Resolve ${f.openScreeningMatches} possible screening match(es) as true match or false positive.`, article: "Art. 20(1)(d)" });
   if (f.eddRequired && !f.eddChecklistComplete) items.push({ id: "edd", message: "Complete the EDD checklist.", article: "Art. 34(4)" });
   if (f.eddRequired && !f.seniorApprovalRecorded) items.push({ id: "senior-approval", message: "Senior management approval is required.", article: "Art. 34(4)" });
@@ -146,12 +146,12 @@ export function openMatterItems(m: MatterState): GateItem[] {
   }
   for (const f of m.files) {
     if (f.scope === "identification-only" && AMLR_MATTER_TYPES.includes(m.type)) {
-      items.push({ id: `${f.partyId}:out-of-scope-matter`, message: `${f.role}: the client is recorded as outside AMLR scope, but this matter is an AMLR service. Switch the client to full due diligence.`, article: "Art. 3, 19" });
+      items.push({ id: `${f.partyId}:out-of-scope-matter`, message: `${f.role}: the client is recorded as outside AMLR scope, but this case is an AMLR service. Switch the client to full due diligence.`, article: "Art. 3, 19" });
     }
     for (const i of openCddItems(f)) items.push({ ...i, id: `${f.partyId}:${i.id}`, message: `${f.role}: ${i.message}` });
   }
   if (m.transactionHold) items.push({ id: "hold", message: "Transaction on hold pending FIU (3 working days).", article: "Art. 71", absolute: true });
-  if (m.sanctionsBlocked) items.push({ id: "sanctions-block", message: "Matter blocked by a sanctions hit.", article: "Reg. 269/2014", absolute: true });
+  if (m.sanctionsBlocked) items.push({ id: "sanctions-block", message: "Case blocked by a sanctions hit.", article: "Reg. 269/2014", absolute: true });
   return items;
 }
 

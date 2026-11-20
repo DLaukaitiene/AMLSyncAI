@@ -36,10 +36,10 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm text-muted">Matter · {m.type === "OTHER" ? String((m.details as { typeOther?: string }).typeOther ?? "other") : m.type.toLowerCase().replace("_", " ")} · {m.status.toLowerCase().replace("_", " ")}</p>
+        <p className="text-sm text-muted">Case · {m.type === "OTHER" ? String((m.details as { typeOther?: string }).typeOther ?? "other") : m.type.toLowerCase().replace("_", " ")} · {m.status.toLowerCase().replace("_", " ")}</p>
         <h1 className="text-2xl font-semibold">{m.title}</h1>
         <p className="text-sm text-muted">{Object.entries(det).filter(([k]) => k !== "transferApprovedAt").map(([k, v]) => `${k}: ${v}`).join(" · ")}</p>
-        {m.status === "ON_HOLD" && <p className="text-sm text-red-700 dark:text-red-300">On hold: a sanctions match or a pending suspicion report blocks this matter.</p>}
+        {m.status === "ON_HOLD" && <p className="text-sm text-red-700 dark:text-red-300">On hold: a sanctions match or a pending suspicion report blocks this case.</p>}
       </div>
 
       <section className="space-y-2 rounded-xl border border-border p-4">
@@ -127,7 +127,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
               )}
               <ActionForm action={completeMatterAction.bind(null, matterId, "complete")} className="space-y-2">
                 {can(s.user.roles, "gate.override") && items.length > 0 && <Field label="Override reason (Compliance Officer)" name="overrideReason" />}
-                <Submit>Mark matter completed</Submit>
+                <Submit>Mark case completed</Submit>
                 <StepUpLink />
               </ActionForm>
             </div>

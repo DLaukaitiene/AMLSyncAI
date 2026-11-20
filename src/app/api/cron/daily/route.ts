@@ -87,12 +87,17 @@ export async function GET(req: Request) {
     await run("backup", async () => {
       const b = await createBackup();
       const mb = b.file.length / 1_048_576;
+      const size = mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(b.file.length / 1024))} KB`;
+      // Copies go to BACKUP_CC (comma-separated), e.g. a personal mailbox outside the company domain.
+      const cc = (process.env.BACKUP_CC ?? "").split(",").map((x) => x.trim()).filter((x) => /^[^@\s]+@[^@\s]+$/.test(x));
       const total = Object.values(b.rows).reduce((a, n) => a + n, 0);
       // Gmail accepts attachments up to 25 MB; above ~18 MB download it from the backoffice instead.
       if (mb <= 18) {
-        await sendEmail(OPS_ALERT_EMAIL, `AMLSync App: weekly backup ${b.name.slice(15, 25)}`, `The weekly encrypted backup is attached (${mb.toFixed(2)} MB, ${total} rows in ${Object.keys(b.rows).length} tables).\n\nKeep it somewhere safe outside Google (e.g. download it to your computer). It can only be opened with BACKUP_KEY; restore steps are in scripts/restore-backup.mts.`, [{ filename: b.name, content: b.file, contentType: "application/octet-stream" }]);
+        for (const to of [OPS_ALERT_EMAIL, ...cc]) {
+          await sendEmail(to, `AMLSync App: weekly backup ${b.name.slice(15, 25)}`, `The weekly encrypted backup is attached (${size}, ${total} rows in ${Object.keys(b.rows).length} tables).\n\nKeep a copy somewhere safe (e.g. download it to your computer). It can only be opened with BACKUP_KEY; restore steps are in scripts/restore-backup.mts.`, [{ filename: b.name, content: b.file, contentType: "application/octet-stream" }]);
+        }
       } else {
-        await sendEmail(OPS_ALERT_EMAIL, `AMLSync App: weekly backup ready to download`, `The weekly backup (${mb.toFixed(1)} MB) is too large for email. Download it from the backoffice: Security → Download backup.`);
+        for (const to of [OPS_ALERT_EMAIL, ...cc]) await sendEmail(to, `AMLSync App: weekly backup ready to download`, `The weekly backup (${size}) is too large for email. Download it from the backoffice: Security → Download backup.`);
       }
       await adminDb.jobRun.create({ data: { job: "backup", ok: true, finishedAt: new Date(), failed: [], summary: { bytes: b.file.length, rows: total, emailed: mb <= 18 } } });
       return { bytes: b.file.length, rows: total, emailed: mb <= 18 };

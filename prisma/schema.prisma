@@ -203,6 +203,7 @@ model Firm {
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
+  aiDrafting       Boolean @default(false) // the firm switched on AI drafting (STR narratives, policy text)
   responsibilities Json @default("{}") // AML duty → user ids (Team → Responsibilities)
   txCashThresholdEUR      Int @default(3000) // transaction monitoring: cash at or above this is flagged
   txHighValueThresholdEUR Int @default(50000) // any payment at or above this is flagged
@@ -1006,6 +1007,20 @@ model StaffScreening {
   screenedAt   DateTime @default(now())
 
   @@index([firmId, userId])
+}
+
+/// Company-register searches (kept so a firm sees its recent searches; counts towards free searches).
+model KybSearch {
+  id         String   @id @default(uuid()) @db.Uuid
+  firmId     String   @db.Uuid
+  userId     String   @db.Uuid
+  country    String   @db.Char(2)
+  query      String
+  level      String // lite | full
+  results    Json     // [{name, registrationNumber, status}] — candidate ids expire, so not kept
+  at         DateTime @default(now())
+
+  @@index([firmId, at])
 }
 
 /// External training events (workshops, seminars, courses) — Team → Training Register.

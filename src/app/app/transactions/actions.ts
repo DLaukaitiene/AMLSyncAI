@@ -13,7 +13,7 @@ import { parseTransactionCsv } from "@/lib/transactions/import";
 /** Log Transaction from the monitoring page: the select carries "matterId:partyId". */
 export async function logTransactionAction(prev: ActionState, fd: FormData): Promise<ActionState> {
   const [matterId, partyId] = String(fd.get("link") ?? "").split(":");
-  if (!matterId || !partyId) return { error: "Choose the client and matter.", fieldErrors: { link: ["Required."] } };
+  if (!matterId || !partyId) return { error: "Choose the client and case.", fieldErrors: { link: ["Required."] } };
   fd.set("customerId", partyId);
   const r = await addTransactionAction(matterId, prev, fd);
   revalidatePath("/app/transactions");
@@ -74,9 +74,9 @@ export async function importTransactionsAction(_: ActionState, fd: FormData): Pr
   const problems = [...errors];
   for (const r of rows) {
     const onMatter = links.filter((l) => norm(l.matter.title) === norm(r.matter));
-    if (!onMatter.length) { problems.push({ line: r.line, error: `No open matter called "${r.matter}".` }); continue; }
+    if (!onMatter.length) { problems.push({ line: r.line, error: `No open case called "${r.matter}".` }); continue; }
     const payer = onMatter.filter((l) => norm(l.party.displayName) === norm(r.client));
-    if (payer.length !== 1) { problems.push({ line: r.line, error: payer.length ? `"${r.client}" is on more than one open matter called "${r.matter}".` : `"${r.client}" is not a party to "${r.matter}".` }); continue; }
+    if (payer.length !== 1) { problems.push({ line: r.line, error: payer.length ? `"${r.client}" is on more than one open case called "${r.matter}".` : `"${r.client}" is not a party to "${r.matter}".` }); continue; }
     const f = new FormData();
     f.set("customerId", payer[0].partyId); f.set("date", r.date); f.set("amountEUR", String(r.amountEUR));
     f.set("method", r.method.startsWith("other: ") ? "other" : r.method);

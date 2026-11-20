@@ -3,7 +3,7 @@ import { adminDb } from "@/lib/server/db";
 import { Badge, eur, Page, Section, Table, Tile, Tiles } from "@/components/admin";
 import { monthlyFeeFor, planOf } from "@/lib/billing/plans";
 import { b2cThreshold, B2C_THRESHOLD_CENTS } from "@/lib/backoffice/vat";
-import { CHECK_PRICE_CENTS } from "@/lib/didit/map";
+import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS } from "@/lib/didit/map";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -49,7 +49,7 @@ export default async function RevenuePage() {
     <Page title="Revenue" intro="Subscriptions plus paid checks, invoiced monthly in arrears. Vendor cost per check is not recorded yet, so gross margin needs the monthly Didit invoice.">
       <Tiles>
         <Tile label="MRR" value={eur(cur.mrr)} sub={`ARR ${eur(cur.mrr * 12)}${mrrChange !== null ? ` · ${mrrChange >= 0 ? "+" : ""}${mrrChange}% vs last month` : ""}`} />
-        <Tile label="Usage revenue (month)" value={eur(cur.usage)} sub={`${cur.checks} paid check(s) at ${eur(CHECK_PRICE_CENTS)}`} />
+        <Tile label="Usage revenue (month)" value={eur(cur.usage)} sub={`${cur.checks} paid check(s) at ${eur(IDV_PRICE_CENTS)} (identity) or ${eur(SCREEN_PRICE_CENTS)} (screening)`} />
         <Tile label="ARPA (month)" value={eur(activeFirms ? Math.round((cur.mrr + cur.usage) / activeFirms) : 0)} sub={`${activeFirms} active firm(s)`} />
         <Tile label="Receivables" value={eur(open.reduce((s, i) => s + i.totalCents, 0))} sub={`${overdue.length} overdue · ${eur(overdue.reduce((s, i) => s + i.totalCents, 0))}`} tone={overdue.length ? "warn" : "ok"} />
       </Tiles>

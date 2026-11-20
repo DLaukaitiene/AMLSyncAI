@@ -3,6 +3,8 @@ import { BadgeCheck, BookOpen, Building2, Download, GraduationCap, Handshake, Lo
 import { Chip } from "@/components/chips";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
+import { aiEnabled, aiProviderLabel, aiUsageThisMonth } from "@/lib/server/ai";
+import { setAiDraftingAction } from "./actions";
 import { can } from "@/lib/auth/permissions";
 import { SECTORS } from "@/lib/server/auth/flows";
 import { ActionForm, Field, Submit } from "@/components/form";
@@ -13,11 +15,12 @@ const CLIENT_TYPES = ["Individuals", "Companies", "Trusts and arrangements", "No
 
 export default async function FirmPage() {
   const s = await requireUser();
-  const { firm, ra, policy, procedure } = await withTenant(s.firm.id, async (tx) => ({
+  const { firm, ra, policy, procedure, aiUsage } = await withTenant(s.firm.id, async (tx) => ({
     firm: await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } }),
     ra: await tx.firmRiskAssessment.findFirst({ where: { status: "IN_FORCE" }, orderBy: { version: "desc" } }),
     policy: await tx.policyDocument.findFirst({ where: { kind: "policy", status: "IN_FORCE" }, orderBy: { version: "desc" } }),
     procedure: await tx.policyDocument.findFirst({ where: { kind: "procedure", status: "IN_FORCE" }, orderBy: { version: "desc" } }),
+    aiUsage: await aiUsageThisMonth(tx, s.firm.id),
   }));
   const edit = can(s.user.roles, "approve.compliance");
   return (
@@ -55,6 +58,20 @@ export default async function FirmPage() {
           </a>
         </li>
       </ul>
+      <section className="space-y-2 rounded-2xl border border-border p-4" data-testid="ai-drafting">
+        <h2 className="text-lg font-semibold">AI drafting</h2>
+        <p className="text-sm text-muted">AI can write a first draft of a suspicious transaction report narrative and help redraft your policy sections. A person always reviews and approves the text; AI never decides anything. The text you ask it to draft is sent to the AI provider ({aiProviderLabel()}) and is not used to train AI models. Your plan includes {aiUsage.strCap} report drafts a month; used this month: {aiUsage.str}.</p>
+        {!aiEnabled() ? (
+          <p className="text-sm">AI drafting isn&apos;t available yet. We&apos;ll let you know when it is.</p>
+        ) : edit ? (
+          <ActionForm action={setAiDraftingAction.bind(null, !firm.aiDrafting)}>
+            <p className="text-sm">AI drafting is <strong>{firm.aiDrafting ? "on" : "off"}</strong> for your firm.</p>
+            <Submit variant="secondary">{firm.aiDrafting ? "Switch AI drafting off" : "Switch AI drafting on"}</Submit>
+          </ActionForm>
+        ) : (
+          <p className="text-sm">AI drafting is <strong>{firm.aiDrafting ? "on" : "off"}</strong> for your firm. The Owner or Compliance Officer can change this.</p>
+        )}
+      </section>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Due diligence for new clients</h2>
         <p className="text-sm text-muted">If most of your clients only receive services outside AMLR scope, new client files can start as identification only (identification and sanctions screening). Switch a client to full due diligence as soon as an AMLR service starts.</p>

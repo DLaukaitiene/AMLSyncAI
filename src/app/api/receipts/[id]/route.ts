@@ -19,7 +19,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     meta: [`Statement ${e.id.slice(0, 8).toUpperCase()} · ${e.createdAt.toISOString().slice(0, 10)}`],
     sections: [
       { id: "to", heading: "Customer", blocks: [{ p: s.firm.name }] },
-      { id: "item", heading: "Item", blocks: [{ table: { head: ["Description", "Client / matter reference", "Check reference", "Price excl. VAT"], rows: [[e.description, e.clientRef ?? "—", e.reference ?? "—", formatEur(-e.amountCents)]] } }] },
+      { id: "item", heading: "Item", blocks: [{ table: { head: ["Description", "Client / case reference", "Check reference", "Price excl. VAT"], rows: [[e.description, e.clientRef ?? "—", e.reference ?? "—", formatEur(-e.amountCents)]] } }] },
       { id: "note", heading: "Note", blocks: [{ p: "You may re-bill this check to your client as a disbursement. VAT is shown on the monthly invoice." }] },
     ],
   });

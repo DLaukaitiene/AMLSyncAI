@@ -116,12 +116,12 @@ export const OBLIGATIONS: Obligation[] = [
   {
     id: "deals", group: "Every deal",
     title: "Record deals and payments; watch for red flags",
-    what: "Record each matter (deal, sale, engagement) and its payments. Deals of €10,000 or more need full client checks. Cash payments of €10,000 or more are not allowed (lower in some countries). Look into anything unusual.",
+    what: "Record each case (deal, sale, engagement) and its payments. Deals of €10,000 or more need full client checks. Cash payments of €10,000 or more are not allowed (lower in some countries). Look into anything unusual.",
     when: "For every deal and payment, as it happens.",
-    how: ["Matters → New Matter: record the deal and its parties.", "Record each payment on the matter or in Transaction Monitoring.", "Review each flagged payment and write down your reason."],
+    how: ["Cases → New Case: record the deal and its parties.", "Record each payment on the case or in Transaction Monitoring.", "Review each flagged payment and write down your reason."],
     article: "AMLR Art. 19, 26, 80",
     duty: "Record each deal and payment. €10,000 or more needs full client checks; cash of €10,000 or more is not allowed.",
-    action: { href: "/app/matters", label: "Matters" },
+    action: { href: "/app/matters", label: "Cases" },
     secondary: { href: "/app/transactions", label: "Transaction Monitoring" },
     sectorNotes: {
       HVG_TRADER: "Sales of cars of €250,000 or more, and of aircraft or boats of €7.5 million or more, must also be reported to the FIU.",
@@ -143,8 +143,8 @@ export const OBLIGATIONS: Obligation[] = [
     what: "If anyone in the firm suspects money laundering or terrorist financing, they tell the Compliance Officer at once. The Compliance Officer decides and, if there are grounds, reports to the FIU promptly. Never tell the client.",
     when: "As soon as a suspicion arises, before carrying out the transaction where possible. Answer FIU requests within the deadline (5 working days unless the FIU sets a shorter one). A reported transaction is held for 3 working days.",
     how: [
-      "Anyone: on a matter or payment, choose 'Report a suspicion to the Compliance Officer'.",
-      "Compliance Officer: FIU Reporting → Suspicious Matters: decide to report, not report (with reasons) or apply legal privilege.",
+      "Anyone: on a case or payment, choose 'Report a suspicion to the Compliance Officer'.",
+      "Compliance Officer: FIU Reporting → Investigations: decide to report, not report (with reasons) or apply legal privilege.",
       "Complete the report in the Report Queue, send it through your FIU's channel and record the reference.",
     ],
     article: "AMLR Art. 69–73",

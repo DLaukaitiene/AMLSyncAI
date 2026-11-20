@@ -21,6 +21,8 @@ import { ObligationCard } from "@/components/obligations";
 import { AppointInline } from "@/components/appoint-inline";
 import { appointAction } from "@/app/app/firm/records-actions";
 import { setGuideAction } from "./guide-actions";
+import { screeningUsage } from "@/lib/server/screening-limits";
+import { ScreeningUsage } from "@/components/screening-usage";
 
 /**
  * Dashboard. First: the firm's AML obligations, one box each, with its status and
@@ -105,10 +107,10 @@ export default async function Dashboard() {
       timeline: await tx.task.findMany({ where: { ...taskWhere, dueOn: { lte: new Date(addCalendarDays(today, 30)) } }, orderBy: { dueOn: "asc" }, take: 8 }),
       activity: seeAudit ? await tx.auditEvent.findMany({ orderBy: { at: "desc" }, take: 8 }) : [],
       obligations: await firmObligations(tx, s.firm.id, { seeCases }),
+      usage: await screeningUsage(tx, s.firm.id),
     };
   });
   const missing = data.checklist.filter((c) => c.status === "required-missing" || c.status === "not-yet-reviewed");
-  const required = data.checklist.filter((c) => c.status === "required-missing");
   const h = data.health;
   const overall = h.level === "on-track" ? "On track" : h.level === "at-risk" ? "At risk" : "Needs attention";
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
@@ -131,6 +133,8 @@ export default async function Dashboard() {
         <Link href="/app/clients/new" className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105"><UserPlus aria-hidden className="h-4 w-4" />Add Client</Link>
       </div>
 
+      <ScreeningUsage limits={data.usage.limits} used={data.usage.used} compact />
+
       {/* Dashboard guide */}
       {!guideHidden ? (
         <section aria-labelledby="guide" className="space-y-3 rounded-2xl border border-accent/40 bg-brand/10 p-5" data-testid="dashboard-guide">
@@ -144,7 +148,7 @@ export default async function Dashboard() {
             <li><strong className="block">3. Click the button to do it</strong>Each box takes you to the right page. &ldquo;What does this mean?&rdquo; explains the duty, when it applies and the steps.</li>
             <li><strong className="block">4. Start at the top</strong>Set up your firm first, then check every client, record every deal, and report anything suspicious to your Compliance Officer.</li>
           </ol>
-          <p className="text-sm"><strong>If in doubt about a client or a payment:</strong> don&apos;t go ahead, and report it to your Compliance Officer from the matter or payment. Never tell the client. <Link href="/app/obligations#reporting" className="text-accent underline">How reporting works</Link></p>
+          <p className="text-sm"><strong>If in doubt about a client or a payment:</strong> don&apos;t go ahead, and report it to your Compliance Officer from the case or payment. Never tell the client. <Link href="/app/obligations#reporting" className="text-accent underline">How reporting works</Link></p>
         </section>
       ) : (
         <form action={setGuideAction.bind(null, false)} className="text-right"><button type="submit" className="text-sm text-accent underline">Show the dashboard guide</button></form>
@@ -332,7 +336,7 @@ export default async function Dashboard() {
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {[
               { href: "/app/clients/new", icon: UserPlus, title: "Add Client" },
-              { href: "/app/matters/new", icon: FilePlus2, title: "New Matter" },
+              { href: "/app/matters/new", icon: FilePlus2, title: "New Case" },
               { href: "/app/registers", icon: CalendarClock, title: "Audit-ready reports", show: seeStaff },
               { href: "/app/firm/policies", icon: Building2, title: "AML Program" },
             ].filter((q) => q.show !== false).map(({ href, icon: Icon, title }) => (

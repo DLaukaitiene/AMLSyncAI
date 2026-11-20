@@ -13,8 +13,8 @@ export const REGISTERS = [
   { id: "verifications", pillar: "Clients", title: "Identity Verification Register", text: "Every identity verification: person, method, provider and date." },
   { id: "screening", pillar: "Monitoring", title: "Screening Alerts", text: "All possible matches for clients and staff, with how each was resolved." },
   { id: "transactions", pillar: "Monitoring", title: "Transaction Log", text: "Every recorded payment with method, flags, monitoring status and review reasons." },
-  { id: "matters", pillar: "Clients", title: "Matters Register", text: "Every matter with type, sector, status and date opened." },
-  { id: "suspicious", pillar: "Regulatory", title: "Suspicious Matters", text: "Internal reports and FIU reports: dates, decision and submission reference. No case content." },
+  { id: "matters", pillar: "Clients", title: "Cases Register", text: "Every case with type, sector, status and date opened." },
+  { id: "suspicious", pillar: "Regulatory", title: "Investigations", text: "Internal reports and FIU reports: dates, decision and submission reference. No case content." },
   { id: "training", pillar: "People", title: "Staff Training Register", text: "In-app training per staff member with due dates, plus external workshops and courses attended." },
   { id: "audit", pillar: "System", title: "Audit Trail", text: "Every recorded action: when, who, what and which fields changed (never the values)." },
 ] as const;
@@ -60,16 +60,16 @@ export async function buildRegister(tx: Tx, id: RegisterId, only?: string[]): Pr
     case "transactions": {
       const ts = await tx.transaction.findMany({ orderBy: { date: "asc" }, include: { matter: { select: { title: true } } } });
       const names = new Map((await tx.party.findMany({ where: { id: { in: [...new Set(ts.map((x) => x.customerId))] } }, select: { id: true, displayName: true } })).map((p) => [p.id, p.displayName]));
-      return [["Date", "Client", "Matter", "Amount EUR", "Method", "From country", "Third-party payer", "Description", "Status", "Flags", "Review", "Reviewed by"],
+      return [["Date", "Client", "Case", "Amount EUR", "Method", "From country", "Third-party payer", "Description", "Status", "Flags", "Review", "Reviewed by"],
         ...ts.map((x) => [d(x.date), names.get(x.customerId) ?? "", x.matter.title, Number(x.amountEUR), x.method, x.fromCountry ?? "", x.thirdPartyPayer ? "yes" : "", x.description ?? "", x.monitorStatus, ((x.flags as { text: string }[]) ?? []).map((f) => f.text).join("; "), x.reviewNote ?? "", x.reviewedById ? who(x.reviewedById) : ""])];
     }
     case "matters": {
       const ms = await tx.matter.findMany({ orderBy: { createdAt: "asc" } });
-      return [["Matter", "Type", "Sector", "Status", "Opened"], ...ms.map((m) => [m.title, m.type, m.sector, m.status, d(m.createdAt)])];
+      return [["Case", "Type", "Sector", "Status", "Opened"], ...ms.map((m) => [m.title, m.type, m.sector, m.status, d(m.createdAt)])];
     }
     case "suspicious": {
       const cs = await tx.case.findMany({ orderBy: { createdAt: "asc" }, include: { reports: true } });
-      return [["Case", "Type", "Opened", "Suspicion formed", "Decision", "Decided", "Status", "Report", "Report status", "Submitted", "Submission ref"],
+      return [["Investigation", "Type", "Opened", "Suspicion formed", "Decision", "Decided", "Status", "Report", "Report status", "Submitted", "Submission ref"],
         ...cs.flatMap((c) => {
           const base = [c.id.slice(0, 8), c.type, t(c.createdAt), t(c.suspicionFormedAt), c.decision ?? "", t(c.decidedAt), c.status];
           return c.reports.length ? c.reports.map((r) => [...base, r.type, r.status, t(r.submittedAt), r.submissionRef ?? ""]) : [[...base, "", "", "", ""]];

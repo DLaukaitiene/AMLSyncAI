@@ -23,6 +23,11 @@ import { buildUserPrompt, SYSTEM_PROMPT, type DraftPurpose } from "@/lib/ai/prom
 export const AI_MODEL = process.env.AI_MODEL ?? "claude-opus-5-5";
 const provider = () => process.env.AI_PROVIDER ?? "off";
 
+export function aiProviderLabel(): string {
+  const p = provider();
+  return p === "vertex" ? `Anthropic Claude on Google Cloud, ${process.env.VERTEX_REGION ?? "europe-west1"}` : p === "anthropic" ? "Anthropic Claude" : p === "mock" ? "test provider" : "none";
+}
+
 export function aiEnabled(): boolean {
   const p = provider();
   if (p === "mock") return process.env.NODE_ENV !== "production" || process.env.ALLOW_DEV_EMAIL === "1";
@@ -30,6 +35,23 @@ export function aiEnabled(): boolean {
 }
 
 export type DraftResult = { ok: true; text: string } | { ok: false; error: string };
+
+/** Monthly AI draft caps per plan [decided 20 Nov 2026]: STR narratives. */
+export const AI_STR_CAP: Record<string, number> = { solo: 30, starter: 80, custom: 80 };
+
+/** AI drafting is available to a firm when the installation has a provider and the firm switched it on. */
+export async function aiForFirm(tx: Tx, firmId: string): Promise<boolean> {
+  if (!aiEnabled()) return false;
+  return (await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { aiDrafting: true } })).aiDrafting;
+}
+
+export async function aiUsageThisMonth(tx: Tx, firmId: string) {
+  const now = new Date();
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { plan: true } });
+  const str = await tx.aiCall.count({ where: { purpose: "str-narrative", error: null, createdAt: { gte: from } } });
+  return { str, strCap: AI_STR_CAP[firm.plan] ?? 80 };
+}
 
 function textOf(content: { type: string; text?: string }[]): string {
   return content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
@@ -72,7 +94,11 @@ export async function draftText(
   objectId: string,
   data: Record<string, unknown>,
 ): Promise<DraftResult> {
-  if (!aiEnabled()) return { ok: false, error: "AI drafting is not switched on for this installation." };
+  if (!(await aiForFirm(tx, ctx.firmId))) return { ok: false, error: "AI drafting is switched off for your firm. Switch it on in Compliance Hub → Overview." };
+  if (purpose === "str-narrative") {
+    const u = await aiUsageThisMonth(tx, ctx.firmId);
+    if (u.str >= u.strCap) return { ok: false, error: `Your plan includes ${u.strCap} AI report drafts a month and they are used up. Write this one yourself, or contact contact@amlsync.com for more.` };
+  }
   if (!(await hit(`ai:${ctx.userId}`, { limit: 30, windowSec: 3600 }))) return { ok: false, error: "Too many AI drafts in the last hour. Try again later." };
   const prompt = buildUserPrompt(purpose, data);
   const log = await tx.aiCall.create({
