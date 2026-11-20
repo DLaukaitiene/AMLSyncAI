@@ -2,16 +2,24 @@ import "server-only";
 import { adminDb, withTenant, type Tx } from "./db";
 import { appUrl, sendEmail } from "./email";
 import { securityEvent } from "./audit";
-import { buildInvoice, invoiceNumber, OVERDUE_PAUSE_DAYS, PAYMENT_TERMS_DAYS, previousMonth, SELLER, type Customer } from "@/lib/billing/invoice";
+import { buildInvoice, invoiceNumber, isEu, OVERDUE_PAUSE_DAYS, PAYMENT_TERMS_DAYS, previousMonth, SELLER, type Customer } from "@/lib/billing/invoice";
+import { checkVies } from "./backoffice/vies";
+import { invoiceCopyName, invoicePdf } from "./invoice-pdf";
 import { formatEur } from "@/lib/didit/map";
 import { monthlyFeeFor, planOf } from "@/lib/billing/plans";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (isoDate: string, n: number) => iso(new Date(Date.parse(isoDate + "T00:00:00Z") + n * 86_400_000));
 
-export function customerOf(f: { name: string; homeState: string; billingName: string | null; billingAddress: string | null; billingCountry: string | null; vatId: string | null; billingCompanyCode: string | null }): Customer {
-  return { name: f.billingName || f.name, address: f.billingAddress, country: f.billingCountry || f.homeState, vatId: f.vatId, companyCode: f.billingCompanyCode };
+export function customerOf(f: { name: string; homeState: string; billingName: string | null; billingAddress: string | null; billingCountry: string | null; vatId: string | null; billingCompanyCode: string | null; viesStatus?: string | null; billingOffice?: string | null; invoiceReference?: string | null; vatNotRegistered?: boolean }): Customer {
+  return {
+    name: f.billingName || f.name, address: f.billingAddress, country: f.billingCountry || f.homeState, vatId: f.vatNotRegistered ? null : f.vatId, companyCode: f.billingCompanyCode,
+    viesValid: f.viesStatus === "valid", office: f.billingOffice ?? null, reference: f.invoiceReference ?? null,
+  };
 }
+
+/** Copy of every invoice, e.g. to the founder's mailbox. */
+export const INVOICE_COPY_EMAIL = process.env.INVOICE_COPY_EMAIL ?? "deimena@amlsync.com";
 
 
 /**
@@ -55,7 +63,14 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
   const label = period.from.slice(0, 7);
   const firms = await adminDb.firm.findMany();
   let issued = 0, skipped = 0;
-  for (const f of firms) {
+  for (const f0 of firms) {
+    let f = f0;
+    // Reverse charge only with a VAT number that passes VIES: check again before invoicing (keep the last result if VIES is down).
+    if (f.vatId && !f.vatNotRegistered && isEu(f.billingCountry || f.homeState) && (f.billingCountry || f.homeState) !== SELLER.country && !(await adminDb.invoice.findUnique({ where: { firmId_period: { firmId: f.id, period: label } } }))) {
+      const before = f.viesStatus;
+      const r = await checkVies(f.id).catch(() => ({ status: "unavailable" as const }));
+      f = { ...f, viesStatus: r.status === "unavailable" ? before : r.status };
+    }
     const done = await adminDb.$transaction(async (tx) => {
       if (await tx.invoice.findUnique({ where: { firmId_period: { firmId: f.id, period: label } } })) return false;
       const entries = await tx.creditEntry.findMany({ where: { firmId: f.id, invoiceId: null, createdAt: { lt: new Date(period.toExclusive + "T00:00:00Z") } }, orderBy: { createdAt: "asc" } });
@@ -82,7 +97,11 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
     if (!done) { skipped++; continue; }
     issued++;
     const to = f.billingEmail || (await adminDb.user.findFirst({ where: { firmId: f.id, roles: { has: "OWNER" }, deactivatedAt: null }, orderBy: { createdAt: "asc" } }))?.email;
-    if (to) await sendEmail(to, `AMLSync invoice ${done.number} (${period.label})`, `Your invoice ${done.number} for ${period.label} is ready: ${formatEur(done.totalCents)} incl. VAT, due on ${done.dueOn}.\n\nDownload it in AMLSync App under Billing: ${appUrl("/app/billing")}\n\n${SELLER.name}`);
+    const pdf = await invoicePdf(done);
+    const file = [{ filename: `${done.number}.pdf`, content: pdf, contentType: "application/pdf" }];
+    if (to) await sendEmail(to, `AMLSync invoice ${done.number} (${period.label})`, `Your invoice ${done.number} for ${period.label} is attached: ${formatEur(done.totalCents)} incl. VAT, due on ${done.dueOn}.\n\nYou can also download it in AMLSync App under Billing: ${appUrl("/app/billing")}\n\n${SELLER.name}`, file);
+    const copyName = invoiceCopyName(done);
+    await sendEmail(INVOICE_COPY_EMAIL, copyName, `${copyName}\n\nInvoice ${done.number} to ${(done.buyer as { name: string }).name}: ${formatEur(done.totalCents)} incl. VAT (VAT ${done.vatRateBp / 100} %${done.vatNote ? `, ${done.vatNote}` : ""}), due on ${done.dueOn}.${to ? ` Sent to ${to}.` : " No invoice email on file: send it yourself."}`, [{ filename: `${copyName}.pdf`, content: pdf, contentType: "application/pdf" }]);
     await securityEvent({ firmId: f.id, kind: "invoice-issued", details: { number: done.number, total: done.totalCents } });
   }
   return { issued, skipped };
@@ -90,4 +109,36 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
 
 export async function firmInvoices(firmId: string) {
   return withTenant(firmId, (tx) => tx.invoice.findMany({ orderBy: { seq: "desc" } }));
+}
+
+/**
+ * Asks each new firm once, before its first invoice, for its invoice details
+ * (legal name, address, company code, country/office, VAT number or "not
+ * VAT-registered", invoice email, PO/reference). Sent once per firm.
+ */
+export async function requestInvoiceDetails(): Promise<{ sent: number }> {
+  const firms = await adminDb.firm.findMany({ where: { status: "active", billingConfirmedAt: null }, select: { id: true, name: true } });
+  let sent = 0;
+  for (const f of firms) {
+    if (await adminDb.invoice.count({ where: { firmId: f.id } })) continue;
+    if (await adminDb.securityEvent.count({ where: { firmId: f.id, kind: "billing-details-requested" } })) continue;
+    const owner = await adminDb.user.findFirst({ where: { firmId: f.id, roles: { has: "OWNER" }, deactivatedAt: null }, orderBy: { createdAt: "asc" } });
+    if (!owner) continue;
+    await sendEmail(owner.email, "AMLSync App: your invoice details", [
+      `Before we send ${f.name}'s first invoice, please add your invoice details in AMLSync App under Billing → Invoice details:`,
+      "",
+      "- full legal name and registered address",
+      "- company code",
+      "- country where the business is established (if you have several, which office receives the service)",
+      "- VAT number, or confirm that you aren't VAT-registered",
+      "- email for invoices, and any PO or reference number you need on the invoice",
+      "",
+      appUrl("/app/billing#invoice-details"),
+      "",
+      SELLER.name,
+    ].join("\n"));
+    await securityEvent({ firmId: f.id, kind: "billing-details-requested" });
+    sent++;
+  }
+  return { sent };
 }

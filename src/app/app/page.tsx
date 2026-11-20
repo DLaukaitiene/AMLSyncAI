@@ -51,7 +51,7 @@ export default async function Dashboard() {
       tx.task.count({ where: { ...taskWhere, dueOn: { lt: new Date(today) } } }),
       tx.task.count({ where: { ...taskWhere, dueOn: { gte: new Date(today), lte: new Date(addCalendarDays(today, 30)) } } }),
     ]);
-    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { billingName: true, responsibilities: true } });
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { billingConfirmedAt: true, responsibilities: true } });
     const users = await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true, name: true, roles: true } });
     const onePerson = await isOnePersonFirm(tx);
     const setup = {
@@ -59,7 +59,7 @@ export default async function Dashboard() {
       policy: (await tx.policyDocument.count({ where: { kind: "policy", status: "IN_FORCE" } })) > 0,
       team: users.length > 1 || (await tx.invitation.count()) > 0,
       client: (await tx.cddFile.count({ where: { role: "CLIENT" } })) > 0,
-      billing: !!firm.billingName,
+      billing: !!firm.billingConfirmedAt,
     };
     const files = await tx.cddFile.findMany({
       where: { role: "CLIENT" }, orderBy: { createdAt: "desc" },
@@ -379,7 +379,7 @@ export default async function Dashboard() {
           <h2 id="account" className="text-lg">Account setup</h2>
           <ul className="space-y-1 text-sm">
             {!data.setup.team && <li><Link href="/app/team" className="text-accent underline">Invite your team</Link> <span className="text-muted">so colleagues have their own sign-in and role.</span></li>}
-            {!data.setup.billing && <li><Link href="/app/billing" className="text-accent underline">Add your invoice details</Link> <span className="text-muted">(company name, VAT number and address).</span></li>}
+            {!data.setup.billing && <li><Link href="/app/billing" className="text-accent underline">Add your invoice details</Link> <span className="text-muted">(legal name, address, company code, VAT number and invoice email), before your first invoice.</span></li>}
           </ul>
         </section>
       )}

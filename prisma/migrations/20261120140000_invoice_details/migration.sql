@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Firm" ADD COLUMN IF NOT EXISTS "billingConfirmedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "billingOffice" TEXT,
+ADD COLUMN IF NOT EXISTS "invoiceReference" TEXT,
+ADD COLUMN IF NOT EXISTS "vatNotRegistered" BOOLEAN NOT NULL DEFAULT false;
+

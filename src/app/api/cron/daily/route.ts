@@ -3,7 +3,7 @@ import { adminDb } from "@/lib/server/db";
 import { safeEqual } from "@/lib/server/crypto";
 import { rescreenFirm } from "@/lib/server/screening-lists";
 import { sendPortalReminders, startDueRefreshes } from "@/lib/server/portal";
-import { issueMonthlyInvoices } from "@/lib/server/invoicing";
+import { issueMonthlyInvoices, requestInvoiceDetails } from "@/lib/server/invoicing";
 import { refreshCompanyCheck } from "@/lib/server/kyb";
 import { withTenant } from "@/lib/server/db";
 import { rescreenStaffIfListsChanged } from "@/lib/server/staff-screening";
@@ -64,6 +64,7 @@ export async function GET(req: Request) {
   });
   await run("portalReminders", () => sendPortalReminders());
   await run("summaries", () => sendDueSummaries());
+  await run("invoiceDetails", () => requestInvoiceDetails());
   await run("invoices", () => issueMonthlyInvoices());
   await run("archivesEnded", async () => {
     // Read-only archives whose retention period ended: AMLSync operations deletes them.

@@ -219,6 +219,10 @@ model Firm {
   billingCompanyCode String?
   vatId           String?
   billingEmail    String?
+  billingOffice   String?  // if established in several countries: which office receives the service
+  vatNotRegistered Boolean @default(false) // the firm stated it isn't VAT-registered
+  invoiceReference String? // PO or reference number to show on invoices
+  billingConfirmedAt DateTime? // when the firm confirmed its invoice details (asked once, before the first invoice)
   customFeeCents  Int?     // overrides the plan's list price (custom plans, discounts)
   spendLimitCents Int      @default(30000) // paid checks per calendar month (net); raised on request
   // status (above) is also set by AMLSyncAI in the Backoffice (§6.2): paused and suspended block new

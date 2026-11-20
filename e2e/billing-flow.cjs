@@ -14,10 +14,17 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   const firmId = sql(`SELECT id FROM "Firm" WHERE name = 'Sąskaita UAB'`);
 
   await p.goto(BASE + "/app/billing");
+  await p.getByTestId("invoice-details").getByText(/Before your first invoice, please give us: .*registered address, company code, VAT number \(or confirm you aren't VAT-registered\), email for invoices/).waitFor();
+  await p.getByLabel("Registered address *").fill("Gedimino pr. 1, Vilnius");
+  await submit(p, "Save invoice details", /Enter the company code|Enter the VAT number/);
+  await p.getByLabel("Company code *").fill("305123456");
   await p.getByLabel("VAT number").fill("LT 1000 1234 5678");
-  await p.getByLabel("Address").fill("Gedimino pr. 1, Vilnius");
+  await p.getByLabel("Email for invoices *").fill("saskaitos@saskaita.lt");
+  await p.getByLabel("PO or reference number for invoices").fill("PO-2026-17");
   await submit(p, "Save invoice details", "Billing details saved");
-  log("invoice details saved");
+  await p.reload();
+  if (await p.getByText("Before your first invoice").count()) throw new Error("✘ details still requested");
+  log("invoice details requested once before the first invoice, validated and saved");
 
   // Seats: Solo includes 2 users (the Owner + 1)
   sql(`UPDATE "Firm" SET plan = 'solo' WHERE id = '${firmId}'`);
@@ -47,9 +54,12 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   const inv = sql(`SELECT number || '|' || "netCents" || '|' || "vatCents" || '|' || "totalCents" FROM "Invoice" WHERE "firmId" = '${firmId}'`);
   if (!/^AMS-\d{4}-\d{5}\|5200\|1092\|6292$/.test(inv)) throw new Error("✘ wrong invoice totals " + inv);
   log("invoice totals: fee + 7 checks − refund − welcome credit = €52.00 + VAT €10.92 = €62.92 " + inv.split("|")[0]);
-  const mail = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'owner@saskaita.lt' AND subject LIKE 'AMLSync invoice%'`);
+  const mail = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'saskaitos@saskaita.lt' AND subject LIKE 'AMLSync invoice%' AND text LIKE '%.pdf (%'`);
   if (mail !== "1") throw new Error("✘ invoice email not sent");
-  log("invoice email sent to the Owner");
+  const ym = sql(`SELECT to_char(date_trunc('month', now()) - interval '1 day', 'YYYY, MM')`);
+  const copy = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject = 'client invoice (Sąskaita UAB) (${ym})' AND text LIKE '%client invoice (Sąskaita UAB) (${ym}).pdf (%'`);
+  if (copy !== "1") throw new Error("✘ invoice copy not sent to deimena@amlsync.com");
+  log("invoice emailed with the PDF to the invoice email; copy 'client invoice (Sąskaita UAB) (" + ym + ")' to deimena@amlsync.com");
 
   await p.goto(BASE + "/app/billing");
   await p.getByRole("cell", { name: inv.split("|")[0] }).waitFor();

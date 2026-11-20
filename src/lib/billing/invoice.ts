@@ -25,24 +25,46 @@ const EU = new Set(["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", 
 export interface Customer {
   name: string;
   address: string | null;
-  country: string; // ISO 3166-1 alpha-2
+  country: string; // ISO 3166-1 alpha-2: where the business is established (or the office that receives the service)
   vatId: string | null;
   companyCode?: string | null;
+  /** The VAT number passed the VIES check. Only then is an EU invoice reverse-charged. */
+  viesValid?: boolean;
+  office?: string | null;
+  reference?: string | null; // PO or reference number the client needs on the invoice
 }
 
+export const isEu = (country: string) => EU.has(country.toUpperCase());
+
 /**
- * VAT for a B2B service sold from Lithuania [verify with the accountant]:
- * - customer in Lithuania: 21 % Lithuanian VAT;
- * - customer in another EU state with a VAT number: no VAT, reverse charge (VAT Directive Art. 44 and 196);
- * - customer in another EU state without a VAT number: 21 % Lithuanian VAT (treated as not proven to be a taxable person).
+ * VAT on invoices from Lithuania [decided 20 Nov 2026]:
+ * - Lithuanian company: 21 %;
+ * - EU company with a VAT number that passes VIES: 0, reverse charge, note with their VAT number;
+ * - EU company with no VAT number, or one that fails VIES: 21 %;
+ * - company outside the EU: 0, "Not subject to Lithuanian VAT";
+ * - private individual in the EU: 21 % (no VAT number, so the rule above).
  */
 export function vatTreatment(c: Customer): { rateBp: number; note: string | null } {
   const country = c.country.toUpperCase();
   const vat = (c.vatId ?? "").replace(/\s/g, "").toUpperCase();
-  if (country !== SELLER.country && EU.has(country) && /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(vat) && !vat.startsWith("LT")) {
-    return { rateBp: 0, note: "Reverse charge: VAT to be accounted for by the customer (Council Directive 2006/112/EC, Art. 44 and 196)." };
+  if (country === SELLER.country) return { rateBp: LT_VAT_BP, note: null };
+  if (!EU.has(country)) return { rateBp: 0, note: "Not subject to Lithuanian VAT" };
+  if (c.viesValid && /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(vat) && !vat.startsWith("LT")) {
+    return { rateBp: 0, note: `Atvirkštinis apmokestinimas / Reverse charge. Customer VAT number: ${vat}` };
   }
   return { rateBp: LT_VAT_BP, note: null };
+}
+
+/** What the firm must give before its first invoice. Returns the missing items, in plain words. */
+export function missingInvoiceDetails(f: { billingName: string | null; billingAddress: string | null; billingCompanyCode: string | null; billingCountry: string | null; vatId: string | null; vatNotRegistered: boolean; billingEmail: string | null }): string[] {
+  return [
+    !f.billingName && "full legal name",
+    !f.billingAddress && "registered address",
+    !f.billingCompanyCode && "company code",
+    !f.billingCountry && "country where the business is established",
+    !f.vatId && !f.vatNotRegistered && "VAT number (or confirm you aren't VAT-registered)",
+    !f.billingEmail && "email for invoices",
+  ].filter((x): x is string => !!x);
 }
 
 export interface LedgerEntry {

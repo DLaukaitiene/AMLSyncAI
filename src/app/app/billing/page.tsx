@@ -3,7 +3,7 @@ import { withTenant } from "@/lib/server/db";
 import { screeningUsage } from "@/lib/server/screening-limits";
 import { ScreeningUsage } from "@/components/screening-usage";
 import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur } from "@/lib/didit/map";
-import { buildInvoice, vatTreatment } from "@/lib/billing/invoice";
+import { buildInvoice, missingInvoiceDetails, vatTreatment } from "@/lib/billing/invoice";
 import { customerOf } from "@/lib/server/invoicing";
 import { CONTACT_EMAIL, monthlyFeeFor, planOf } from "@/lib/billing/plans";
 import { ActionForm, Field, Submit } from "@/components/form";
@@ -27,6 +27,7 @@ export default async function BillingPage() {
   const plan = planOf(firm.plan);
   const draft = buildInvoice(monthlyFeeFor(firm.plan, firm.customFeeCents, firm.trialEndsOn, monthFrom, monthTo), plan.name, open, customer);
   const vat = vatTreatment(customer);
+  const missing = missingInvoiceDetails({ ...firm, billingCountry: firm.billingCountry ?? firm.homeState });
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="max-w-4xl space-y-6">
@@ -72,16 +73,20 @@ export default async function BillingPage() {
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-2" id="invoice-details" data-testid="invoice-details">
         <h2 className="text-lg font-semibold">Invoice details</h2>
-        <p className="text-sm text-muted">{vat.rateBp === 0 ? "Your invoices are reverse-charged (no Lithuanian VAT)." : "Lithuanian VAT (21 %) is added. Businesses in other EU countries with a valid VAT number are reverse-charged."}</p>
+        {missing.length > 0 && <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50">Before your first invoice, please give us: {missing.join(", ")}.</p>}
+        <p className="text-sm text-muted">{vat.rateBp === 0 ? (vat.note?.startsWith("Not subject") ? "Your business is outside the EU: no Lithuanian VAT is added." : "Your VAT number passed the EU VIES check: your invoices are reverse-charged (no Lithuanian VAT).") : "Lithuanian VAT (21 %) is added. EU businesses outside Lithuania whose VAT number passes the EU VIES check are reverse-charged; businesses outside the EU pay no Lithuanian VAT."}</p>
         <ActionForm action={saveBillingDetails} className="grid gap-3 sm:grid-cols-2">
-          <Field label="Legal name *" name="billingName" defaultValue={firm.billingName ?? firm.name} required />
-          <Field label="Company code" name="billingCompanyCode" defaultValue={firm.billingCompanyCode ?? ""} />
-          <Field label="Address" name="billingAddress" defaultValue={firm.billingAddress ?? ""} />
-          <Field label="Country (2 letters) *" name="billingCountry" defaultValue={firm.billingCountry ?? firm.homeState} required />
-          <Field label="VAT number" name="vatId" defaultValue={firm.vatId ?? ""} hint="With country prefix, e.g. LT123456789." />
-          <Field label="Send invoices to (email)" name="billingEmail" type="email" defaultValue={firm.billingEmail ?? ""} hint="Leave empty to send to the Owner." />
+          <Field label="Full legal name *" name="billingName" defaultValue={firm.billingName ?? firm.name} required />
+          <Field label="Company code *" name="billingCompanyCode" defaultValue={firm.billingCompanyCode ?? ""} required />
+          <Field label="Registered address *" name="billingAddress" defaultValue={firm.billingAddress ?? ""} required />
+          <Field label="Country where the business is established (2 letters) *" name="billingCountry" defaultValue={firm.billingCountry ?? firm.homeState} required />
+          <Field label="If you have offices in several countries: which office receives the service" name="billingOffice" defaultValue={firm.billingOffice ?? ""} />
+          <Field label="VAT number" name="vatId" defaultValue={firm.vatId ?? ""} hint={`With country prefix, e.g. LT123456789.${firm.viesStatus ? ` EU VIES check: ${firm.viesStatus}.` : ""}`} />
+          <label className="flex items-start gap-2 text-sm sm:col-span-2"><input type="checkbox" name="vatNotRegistered" defaultChecked={firm.vatNotRegistered} className="mt-1" /> <span>We aren&apos;t VAT-registered.</span></label>
+          <Field label="Email for invoices *" name="billingEmail" type="email" defaultValue={firm.billingEmail ?? ""} required />
+          <Field label="PO or reference number for invoices" name="invoiceReference" defaultValue={firm.invoiceReference ?? ""} hint="Optional. Shown on every invoice." />
           <div className="sm:col-span-2"><Submit variant="secondary">Save invoice details</Submit></div>
         </ActionForm>
       </section>

@@ -1,17 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { buildInvoice, invoiceNumber, previousMonth, vatTreatment } from "./invoice";
+import { buildInvoice, invoiceNumber, missingInvoiceDetails, previousMonth, vatTreatment } from "./invoice";
 
 const lt = { name: "Namai UAB", address: "Vilnius", country: "LT", vatId: "LT123456789" };
 const ch = (id: string, d = "Identity check") => ({ id, amountCents: -300, kind: "charge", description: d });
 
 describe("VAT treatment", () => {
   it("charges 21 % to Lithuanian customers, even with a VAT number", () => expect(vatTreatment(lt).rateBp).toBe(2100));
-  it("reverse-charges other EU businesses with a VAT number", () => {
-    const v = vatTreatment({ ...lt, country: "LV", vatId: "LV40003012345" });
+  it("reverse-charges other EU businesses whose VAT number passes VIES, with their number on the invoice", () => {
+    const v = vatTreatment({ ...lt, country: "LV", vatId: "LV40003012345", viesValid: true });
     expect(v.rateBp).toBe(0);
-    expect(v.note).toMatch(/Reverse charge/);
+    expect(v.note).toBe("Atvirkštinis apmokestinimas / Reverse charge. Customer VAT number: LV40003012345");
   });
-  it("charges 21 % to other EU customers without a VAT number", () => expect(vatTreatment({ ...lt, country: "EE", vatId: null }).rateBp).toBe(2100));
+  it("charges 21 % when the EU VAT number fails VIES or is missing", () => {
+    expect(vatTreatment({ ...lt, country: "LV", vatId: "LV40003012345", viesValid: false }).rateBp).toBe(2100);
+    expect(vatTreatment({ ...lt, country: "EE", vatId: null }).rateBp).toBe(2100);
+  });
+  it("doesn't charge Lithuanian VAT outside the EU", () => {
+    expect(vatTreatment({ ...lt, country: "NO", vatId: null })).toEqual({ rateBp: 0, note: "Not subject to Lithuanian VAT" });
+  });
 });
 
 describe("buildInvoice", () => {
@@ -61,5 +67,13 @@ describe("cancellation", () => {
   it("charges the cancellation month up to the cancellation day, nothing after", () => {
     expect(monthlyFeeFor("solo", null, null, "2026-11-01", "2026-12-01", "2026-11-16")).toBe(Math.round((4900 * 15) / 30));
     expect(monthlyFeeFor("solo", null, null, "2026-12-01", "2027-01-01", "2026-11-16")).toBe(0);
+  });
+});
+
+describe("invoice details", () => {
+  it("lists what is missing before the first invoice", () => {
+    const f = { billingName: "Namai UAB", billingAddress: null, billingCompanyCode: "123", billingCountry: "LT", vatId: null, vatNotRegistered: false, billingEmail: "a@b.lt" };
+    expect(missingInvoiceDetails(f)).toEqual(["registered address", "VAT number (or confirm you aren't VAT-registered)"]);
+    expect(missingInvoiceDetails({ ...f, billingAddress: "Vilnius", vatNotRegistered: true })).toEqual([]);
   });
 });

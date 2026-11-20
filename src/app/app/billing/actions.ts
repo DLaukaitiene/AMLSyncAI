@@ -21,12 +21,21 @@ export async function saveBillingDetails(_: ActionState, fd: FormData): Promise<
   if (!/^[A-Z]{2}$/.test(country)) fieldErrors.billingCountry = ["Use the two-letter country code, e.g. LT."];
   if (vatId && !/^[A-Z]{2}[0-9A-Z]{2,13}$/.test(vatId)) fieldErrors.vatId = ["Enter the VAT number with its country prefix, e.g. LT123456789."];
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) fieldErrors.billingEmail = ["Enter a valid email address."];
-  if (!clean(fd, "billingName")) fieldErrors.billingName = ["Enter the legal name for invoices."];
+  const notVat = fd.get("vatNotRegistered") === "on";
+  if (!clean(fd, "billingName")) fieldErrors.billingName = ["Enter the full legal name for invoices."];
+  if (!clean(fd, "billingAddress")) fieldErrors.billingAddress = ["Enter the registered address."];
+  if (!clean(fd, "billingCompanyCode")) fieldErrors.billingCompanyCode = ["Enter the company code."];
+  if (!email) fieldErrors.billingEmail = ["Enter the email for invoices."];
+  if (!vatId && !notVat) fieldErrors.vatId = ["Enter the VAT number, or tick that you aren't VAT-registered."];
+  if (vatId && notVat) fieldErrors.vatId = ["Leave the VAT number empty if you aren't VAT-registered."];
   if (Object.keys(fieldErrors).length) return { fieldErrors };
   await withTenant(s.firm.id, async (tx) => {
+    const prev = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { vatId: true } });
     await tx.firm.update({
       where: { id: s.firm.id },
-      data: { billingName: clean(fd, "billingName"), billingAddress: clean(fd, "billingAddress", 300), billingCountry: country, billingCompanyCode: clean(fd, "billingCompanyCode", 40), vatId, billingEmail: email },
+      data: { billingName: clean(fd, "billingName"), billingAddress: clean(fd, "billingAddress", 300), billingCountry: country, billingCompanyCode: clean(fd, "billingCompanyCode", 40), vatId, billingEmail: email,
+        billingOffice: clean(fd, "billingOffice", 300), vatNotRegistered: notVat, invoiceReference: clean(fd, "invoiceReference", 100), billingConfirmedAt: new Date(),
+        ...(vatId !== prev.vatId ? { viesStatus: null, viesName: null, viesCheckedAt: null } : {}) },
     });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["billingDetails"] });
   });
