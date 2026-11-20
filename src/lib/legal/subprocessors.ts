@@ -13,7 +13,7 @@ export interface Subprocessor {
   active: boolean;
 }
 
-export const SUBPROCESSORS_UPDATED = "2026-11-18";
+export const SUBPROCESSORS_UPDATED = "2026-11-20";
 
 export const SUBPROCESSORS: Subprocessor[] = [
   {
@@ -43,7 +43,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Google Workspace",
     purpose: "Sends emails from AMLSync App (links, codes, notifications, invoices)",
-    data: "Recipient email address and the email text (no client files)",
+    data: "Recipient email address and the email text; invoice PDFs; the weekly database backup, which is encrypted and can't be read without a key Google doesn't have (no client files otherwise)",
     location: "Google data centres (EU and other regions)",
     safeguard: "Google Cloud data processing terms; EU Standard Contractual Clauses",
     active: true,
@@ -58,9 +58,9 @@ export const SUBPROCESSORS: Subprocessor[] = [
   },
   {
     name: "AI drafting provider",
-    purpose: "Optional 'Draft with AI' for report narratives and policy wording",
-    data: "The facts the user chooses to draft from",
-    location: "To be confirmed — switched off until an EU-hosted provider is configured",
+    purpose: "Optional AI drafting of report narratives and policy wording, and reading a document to propose a client's owners",
+    data: "The facts the user chooses to draft from; a document the user asks the AI to read (e.g. shareholder register, trust deed)",
+    location: "To be confirmed: switched off until a provider is chosen (EU-hosted option: Claude on Google Cloud, Belgium)",
     safeguard: "Not in use",
     active: false,
   },
