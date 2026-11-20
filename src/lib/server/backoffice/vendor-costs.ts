@@ -1,6 +1,5 @@
 import "server-only";
 import { adminDb } from "../db";
-import { KYB_FULL_PRICE_CENTS } from "@/lib/didit/map";
 
 /** Vendor cost and margin per check type (§9.5). Counts only; live (non-sandbox) sessions. */
 export const CHECK_TYPES = [
@@ -14,10 +13,10 @@ export async function marginByMonth(months = 6) {
   const now = new Date();
   const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months + 1, 1));
   const [rows, prices, invoices] = await Promise.all([
-    adminDb.$queryRaw<{ m: Date; kind: string; price: number; n: bigint }[]>`
-      SELECT date_trunc('month', d."createdAt") AS m, d.kind, coalesce(-c."amountCents", 0)::int AS price, count(*) AS n
+    adminDb.$queryRaw<{ m: Date; kind: string; price: number; full: boolean; n: bigint }[]>`
+      SELECT date_trunc('month', d."createdAt") AS m, d.kind, coalesce(-c."amountCents", 0)::int AS price, coalesce(c.description ILIKE '%full ownership%', false) AS full, count(*) AS n
       FROM "DiditSession" d LEFT JOIN "CreditEntry" c ON c.id = d."creditEntryId"
-      WHERE d.sandbox = false AND d."createdAt" >= ${since} GROUP BY 1, 2, 3`,
+      WHERE d.sandbox = false AND d."createdAt" >= ${since} GROUP BY 1, 2, 3, 4`,
     adminDb.vendorPrice.findMany({ where: { vendor: "didit" }, orderBy: { validFrom: "desc" } }),
     adminDb.vendorInvoice.findMany({ where: { vendor: "didit" } }),
   ]);
@@ -31,7 +30,7 @@ export async function marginByMonth(months = 6) {
     const month = r.m.toISOString().slice(0, 7);
     const o = out.get(month);
     if (!o) continue;
-    const type = r.kind === "kyb" ? (r.price === KYB_FULL_PRICE_CENTS ? "kyb-full" : "kyb-lite") : r.kind;
+    const type = r.kind === "kyb" ? (r.full ? "kyb-full" : "kyb-lite") : r.kind;
     const n = Number(r.n);
     const unit = costAt(type, month);
     o.checks += n;

@@ -6,7 +6,8 @@ import { encryptField } from "./crypto";
 import { storeDocument } from "./storage";
 import { loadClientFile, persistRiskIfChanged, upsertTask } from "./cdd";
 import { appUrl } from "./email";
-import { autoClear, IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
+import { autoClear, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
+import { currentPrices, PriceUnavailable } from "./prices";
 import { toIsoDate } from "@/lib/rules/dates";
 import { assertCanSpend, SpendError } from "./invoicing";
 import { takeScreeningSlots } from "./screening-limits";
@@ -17,7 +18,7 @@ import { takeScreeningSlots } from "./screening-limits";
  *   DIDIT_WORKFLOW_ID   KYC workflow: eID wallets → document + NFC + liveness + face match (+ AML)
  *   DIDIT_WEBHOOK_SECRET  destination secret for X-Signature-V2
  *   DIDIT_BASE_URL      default https://verification.didit.me
- * Every check is charged to the firm's credit (€3.00) when it is created and
+ * Every check is charged to the firm's credit (price: src/lib/didit/pricing.ts) when it is created and
  * refunded when it expires, is abandoned or can't be created.
  */
 
@@ -68,7 +69,7 @@ export async function balanceCents(tx: Tx): Promise<number> {
   return (await tx.creditEntry.aggregate({ _sum: { amountCents: true } }))._sum.amountCents ?? 0;
 }
 
-export async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string, cents = SCREEN_PRICE_CENTS): Promise<string> {
+export async function charge(tx: Tx, firmId: string, userId: string | null, description: string, clientRef: string, cents: number): Promise<string> {
   try {
     await assertCanSpend(tx, firmId, cents);
   } catch (e) {
@@ -77,6 +78,16 @@ export async function charge(tx: Tx, firmId: string, userId: string | null, desc
   }
   const e = await tx.creditEntry.create({ data: { firmId, amountCents: -cents, kind: "charge", description, clientRef, createdById: userId } });
   return e.id;
+}
+
+/** Current client prices; without an exchange rate, paid checks can't start. */
+export async function pricesOrError() {
+  try {
+    return await currentPrices();
+  } catch (e) {
+    if (e instanceof PriceUnavailable) throw new DiditError(e.message);
+    throw e;
+  }
 }
 
 export async function refund(tx: Tx, firmId: string, chargeId: string, why: string) {
@@ -108,7 +119,7 @@ export async function createIdvSession(
   }
   if (person.kind !== "NATURAL") throw new DiditError("Identity checks are for people. For a company, check its representatives and owners.");
   const d = person.details as Record<string, unknown>;
-  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Identity check (document / eID, chip, liveness, face match)", person.displayName, IDV_PRICE_CENTS);
+  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Identity check (document / eID, chip, liveness, face match)", person.displayName, (await pricesOrError()).idv);
   let created: { session_id: string; url: string; status: string };
   try {
     created = await didit("POST", "/v3/session/", {
@@ -287,7 +298,7 @@ export async function screenWithDidit(tx: Tx, ctx: { firmId: string; userId: str
   const d = (p.details ?? {}) as Record<string, unknown>;
   const slot = await takeScreeningSlots(tx, ctx.firmId, [partyId], "didit");
   if (slot.message) throw new DiditError(slot.message);
-  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Screening: PEP, sanctions, adverse media", p.displayName, SCREEN_PRICE_CENTS);
+  const chargeId = await charge(tx, ctx.firmId, ctx.userId, "Screening: PEP, sanctions, adverse media", p.displayName, (await pricesOrError()).screen);
   type AmlResp = { request_id: string; aml?: Record<string, unknown> } & Record<string, unknown>;
   let r: AmlResp;
   try {

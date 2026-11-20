@@ -19,7 +19,8 @@ import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/p
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
-import { formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
+import { formatEur } from "@/lib/didit/map";
+import { currentPricesOrNull } from "@/lib/server/prices";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 import { addPersonFromRegister, buySearchPack, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
@@ -412,7 +413,7 @@ export async function markRefreshedAction(fileId: string): Promise<ActionState> 
 }
 
 // ---------------------------------------------------------------------------
-// Didit: identity checks and provider screening (paid, €3.00 per check)
+// Didit: identity checks and provider screening (paid per check; prices from src/lib/didit/pricing.ts)
 // ---------------------------------------------------------------------------
 
 export async function diditIdvAction(fileId: string, personId?: string): Promise<ActionState> {
@@ -429,7 +430,9 @@ export async function diditIdvAction(fileId: string, personId?: string): Promise
       return { ...created, email };
     }, { timeoutMs: 90_000 });
     revalidatePath(`/app/clients/${fileId}`);
-    return { message: r.email ? `Identity check sent to ${r.email} (€3.00 charged to your credit).` : `Identity check created (€3.00). Send the client this link: ${r.url}` };
+    const idv = (await currentPricesOrNull())?.idv;
+    const cost = idv ? ` (${formatEur(idv)})` : "";
+    return { message: r.email ? `Identity check sent to ${r.email}${cost}.` : `Identity check created${cost}. Send the client this link: ${r.url}` };
   } catch (e) {
     if (!(e instanceof DiditError)) console.error("didit idv create failed:", e instanceof Error ? e.message : e);
     return { error: e instanceof DiditError ? e.message.replace(/^Didit [A-Z]+ \S+: /, "Didit: ") : "The identity check couldn't be created." };
@@ -456,7 +459,8 @@ export async function diditScreenAction(fileId: string, partyId: string): Promis
       return res;
     }, { timeoutMs: 90_000 });
     revalidatePath(`/app/clients/${fileId}`);
-    return { message: `Screened with Didit (€3.00): ${r.hits} possible match(es).` };
+    const sc = (await currentPricesOrNull())?.screen;
+    return { message: `Screened with Didit${sc ? ` (${formatEur(sc)})` : ""}: ${r.hits} possible match(es).` };
   } catch (e) {
     return { error: e instanceof DiditError ? e.message : "Screening failed." };
   }
@@ -496,7 +500,7 @@ export async function kybRetrieveAction(fileId: string, kybResponseId: string, l
   try {
     const r = await retrieveCompany({ firmId: s.firm.id, userId: s.user.id }, fileId, kybResponseId, level);
     revalidatePath(`/app/clients/${fileId}`);
-    const price = formatEur(level === "full" ? KYB_FULL_PRICE_CENTS : KYB_LITE_PRICE_CENTS);
+    const price = formatEur(r.chargedCents);
     if (r.status !== "imported") return { message: "The register is preparing the ownership data. It usually arrives within a few minutes and is imported automatically: use “Refresh” to check. Don't run the check again (each one is charged)." };
     if (r.refundedCents) return { message: `Register data imported. The register had no full ownership data for this company, so ${formatEur(r.refundedCents)} was refunded.` };
     return { message: level === "full" ? `Register data imported (${price}). Review the owners below and add them to the structure.` : `Company and status imported (${price}).` };

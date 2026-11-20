@@ -1,12 +1,17 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CONTACT_EMAIL, PLANS, SELF_SERVE_PLANS, TRIAL_DAYS } from "@/lib/billing/plans";
-import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
+import { formatEur, TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
+import { currentPricesOrNull } from "@/lib/server/prices";
 import { DEFAULT_LIMITS } from "@/lib/security/screening-caps";
 
 export const metadata: Metadata = { title: "Pricing · AMLSync App", description: "Simple monthly plans billed by invoice: Solo €49 and Starter €149 a month, with a 14-day free trial. Identity checks, screening and company checks charged per check." };
 
-export default function Pricing() {
+export const revalidate = 3600;
+
+export default async function Pricing() {
+  const pr = await currentPricesOrNull();
+  const eur = (c: number | undefined) => (c === undefined ? "price being updated" : formatEur(c));
   return (
     <div className="space-y-8">
       <section className="space-y-2">
@@ -43,9 +48,10 @@ export default function Pricing() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Paid checks (all plans)</h2>
         <ul className="list-disc pl-5 text-sm">
-          <li>Remote identity check (national eID or ID document with chip, liveness, face match): {formatEur(IDV_PRICE_CENTS)}</li>
-          <li>PEP, sanctions and adverse-media screening: {formatEur(SCREEN_PRICE_CENTS)}</li>
-          <li>Company register check — company and status: {formatEur(KYB_LITE_PRICE_CENTS)}; with full ownership (shareholders and beneficial owners): {formatEur(KYB_FULL_PRICE_CENTS)}</li>
+          <li>Remote identity check (national eID or ID document with chip, liveness, face match): {eur(pr?.idv)}</li>
+          <li>PEP, sanctions and adverse-media screening: {eur(pr?.screen)}</li>
+          <li>Company register check — company and status: {eur(pr?.kybLite)}; with full ownership (shareholders and beneficial owners): {eur(pr?.kybFull("LT"))} for Lithuanian companies (registers in other countries may differ)</li>
+          <li>Prices excl. VAT, set from our supplier&apos;s US-dollar price at the European Central Bank&apos;s daily euro rate{pr ? ` (${pr.rate.date})` : ""}, so they can move by a few cents.</li>
           <li>Not charged if a check expires or fails. Each check has a statement with your client reference, so you can re-bill it.</li>
         </ul>
         <p className="text-sm text-muted">

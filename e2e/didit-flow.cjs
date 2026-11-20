@@ -22,7 +22,7 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}" -c '${q}'`).
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Camila Diaz" }).waitFor();
   const fileUrl = p.url();
-  await submit(p, "Send identity check (€2.00)", "Identity check sent to camila@example.lt");
+  await submit(p, "Send identity check (€2.60)", "Identity check sent to camila@example.lt");
   log("identity check session created in Didit sandbox, link emailed");
   const sid = sql(`SELECT "diditSessionId" FROM "DiditSession" ORDER BY "createdAt" DESC LIMIT 1`);
   const sim = execSync(`curl -s -o /dev/null -w "%{http_code}" -X POST https://verification.didit.me/v3/session/${sid}/simulate/ -H "x-api-key: sk_test_proxy-injected-placeholder" -H "content-type: application/json" -d '{"new_status":"Approved","send_webhooks":false}'`).toString();
@@ -36,7 +36,7 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}" -c '${q}'`).
 
   await p.goto(fileUrl);
   await p.getByText(/screening with Didit/).click();
-  await submit(p, "Screen (€3.00)", "");
+  await submit(p, "Screen (€1.20)", "");
   await p.waitForTimeout(1500);
   const scr = sql(`SELECT count(*) FROM "ScreeningResult" WHERE "listName" LIKE $$Didit%$$`);
   log(`Didit AML screening stored ${scr} result(s)`);

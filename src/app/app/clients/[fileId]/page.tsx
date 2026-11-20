@@ -28,7 +28,8 @@ import { diditEnabled } from "@/lib/server/didit";
 import { aiForFirm } from "@/lib/server/ai";
 import { SHARE_BASES } from "@/lib/server/sharing";
 import { shareClientAction } from "../shared/actions";
-import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
+import { formatEur } from "@/lib/didit/map";
+import { currentPricesOrNull } from "@/lib/server/prices";
 import { KybSearch } from "./kyb-panel";
 import { kybSearchStatus, searchLimitMessage } from "@/lib/server/kyb";
 import { Chip, RiskChip, StatusChip } from "@/components/chips";
@@ -121,6 +122,9 @@ export default async function ClientFilePage({ params, searchParams }: { params:
   });
   if (!data) notFound();
   const kybStatus = data.cf.party.kind !== "NATURAL" && diditEnabled() ? await kybSearchStatus(s.firm.id) : null;
+  const pr = diditEnabled() ? await currentPricesOrNull() : null;
+  const priceOf = (c: number | undefined) => (c === undefined ? "price updating" : formatEur(c));
+  const kybCountryCode = String((data.cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState).toUpperCase();
   const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions, aiOn } = data;
   const flaggedTx = transactions.filter((t) => t.monitorStatus === "flagged").length;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
@@ -346,7 +350,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                   </div>
                 ))}
                 {mismatches?.length ? <p className="text-sm text-red-700 dark:text-red-300">ID check differs from the file: {mismatches.join("; ")}. Correct the file or ask the client.</p> : null}
-                {edit && <ActionButton action={diditIdvAction.bind(null, fileId)} variant="primary">{`Send identity check (${formatEur(IDV_PRICE_CENTS)})`}</ActionButton>}
+                {edit && <ActionButton action={diditIdvAction.bind(null, fileId)} variant="primary">{`Send identity check (${priceOf(pr?.idv)})`}</ActionButton>}
               </div>
             ) : (
               <p className="text-xs text-muted">Remote identity checks aren&apos;t set up for this installation. Record the result of the check here.</p>
@@ -394,7 +398,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                       {xd.provider === "Didit" && xd.level === "lite" && (
                         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                           <span>Company and status check — ownership not included.</span>
-                          {edit && <span>Need the owners? Search the register again and choose <strong>Full ownership</strong> ({formatEur(KYB_FULL_PRICE_CENTS)}).</span>}
+                          {edit && <span>Need the owners? Search the register again and choose <strong>Full ownership</strong> ({priceOf(pr?.kybFull(kybCountryCode))}).</span>}
                         </div>
                       )}
                       {xd.provider === "Didit" && xd.level !== "lite" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
@@ -457,8 +461,8 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                 name={String((cf.party.details as { name?: string }).name ?? cf.party.displayName)}
                 registrationNumber={String((cf.party.details as { registrationNumber?: string }).registrationNumber ?? "")}
                 country={String((cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState)}
-                litePrice={formatEur(KYB_LITE_PRICE_CENTS)}
-                fullPrice={formatEur(KYB_FULL_PRICE_CENTS)}
+                litePrice={priceOf(pr?.kybLite)}
+                fullPrice={priceOf(pr?.kybFull(kybCountryCode))}
                 ownersRecorded={cf.tree.links.some((l) => l.ownedId === cf.party.id)}
                 search={kybStatus ? { blocked: kybStatus.state.blocked, remaining: kybStatus.state.remaining, message: kybStatus.state.blocked ? searchLimitMessage(kybStatus.state.limit, kybStatus.state.blockedUntil!) : null, recent: kybStatus.recent.map((r) => ({ at: r.at.toISOString().slice(0, 16).replace("T", " "), query: r.query, country: r.country, results: (r.results as { name: string; registrationNumber: string | null }[]).slice(0, 5) })) } : null}
               />
@@ -715,7 +719,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <span className="flex items-center gap-2">
                 {c.done ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900 dark:bg-green-900/40 dark:text-green-200">Done</span> : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Needed</span>}
                 {!c.done && edit && diditEnabled() && c.kind === "NATURAL" && c.partyId !== cf.party.id && (c.required.level === "full" || c.required.level === "reasonable") && (
-                  <ActionButton action={diditIdvAction.bind(null, fileId, c.partyId)}>{`Send identity check (${formatEur(IDV_PRICE_CENTS)})`}</ActionButton>
+                  <ActionButton action={diditIdvAction.bind(null, fileId, c.partyId)}>{`Send identity check (${priceOf(pr?.idv)})`}</ActionButton>
                 )}
               </span>
             </li>
@@ -767,14 +771,14 @@ export default async function ClientFilePage({ params, searchParams }: { params:
         {can(r, "client.edit") && <ActionButton action={rescreenAction.bind(null, fileId)}>Screen again now (EU/UN lists, free)</ActionButton>}
         {can(r, "client.edit") && diditEnabled() && (
           <details className="rounded border border-border p-3" data-testid="didit-screen">
-            <summary className="cursor-pointer text-sm font-medium">PEP, sanctions and adverse-media screening with Didit ({formatEur(SCREEN_PRICE_CENTS)} per person or company)</summary>
+            <summary className="cursor-pointer text-sm font-medium">PEP, sanctions and adverse-media screening with Didit ({priceOf(pr?.screen)} per person or company)</summary>
             <ul className="mt-2 space-y-1 text-sm">
               {[...cf.tree.parties.values()].map((p) => {
                 const last = didit.find((x) => x.kind === "aml" && x.partyId === p.id);
                 return (
                   <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
                     <span>{p.displayName}{last ? <span className="text-muted"> · screened {last.createdAt.toISOString().slice(0, 10)}</span> : null}</span>
-                    <ActionButton action={diditScreenAction.bind(null, fileId, p.id)}>{`Screen (${formatEur(SCREEN_PRICE_CENTS)})`}</ActionButton>
+                    <ActionButton action={diditScreenAction.bind(null, fileId, p.id)}>{`Screen (${priceOf(pr?.screen)})`}</ActionButton>
                   </li>
                 );
               })}

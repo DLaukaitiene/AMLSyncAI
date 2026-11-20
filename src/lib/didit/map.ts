@@ -151,10 +151,8 @@ export function autoClear(hit: AmlHitMapped, firmThreshold: number | null): { cl
   return { cleared: false };
 }
 
-export const IDV_PRICE_CENTS = 200; // €2.00 per identity check, excl. VAT [decided 20 Nov 2026]
-export const SCREEN_PRICE_CENTS = 300; // €3.00 per provider screening (PEP, sanctions, adverse media), excl. VAT
-/** @deprecated use IDV_PRICE_CENTS or SCREEN_PRICE_CENTS */
-export const CHECK_PRICE_CENTS = SCREEN_PRICE_CENTS;
+// Client prices for Didit services are computed from Didit's list price, the ECB rate and the margin rule:
+// src/lib/didit/pricing.ts (pure) and src/lib/server/prices.ts (current rate).
 export const TRIAL_CREDIT_CENTS = 1500; // 5 checks for new firms
 export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
 
@@ -166,9 +164,6 @@ export const formatEur = (cents: number) => `€${(cents / 100).toFixed(2)}`;
  * a full-ownership request that comes back as Shareholders or Lite is refunded down.
  * Didit's $0.50 search fee is absorbed (not passed on) [decision].
  */
-export const KYB_LITE_PRICE_CENTS = 500;
-export const KYB_SHAREHOLDERS_PRICE_CENTS = 800; // only billed when a full request is delivered as Shareholders
-export const KYB_FULL_PRICE_CENTS = 1200;
 export type KybLevel = "lite" | "full";
 /** Didit search tier that sells each level ("search at the tier you intend to buy"). */
 export const KYB_SEARCH_TIER: Record<KybLevel, "basic" | "ubo"> = { lite: "basic", full: "ubo" };
@@ -178,12 +173,12 @@ export const KYB_SEARCH_TIER: Record<KybLevel, "basic" | "ubo"> = { lite: "basic
  * up front, and the price of the tier actually delivered. Returns null while the
  * ownership data is still pending (nothing is settled yet).
  */
-export function kybBilledCents(chargedCents: number, tierDelivered: string | null | undefined, ownershipStatus: string | null | undefined): number | null {
+export function kybBilledCents(chargedCents: number, tierDelivered: string | null | undefined, ownershipStatus: string | null | undefined, price: { lite: number; shareholders: number }): number | null {
   const st = (ownershipStatus ?? "").toLowerCase();
   const tier = (tierDelivered ?? "").toLowerCase();
   if (st === "pending" || (!tier && st !== "not_held" && st !== "unavailable")) return st === "pending" ? null : chargedCents;
-  if (st === "not_held" || st === "unavailable" || /lite|basic|select/.test(tier)) return Math.min(chargedCents, KYB_LITE_PRICE_CENTS);
-  if (/shareholder/.test(tier)) return Math.min(chargedCents, KYB_SHAREHOLDERS_PRICE_CENTS);
+  if (st === "not_held" || st === "unavailable" || /lite|basic|select/.test(tier)) return Math.min(chargedCents, price.lite);
+  if (/shareholder/.test(tier)) return Math.min(chargedCents, price.shareholders);
   return chargedCents;
 }
 

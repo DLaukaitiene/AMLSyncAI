@@ -90,7 +90,7 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'AdminMember','AdminAuditEvent','AdminApproval','FirmAdminMeta','FirmNote','FirmKyb',
     'Incident','IncidentUpdate','DataSubjectRequest','WebEvent','Lead','LeadNote','Ticket','TicketMessage',
-    'Announcement','AnnouncementDismissal','VendorPrice','VendorInvoice','ExpertEngagement','ExpertTask','ClientShare'
+    'Announcement','AnnouncementDismissal','VendorPrice','VendorInvoice','ExpertEngagement','ExpertTask','ClientShare','FxRate'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
   END LOOP;

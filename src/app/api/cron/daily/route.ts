@@ -4,6 +4,7 @@ import { safeEqual } from "@/lib/server/crypto";
 import { rescreenFirm } from "@/lib/server/screening-lists";
 import { sendPortalReminders, startDueRefreshes } from "@/lib/server/portal";
 import { issueMonthlyInvoices, requestInvoiceDetails } from "@/lib/server/invoicing";
+import { refreshFxRate } from "@/lib/server/prices";
 import { refreshCompanyCheck } from "@/lib/server/kyb";
 import { withTenant } from "@/lib/server/db";
 import { rescreenStaffIfListsChanged } from "@/lib/server/staff-screening";
@@ -64,6 +65,11 @@ export async function GET(req: Request) {
   });
   await run("portalReminders", () => sendPortalReminders());
   await run("summaries", () => sendDueSummaries());
+  await run("fxRate", async () => {
+    const r = await refreshFxRate();
+    if (!r) throw new Error("ECB euro reference rate could not be fetched; prices use the last stored rate (up to 7 days).");
+    return r;
+  });
   await run("invoiceDetails", () => requestInvoiceDetails());
   await run("invoices", () => issueMonthlyInvoices());
   await run("archivesEnded", async () => {

@@ -4,9 +4,9 @@ import type { Prisma } from "@prisma/client";
 import { adminDb, withTenant, type Tx } from "./db";
 import { audit } from "./audit";
 import { hit } from "./rate-limit";
-import { charge, didit, DiditError, diditEnabled, refund } from "./didit";
+import { charge, didit, DiditError, diditEnabled, pricesOrError, refund } from "./didit";
 import { loadClientFile, persistRiskIfChanged, runScreening, upsertTask } from "./cdd";
-import { KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, KYB_SEARCH_TIER, formatEur, kybBilledCents, kybInactive, mapKybCompany, type KybCompany, type KybLevel } from "@/lib/didit/map";
+import { KYB_SEARCH_TIER, formatEur, kybBilledCents, kybInactive, mapKybCompany, type KybCompany, type KybLevel } from "@/lib/didit/map";
 import { searchState, SEARCH_PACK } from "@/lib/didit/search-allowance";
 import { notify } from "./email";
 import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
@@ -81,20 +81,29 @@ export async function searchCompanyRegister(ctx: { firmId: string; userId: strin
   return out;
 }
 
+/** Country whose register is checked: the company's country of creation, else the firm's home state. */
+export async function kybCountry(tx: Tx, party: { details: unknown }): Promise<string> {
+  const c = String((party.details as { countryOfCreation?: string } | null)?.countryOfCreation ?? "").toUpperCase();
+  if (/^[A-Z]{2}$/.test(c)) return c;
+  return (await tx.firm.findFirstOrThrow({ select: { homeState: true } })).homeState;
+}
+
 export function searchLimitMessage(limit: number, until: Date) {
   return `You've reached the limit of ${limit} free register searches without ordering a check. Searching is paused until ${until.toISOString().slice(0, 10)}. To continue now, buy ${SEARCH_PACK.searches} more searches for ${formatEur(SEARCH_PACK.cents)}, or order a company check: the count then starts again.`;
 }
 
 /** Retrieves the chosen company at the chosen level, charges the check, imports it when ready. */
-export async function retrieveCompany(ctx: { firmId: string; userId: string }, fileId: string, kybResponseId: string, level: KybLevel = "full"): Promise<{ status: "imported" | "pending"; company?: KybCompany; refundedCents?: number }> {
+export async function retrieveCompany(ctx: { firmId: string; userId: string }, fileId: string, kybResponseId: string, level: KybLevel = "full"): Promise<{ status: "imported" | "pending"; company?: KybCompany; refundedCents?: number; chargedCents: number }> {
   if (!diditEnabled()) throw new DiditError("Company register checks are not set up for this installation.");
+  const prices = await pricesOrError();
   const pre = await withTenant(ctx.firmId, async (tx) => {
     const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
     if (file.party.kind === "NATURAL") throw new DiditError("Register checks are for companies and other legal entities.");
+    const country = await kybCountry(tx, file.party);
     const chargeId = level === "full"
-      ? await charge(tx, ctx.firmId, ctx.userId, "Company register check: full ownership (details, officers, owners)", file.party.displayName, KYB_FULL_PRICE_CENTS)
-      : await charge(tx, ctx.firmId, ctx.userId, "Company register check: company and status", file.party.displayName, KYB_LITE_PRICE_CENTS);
-    return { partyId: file.partyId, chargeId };
+      ? await charge(tx, ctx.firmId, ctx.userId, "Company register check: full ownership (details, officers, owners)", file.party.displayName, prices.kybFull(country))
+      : await charge(tx, ctx.firmId, ctx.userId, "Company register check: company and status", file.party.displayName, prices.kybLite);
+    return { partyId: file.partyId, chargeId, chargedCents: level === "full" ? prices.kybFull(country) : prices.kybLite };
   });
   type Resp = { request_id: string; registry_tier_delivered?: string; kyb_registry?: Record<string, unknown> };
   let r: Resp;
@@ -106,7 +115,7 @@ export async function retrieveCompany(ctx: { firmId: string; userId: string }, f
   }
   const company = r.kyb_registry ? mapKybCompany(r.kyb_registry, r.registry_tier_delivered) : null;
   const ready = !!company && company.fetchStatus !== "pending";
-  return withTenant(ctx.firmId, async (tx) => {
+  const out = await withTenant(ctx.firmId, async (tx) => {
     const row = await tx.diditSession.create({
       data: { firmId: ctx.firmId, partyId: pre.partyId, cddFileId: fileId, kind: "kyb", diditSessionId: r.request_id, status: ready ? "Approved" : "In Progress", sandbox: !!company?.sandbox, creditEntryId: pre.chargeId, createdVia: "staff", createdById: ctx.userId },
     });
@@ -117,6 +126,7 @@ export async function retrieveCompany(ctx: { firmId: string; userId: string }, f
     const refunded = await settleKybCharge(tx, ctx.firmId, pre.chargeId, company);
     return { status: "imported" as const, company, refundedCents: refunded };
   }, { timeoutMs: 60_000 });
+  return { ...out, chargedCents: pre.chargedCents };
 }
 
 /** Ownership data some registers deliver a few minutes later: fetch and import when ready. */
@@ -145,12 +155,14 @@ async function settleKybCharge(tx: Tx, firmId: string, chargeId: string, k: KybC
   const c = await tx.creditEntry.findUnique({ where: { id: chargeId } });
   if (!c || (await tx.creditEntry.count({ where: { kind: "refund", reference: chargeId } }))) return 0;
   const charged = -c.amountCents;
-  const billed = kybBilledCents(charged, k.tierDelivered, k.ownershipStatus);
+  const prices = await pricesOrError();
+  const country = (k.country ?? "").toUpperCase() || "LT";
+  const billed = kybBilledCents(charged, k.tierDelivered, k.ownershipStatus, { lite: prices.kybLite, shareholders: prices.kybShareholders(country) });
   if (billed === null || billed >= charged) return 0;
   const diff = charged - billed;
   await tx.creditEntry.create({
     data: { firmId, amountCents: diff, kind: "refund", reference: chargeId, clientRef: c.clientRef,
-      description: `Refund: the register had no ${billed <= KYB_LITE_PRICE_CENTS ? "ownership data" : "beneficial-owner data"} for this company, so you pay ${formatEur(billed)} instead of ${formatEur(charged)}` },
+      description: `Refund: the register had no ${billed <= prices.kybLite ? "ownership data" : "beneficial-owner data"} for this company, so you pay ${formatEur(billed)} instead of ${formatEur(charged)}` },
   });
   return diff;
 }

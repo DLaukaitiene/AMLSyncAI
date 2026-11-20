@@ -85,8 +85,8 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   await p.getByLabel("Surname *").fill("Mokėtoja");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Ona Mokėtoja" }).waitFor();
-  if (await p.getByRole("button", { name: "Send identity check (€2.00)" }).count()) {
-    await submit(p, "Send identity check (€2.00)", "Paid checks are paused: invoice");
+  if (await p.getByRole("button", { name: "Send identity check (€2.60)" }).count()) {
+    await submit(p, "Send identity check (€2.60)", "Paid checks are paused: invoice");
     log("paid checks paused while an invoice is >14 days overdue");
   } else log("(Didit not configured: overdue pause not exercised)");
   if (errors.length) console.log("✘ page errors", errors);

@@ -1563,3 +1563,10 @@ model ClientShare {
   @@index([toFirmId, status])
   @@index([fromFirmId])
 }
+
+/// ECB euro reference rates (USD per 1 EUR), fetched by the app; client prices for Didit services are computed from them.
+model FxRate {
+  date      String   @id // YYYY-MM-DD, the ECB reference date
+  usdPerEur Decimal  @db.Decimal(10, 4)
+  fetchedAt DateTime @default(now())
+}
