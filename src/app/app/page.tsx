@@ -141,6 +141,19 @@ export default async function Dashboard() {
 
       <ScreeningUsage limits={data.usage.limits} used={data.usage.used} compact />
 
+      {data.reviewQueueCount > 0 && (
+        <section className="space-y-2 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-950 dark:border-red-800 dark:bg-red-950 dark:text-red-50" data-testid="reviews-overdue">
+          <h2 className="text-lg font-semibold">{data.reviewQueueCount === 1 ? "1 client review is overdue" : `${data.reviewQueueCount} client reviews are overdue`}</h2>
+          <p>The law requires you to review every client at least once a year if they are high risk, and at least every 5 years otherwise (Art. 26 AMLR). Open each client, check that their details, owners and documents are still right, and mark the review done.</p>
+          <ul className="list-disc pl-5">
+            {data.reviewQueue.map((f) => (
+              <li key={f.id}><Link href={`/app/clients/${f.id}`} className="font-medium underline">{f.party.displayName}</Link> · {f.status === "EDD" ? "high risk, yearly review" : "review every 5 years"} · due {toIsoDate(f.nextRefreshOn!)}</li>
+            ))}
+          </ul>
+          {data.reviewQueueCount > data.reviewQueue.length && <p>and {data.reviewQueueCount - data.reviewQueue.length} more: see the Review Queue below.</p>}
+        </section>
+      )}
+
       {/* Dashboard guide */}
       {!guideHidden ? (
         <section aria-labelledby="guide" className="space-y-3 rounded-2xl border border-accent/40 bg-brand/10 p-5" data-testid="dashboard-guide">
