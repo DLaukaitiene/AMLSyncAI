@@ -57,11 +57,11 @@ export const SUBPROCESSORS: Subprocessor[] = [
     active: true,
   },
   {
-    name: "AI drafting provider",
+    name: "Anthropic (Claude API)",
     purpose: "Optional AI drafting of report narratives and policy wording, and reading a document to propose a client's owners",
     data: "The facts the user chooses to draft from; a document the user asks the AI to read (e.g. shareholder register, trust deed)",
-    location: "To be confirmed: switched off until a provider is chosen (EU-hosted option: Claude on Google Cloud, Belgium)",
-    safeguard: "Not in use",
-    active: false,
+    location: "United States",
+    safeguard: "Anthropic's data processing terms with EU Standard Contractual Clauses; API data isn't used to train models. Used only when a firm switches AI on, and only for what a user sends to it",
+    active: true,
   },
 ];
