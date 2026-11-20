@@ -13,11 +13,21 @@ import { TASK_KIND, taskHref } from "@/lib/tasks/labels";
 import { RiskChip, StatusChip } from "@/components/chips";
 import { OBJECT_LABEL } from "@/lib/audit-labels";
 import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
+import { adminDb } from "@/lib/server/db";
+import { firmObligations } from "@/lib/server/obligations";
+import { OBLIGATIONS } from "@/lib/obligations/catalog";
+import { obligationSummary, sectorNote } from "@/lib/obligations/evaluate";
+import { ObligationCard } from "@/components/obligations";
+import { AppointInline } from "@/components/appoint-inline";
+import { appointAction } from "@/app/app/firm/records-actions";
+import { setGuideAction } from "./guide-actions";
 
 /**
- * Dashboard laid out like ClearAML's: alerts feed, metric cards, risk
- * distribution, review queue, upcoming timeline, program status by pillar,
- * recent clients, activity feed and the onboarding checklist.
+ * Dashboard. First: the firm's AML obligations, one box each, with its status and
+ * the button that does it (for firms that don't know what the law asks), and a
+ * guide for new users. Below: the overview laid out like ClearAML's — alerts,
+ * metric cards, program status, risk distribution, review queue, timeline,
+ * recent clients and the activity feed.
  */
 export default async function Dashboard() {
   const s = await requireUser();
@@ -94,34 +104,84 @@ export default async function Dashboard() {
       userNames: new Map(users.map((u) => [u.id, u.name])),
       timeline: await tx.task.findMany({ where: { ...taskWhere, dueOn: { lte: new Date(addCalendarDays(today, 30)) } }, orderBy: { dueOn: "asc" }, take: 8 }),
       activity: seeAudit ? await tx.auditEvent.findMany({ orderBy: { at: "desc" }, take: 8 }) : [],
+      obligations: await firmObligations(tx, s.firm.id, { seeCases }),
     };
   });
   const missing = data.checklist.filter((c) => c.status === "required-missing" || c.status === "not-yet-reviewed");
   const required = data.checklist.filter((c) => c.status === "required-missing");
-  const gettingStarted = [
-    { done: required.length === 0, title: "Fill in your Country Profile", text: "Your supervisor, FIU and national rules (the EU rules are built in).", href: "/app/settings/country-profile" },
-    { done: data.setup.ra, title: "Approve your Business Risk Assessment", text: "Answer a few questions; AMLSync App drafts it for you.", href: "/app/firm/risk-assessment" },
-    { done: data.setup.policy, title: "Approve your AML Program", text: "Generated from your risk assessment — review and approve.", href: "/app/firm/policies" },
-    { done: data.setup.client, title: "Add your first client", text: "A name and an email are enough to start.", href: "/app/clients/new" },
-    { done: data.setup.team, title: "Invite your team", text: "Give colleagues their own sign-in and role.", href: "/app/team" },
-    { done: data.setup.billing, title: "Add your invoice details", text: "Company name, VAT number and address for your invoices.", href: "/app/billing" },
-  ];
-  const doneCount = gettingStarted.filter((g) => g.done).length;
   const h = data.health;
   const overall = h.level === "on-track" ? "On track" : h.level === "at-risk" ? "At risk" : "Needs attention";
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
   const card = "rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]";
   const alertCount = data.openAlerts + data.staffOpen.length + data.flaggedTx;
+  const guideHidden = !!(await adminDb.user.findUnique({ where: { id: s.user.id }, select: { guideHiddenAt: true } }))?.guideHiddenAt;
+  const ob = data.obligations;
+  const sum = obligationSummary(ob.statuses);
+  const statusOf = new Map(ob.statuses.map((x) => [x.id, x]));
+  const groups = [...new Set(OBLIGATIONS.map((o) => o.group))];
+  const canAppoint = can(r, "approve.management");
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl">Dashboard</h1>
-          <p className="text-muted">Welcome, {s.user.name.split(" ")[0]}. Here is your firm&apos;s compliance at a glance.</p>
+          <p className="text-muted">Welcome, {s.user.name.split(" ")[0]}. These are the duties the anti-money-laundering rules give your firm, and where you stand on each.</p>
         </div>
         <Link href="/app/clients/new" className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105"><UserPlus aria-hidden className="h-4 w-4" />Add Client</Link>
       </div>
+
+      {/* Dashboard guide */}
+      {!guideHidden ? (
+        <section aria-labelledby="guide" className="space-y-3 rounded-2xl border border-accent/40 bg-brand/10 p-5" data-testid="dashboard-guide">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h2 id="guide" className="text-lg">How this page works</h2>
+            <form action={setGuideAction.bind(null, true)}><button type="submit" className="text-sm text-accent underline">Hide the guide</button></form>
+          </div>
+          <ol className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+            <li><strong className="block">1. Each box is a legal duty</strong>The EU anti-money-laundering rules (AMLR) apply to your firm. Every box below is one thing they require, in plain words.</li>
+            <li><strong className="block">2. Colours show where you stand</strong><span className="text-green-800 dark:text-green-300">In order</span>, <span className="text-amber-800 dark:text-amber-300">to do</span>, or <span className="text-red-800 dark:text-red-300">act now</span> (a deadline has passed or a decision is waiting).</li>
+            <li><strong className="block">3. Click the button to do it</strong>Each box takes you to the right page. &ldquo;What does this mean?&rdquo; explains the duty, when it applies and the steps.</li>
+            <li><strong className="block">4. Start at the top</strong>Set up your firm first, then check every client, record every deal, and report anything suspicious to your Compliance Officer.</li>
+          </ol>
+          <p className="text-sm"><strong>If in doubt about a client or a payment:</strong> don&apos;t go ahead, and report it to your Compliance Officer from the matter or payment. Never tell the client. <Link href="/app/obligations#reporting" className="text-accent underline">How reporting works</Link></p>
+        </section>
+      ) : (
+        <form action={setGuideAction.bind(null, false)} className="text-right"><button type="submit" className="text-sm text-accent underline">Show the dashboard guide</button></form>
+      )}
+
+      {/* Your obligations */}
+      <section aria-labelledby="obligations" className="space-y-4" data-testid="obligations">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="obligations" className="text-2xl">Your obligations</h2>
+            <p className="text-sm text-muted"><strong className="text-foreground">{sum.done} of {sum.total}</strong> in order{sum.overdue ? <> · <strong className="text-red-800 dark:text-red-300">{sum.overdue} need action now</strong></> : null}{sum.todo ? ` · ${sum.todo} to do` : ""}</p>
+          </div>
+          <Link href="/app/obligations" className="text-sm text-accent underline">All obligations explained</Link>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuemin={0} aria-valuemax={sum.total} aria-valuenow={sum.done} aria-label="Obligations in order">
+          <div className="h-full rounded-full bg-green-600" style={{ width: `${sum.total ? (sum.done / sum.total) * 100 : 0}%` }} />
+        </div>
+        {groups.map((g) => (
+          <div key={g} className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted">{g}</h3>
+            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {OBLIGATIONS.filter((o) => o.group === g).map((o) => (
+                <ObligationCard key={o.id} o={o} status={statusOf.get(o.id)!} note={sectorNote(o, ob.input.sectors)}>
+                  {o.id === "compliance-officer" && canAppoint && (!ob.input.complianceOfficer || !ob.input.responsibleManager) && (
+                    <div className="space-y-2">
+                      {!ob.input.complianceOfficer && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-officer")} label="Compliance Officer" current={ob.input.complianceOfficer} />}
+                      {!ob.input.responsibleManager && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-manager")} label="Responsible manager (management body)" current={ob.input.responsibleManager} />}
+                    </div>
+                  )}
+                </ObligationCard>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+
+      <h2 className="border-t border-border pt-6 text-2xl">Overview</h2>
 
       {/* Alerts Feed */}
       <section aria-labelledby="alerts" className={`${card} ${alertCount ? "border-red-300 dark:border-red-800" : ""}`} data-testid="alerts-feed">
@@ -287,29 +347,13 @@ export default async function Dashboard() {
         </section>
       </div>
 
-      {/* Onboarding Checklist */}
-      {doneCount < gettingStarted.length && (
-        <section className={`space-y-3 ${card}`} aria-labelledby="gs">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="gs" className="text-lg">Onboarding Checklist</h2>
-            <span className="text-sm text-muted">{doneCount} of {gettingStarted.length} done</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuemin={0} aria-valuemax={gettingStarted.length} aria-valuenow={doneCount} aria-label="Setup progress">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${(doneCount / gettingStarted.length) * 100}%` }} />
-          </div>
-          <ol className="grid gap-2 sm:grid-cols-2">
-            {gettingStarted.map((g) => (
-              <li key={g.title}>
-                <Link href={g.href} className={`flex gap-3 rounded-xl border border-border p-3 transition hover:border-accent ${g.done ? "bg-surface" : ""}`}>
-                  <span aria-hidden className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${g.done ? "bg-green-600 text-white" : "border-2 border-border"}`}>{g.done ? "✓" : ""}</span>
-                  <span>
-                    <span className={`block text-sm font-semibold ${g.done ? "line-through" : ""}`}>{g.title}<span className="sr-only">{g.done ? " (done)" : ""}</span></span>
-                    <span className="block text-xs text-muted">{g.text}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ol>
+      {(!data.setup.billing || !data.setup.team) && (
+        <section className={`space-y-2 ${card}`} aria-labelledby="account">
+          <h2 id="account" className="text-lg">Account setup</h2>
+          <ul className="space-y-1 text-sm">
+            {!data.setup.team && <li><Link href="/app/team" className="text-accent underline">Invite your team</Link> <span className="text-muted">so colleagues have their own sign-in and role.</span></li>}
+            {!data.setup.billing && <li><Link href="/app/billing" className="text-accent underline">Add your invoice details</Link> <span className="text-muted">(company name, VAT number and address).</span></li>}
+          </ul>
         </section>
       )}
 

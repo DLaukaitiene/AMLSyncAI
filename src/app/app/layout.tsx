@@ -7,6 +7,7 @@ import { AppShell, type NavItem } from "@/components/app-shell";
 import { isPlatformAdmin } from "@/lib/server/feedback";
 import { Announcements } from "@/components/announcements";
 import { SectionTabs } from "@/components/section-tabs";
+import { PageDuty } from "@/components/page-duty";
 
 type Child = { href: string; label: string; icon: string; show?: boolean };
 type Entry = Child & { children?: Child[] };
@@ -18,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Menu follows ClearAML's structure and names (familiar to users of AML tools); "FIU" replaces "AUSTRAC".
   const entries: Entry[] = [
     { href: "/app", label: "Dashboard", icon: "dashboard" },
+    { href: "/app/obligations", label: "My Obligations", icon: "obligations" },
     {
       href: "/app/clients", label: "Clients", icon: "clients", show: can(r, "client.view"),
       children: [
@@ -107,6 +109,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     >
       <Announcements firmId={s.firm.id} userId={s.user.id} />
       <SectionTabs allowed={nav.flatMap((n) => [n.href, ...(n.children ?? []).map((c) => c.href)])} />
+      <PageDuty />
       {children}
     </AppShell>
   );

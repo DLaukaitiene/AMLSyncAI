@@ -272,6 +272,7 @@ model User {
   recoveryCodeHashes String[] // one-time recovery codes (Argon2id)
   failedLogins  Int       @default(0)
   lockedUntil   DateTime?
+  guideHiddenAt DateTime? // dashboard guide dismissed
   deactivatedAt DateTime?
   createdAt     DateTime  @default(now())
 

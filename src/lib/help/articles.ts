@@ -11,7 +11,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   {
     slug: "first-steps", topic: "Getting started", title: "First steps with AMLSync App",
     summary: "Set up your firm in about ten minutes and add your first client.",
-    body: `The Onboarding Checklist on your Dashboard walks you through the setup. Each item opens the right page.
+    body: `Your Dashboard shows every duty the anti-money-laundering rules give your firm, one box each, with where you stand and a button that does it. My Obligations explains each duty in full. Start at the top.
 
 ## 1. Fill in your Country Profile
 Settings → Country Profile. The EU rules are built in; add your national details: supervisor, FIU and how you report to it, cash limit if lower than €10,000. Missing required items only block the steps that depend on them.
@@ -33,7 +33,10 @@ Clients → Add Client. A name and an email are enough: the client gets a secure
   {
     slug: "dashboard", topic: "Getting started", title: "Understanding your Dashboard",
     summary: "What each part of the Dashboard tells you and where to start each day.",
-    body: `## Alerts
+    body: `## Your obligations
+One box per legal duty: green is in order, amber is to do, red means act now. Each box has the button that does it and "What does this mean?" for the full explanation. The guide at the top can be hidden and shown again.
+
+## Alerts
 Possible sanctions or PEP matches, flagged transactions and staff screening matches. Each has a Review button. Start here every day.
 
 ## Metric cards
