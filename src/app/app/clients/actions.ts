@@ -487,12 +487,12 @@ export async function kybSearchAction(fileId: string, _: ActionState, fd: FormDa
 export async function buySearchPackAction(fileId: string): Promise<ActionState> {
   const s = await requireUser("client.edit");
   try {
-    await buySearchPack({ firmId: s.firm.id, userId: s.user.id });
+    const cents = await buySearchPack({ firmId: s.firm.id, userId: s.user.id });
+    revalidatePath(`/app/clients/${fileId}`);
+    return { message: `5 more searches added (${formatEur(cents)}). They appear on your next invoice.` };
   } catch (e) {
     return { error: e instanceof DiditError ? e.message : "Couldn't add the searches." };
   }
-  revalidatePath(`/app/clients/${fileId}`);
-  return { message: "5 more searches added. They appear on your next invoice." };
 }
 
 export async function kybRetrieveAction(fileId: string, kybResponseId: string, level: "lite" | "full" = "full"): Promise<ActionState> {

@@ -18,6 +18,8 @@ export const DIDIT_USD = {
   kybShareholdersRest: 5.0,
   kybUboEurope: 5.0,
   kybUboRest: 9.0,
+  /** Successful standalone registry search on a paid company-data source (Didit, 20 Nov 2026). Empty, failed and sandbox searches are free. */
+  registrySearch: 0.5,
 } as const;
 
 /** eID wallets (per completed verification). */
@@ -31,7 +33,7 @@ export function walletIdvUsd(provider: string | null | undefined): number {
 
 /**
  * Countries on Didit's cheaper "most of Europe" KYB rate (didit.me/pricing, 20 Nov 2026). Exception: Lithuania stays on
- * the higher rate for now, because Didit told us directly it uses that rate [being confirmed with Didit].
+ * the higher rate: Didit confirmed in writing (20 Nov 2026) Lite $2, Shareholders $5, UBO $9 for Lithuania.
  */
 export const KYB_EUROPE_RATE = new Set(["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IS", "IE", "IT", "LV", "LI", "LU", "MT", "NL", "NO", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH", "GB"]);
 
@@ -40,6 +42,8 @@ export const SERVICE_USD = {
   /** Identity check workflow: KYC bundle + NFC chip reading + AML screening. */
   idv: DIDIT_USD.kycBundle + DIDIT_USD.nfc + DIDIT_USD.amlScreening,
   screen: DIDIT_USD.amlScreening,
+  /** Pack of 5 extra register searches, sold as one item. */
+  searchPack: 5 * DIDIT_USD.registrySearch,
   kybLite: DIDIT_USD.kybLite,
   kybShareholders: (country: string) => (KYB_EUROPE_RATE.has(country.toUpperCase()) ? DIDIT_USD.kybShareholdersEurope : DIDIT_USD.kybShareholdersRest),
   kybFull: (country: string) => (KYB_EUROPE_RATE.has(country.toUpperCase()) ? DIDIT_USD.kybUboEurope : DIDIT_USD.kybUboRest),
@@ -63,6 +67,7 @@ export interface ClientPrices {
   idv: number;
   screen: number;
   kybLite: number;
+  searchPack: number;
   kybShareholders: (country: string) => number;
   kybFull: (country: string) => number;
   rate: { usdPerEur: number; date: string };
@@ -74,6 +79,7 @@ export function pricesAt(usdPerEur: number, date: string): ClientPrices {
     idv: p(SERVICE_USD.idv),
     screen: p(SERVICE_USD.screen),
     kybLite: p(SERVICE_USD.kybLite),
+    searchPack: p(SERVICE_USD.searchPack),
     kybShareholders: (c) => p(SERVICE_USD.kybShareholders(c)),
     kybFull: (c) => p(SERVICE_USD.kybFull(c)),
     rate: { usdPerEur, date },

@@ -482,8 +482,9 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                 country={String((cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState)}
                 litePrice={priceOf(pr?.kybLite)}
                 fullPrice={priceOf(pr?.kybFull(kybCountryCode))}
+                packPrice={priceOf(pr?.searchPack)}
                 ownersRecorded={cf.tree.links.some((l) => l.ownedId === cf.party.id)}
-                search={kybStatus ? { blocked: kybStatus.state.blocked, remaining: kybStatus.state.remaining, message: kybStatus.state.blocked ? searchLimitMessage(kybStatus.state.limit, kybStatus.state.blockedUntil!) : null, recent: kybStatus.recent.map((r) => ({ at: r.at.toISOString().slice(0, 16).replace("T", " "), query: r.query, country: r.country, results: (r.results as { name: string; registrationNumber: string | null }[]).slice(0, 5) })) } : null}
+                search={kybStatus ? { blocked: kybStatus.state.blocked, remaining: kybStatus.state.remaining, message: kybStatus.state.blocked ? searchLimitMessage(kybStatus.state.limit, kybStatus.state.blockedUntil!, pr?.searchPack) : null, recent: kybStatus.recent.map((r) => ({ at: r.at.toISOString().slice(0, 16).replace("T", " "), query: r.query, country: r.country, results: (r.results as { name: string; registrationNumber: string | null }[]).slice(0, 5) })) } : null}
               />
             )}
             {edit && (

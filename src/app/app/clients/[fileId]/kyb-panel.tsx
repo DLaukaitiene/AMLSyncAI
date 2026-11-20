@@ -10,7 +10,7 @@ type Candidate = { id: string; name: string; registrationNumber: string | null; 
 /** Choose the level, search the register on that level's tier, then retrieve the right company (paid). */
 type SearchInfo = { blocked: boolean; remaining: number; message: string | null; recent: { at: string; query: string; country: string; results: { name: string; registrationNumber: string | null }[] }[] } | null;
 
-export function KybSearch({ fileId, name, registrationNumber, country, litePrice, fullPrice, ownersRecorded, search }: { fileId: string; name: string; registrationNumber: string; country: string; litePrice: string; fullPrice: string; ownersRecorded: boolean; search?: SearchInfo }) {
+export function KybSearch({ fileId, name, registrationNumber, country, litePrice, fullPrice, packPrice, ownersRecorded, search }: { fileId: string; name: string; registrationNumber: string; country: string; litePrice: string; fullPrice: string; packPrice: string; ownersRecorded: boolean; search?: SearchInfo }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(kybSearchAction.bind(null, fileId), null);
   const candidates = ((state?.data as { candidates?: Candidate[] } | undefined)?.candidates ?? []);
   const searchedLevel = ((state?.data as { level?: "lite" | "full" } | undefined)?.level ?? "full");
@@ -19,13 +19,13 @@ export function KybSearch({ fileId, name, registrationNumber, country, litePrice
     <div className="space-y-3 rounded-xl border border-border p-3" data-testid="kyb-search">
       <p className="text-sm font-medium">Check the company register (Didit)</p>
       <p className="text-xs text-muted">
-        Searching is free. You pay only when you retrieve the company, and only for what the register delivers: if it has no ownership data, a full ownership check is charged as company and status.
+        Searching is free up to your plan&apos;s allowance (searches that find nothing don&apos;t count). You pay only when you retrieve the company, and only for what the register delivers: if it has no ownership data, a full ownership check is charged as company and status.
         {search && !search.blocked ? ` ${search.remaining} free search${search.remaining === 1 ? "" : "es"} left before you order a check.` : ""}
       </p>
       {search?.blocked && (
         <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950" data-testid="kyb-search-paused">
           <p>{search.message}</p>
-          <ActionButton action={buySearchPackAction.bind(null, fileId)} variant="primary">Buy 5 more searches (€2.00)</ActionButton>
+          <ActionButton action={buySearchPackAction.bind(null, fileId)} variant="primary">Buy 5 more searches ({packPrice})</ActionButton>
         </div>
       )}
       <form action={action} className="grid gap-3 sm:grid-cols-3">

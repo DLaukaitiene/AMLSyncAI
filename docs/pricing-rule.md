@@ -135,7 +135,7 @@ Re-check didit.me/pricing before you send a client quote. Prices can change.
 
 **"Most of Europe"** (didit.me/pricing, 20 Nov 2026): Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy, Latvia, Liechtenstein, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Slovenia, Spain, Sweden, Switzerland, United Kingdom.
 
-**Exception: Lithuania** stays on the rest-of-world rate ($5 shareholders / $9 UBO) for now. Didit's pricing page lists it in the European group, but Didit told us directly that Lithuania uses the higher rate. Being confirmed with Didit.
+**Exception: Lithuania** uses the rest-of-world rate: Lite $2.00, Shareholders $5.00, UBO $9.00, confirmed by Didit in writing (20 Nov 2026). The account's live per-check rates are in the Didit Business Console, which is the reference if figures differ.
 
 ## 6a. Identity check sold as one item, and eID wallets
 
@@ -144,7 +144,8 @@ Re-check didit.me/pricing before you send a client quote. Prices can change.
 
 ## 6b. Register searches
 
-- The search pack stays at **€2 for 5 searches** until it is clear whether Didit charges for registry searches. Didit's pricing page says registry search is free; the $0.50 per search came from Didit's earlier written answer. If searches cost $0.50, the rule applies to the pack (5 × $0.50 = $2.50 → €3 tier, about €5.30).
+- Didit confirmed in writing (20 Nov 2026): a successful standalone registry search that uses a paid company-data source costs **$0.50**. Empty results, failed searches and results served only by other sources are not charged; sandbox searches are free; searches inside Didit's hosted KYB workflow have no separate search fee.
+- AMLSync gives firms free searches between orders (Solo 6, other plans 10); searches that find nothing don't count. Extra searches are sold as a **pack of 5 = one item**: 5 × $0.50 = $2.50 → €3 tier (about €5.30 at USD 1.0992 per €1).
 
 ## 7. Worked example
 

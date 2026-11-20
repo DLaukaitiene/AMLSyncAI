@@ -1,4 +1,5 @@
 import "server-only";
+import { currentPricesOrNull } from "./prices";
 import { TRUST_ROLE_LINK } from "@/lib/ai/ownership";
 import type { Prisma } from "@prisma/client";
 import { adminDb, withTenant, type Tx } from "./db";
@@ -41,14 +42,16 @@ export async function kybSearchStatus(firmId: string) {
 export const SEARCH_PACK_REF = "Register searches";
 
 export async function buySearchPack(ctx: { firmId: string; userId: string }) {
-  await withTenant(ctx.firmId, (tx) => charge(tx, ctx.firmId, ctx.userId, `${SEARCH_PACK.searches} extra company register searches`, SEARCH_PACK_REF, SEARCH_PACK.cents));
+  const prices = await pricesOrError();
+  await withTenant(ctx.firmId, (tx) => charge(tx, ctx.firmId, ctx.userId, `${SEARCH_PACK.searches} extra company register searches`, SEARCH_PACK_REF, prices.searchPack));
+  return prices.searchPack;
 }
 
 export async function searchCompanyRegister(ctx: { firmId: string; userId: string }, q: { country: string; name?: string; registrationNumber?: string; level?: KybLevel }): Promise<Candidate[]> {
   const firmId = ctx.firmId;
   if (!diditEnabled()) throw new DiditError("Company register checks are not set up for this installation.");
   const st = (await kybSearchStatus(firmId)).state;
-  if (st.blocked) throw new DiditError(searchLimitMessage(st.limit, st.blockedUntil!));
+  if (st.blocked) throw new DiditError(searchLimitMessage(st.limit, st.blockedUntil!, (await currentPricesOrNull())?.searchPack));
   // Hard safety net against automated abuse, on top of the free-search rule.
   if (!(await hit(`kyb-search:${firmId}`, { limit: 30, windowSec: 86_400 }))) throw new DiditError("For your security there is a limit of 30 register searches a day. Please reach out to contact@amlsync.com so we can adjust it within 1 business day.");
   const country = normalizeCountry(q.country);
@@ -75,7 +78,7 @@ export async function searchCompanyRegister(ctx: { firmId: string; userId: strin
     const after = (await kybSearchStatus(firmId)).state;
     if (after.blocked) {
       const firm = await adminDb.firm.findUniqueOrThrow({ where: { id: firmId }, select: { name: true } });
-      await notify(OPS_ALERT_EMAIL, `AMLSync App: ${firm.name} used its free register searches`, `${firm.name} made ${after.limit} company-register searches without ordering a check. Searching is paused until ${after.blockedUntil!.toISOString().slice(0, 10)} unless the firm buys ${SEARCH_PACK.searches} more searches (${formatEur(SEARCH_PACK.cents)}) or orders a check. Firm id ${firmId}.`);
+      await notify(OPS_ALERT_EMAIL, `AMLSync App: ${firm.name} used its free register searches`, `${firm.name} made ${after.limit} company-register searches without ordering a check. Searching is paused until ${after.blockedUntil!.toISOString().slice(0, 10)} unless the firm buys ${SEARCH_PACK.searches} more searches${(await currentPricesOrNull())?.searchPack ? ` (${formatEur((await currentPricesOrNull())!.searchPack)})` : ""} or orders a check. Firm id ${firmId}.`);
     }
   }
   return out;
@@ -88,8 +91,8 @@ export async function kybCountry(tx: Tx, party: { details: unknown }): Promise<s
   return (await tx.firm.findFirstOrThrow({ select: { homeState: true } })).homeState;
 }
 
-export function searchLimitMessage(limit: number, until: Date) {
-  return `You've reached the limit of ${limit} free register searches without ordering a check. Searching is paused until ${until.toISOString().slice(0, 10)}. To continue now, buy ${SEARCH_PACK.searches} more searches for ${formatEur(SEARCH_PACK.cents)}, or order a company check: the count then starts again.`;
+export function searchLimitMessage(limit: number, until: Date, packCents?: number) {
+  return `You've reached the limit of ${limit} free register searches without ordering a check. Searching is paused until ${until.toISOString().slice(0, 10)}. To continue now, buy ${SEARCH_PACK.searches} more searches${packCents ? ` for ${formatEur(packCents)}` : ""}, or order a company check: the count then starts again.`;
 }
 
 /** Retrieves the chosen company at the chosen level, charges the check, imports it when ready. */

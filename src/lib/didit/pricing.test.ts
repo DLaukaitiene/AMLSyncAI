@@ -30,6 +30,8 @@ describe("pricing rule", () => {
     const p = pricesAt(R, "2026-11-20");
     expect(p.kybFull("LV")).toBe(730);
     expect(p.kybFull("LT")).toBe(1075);
+    expect(p.searchPack).toBe(515); // 5 × $0.50 = $2.50 → €3 tier
+    expect(pricesAt(1.0992, "2026-11-19").searchPack).toBe(530);
   });
   it("never runs without a rate", () => expect(() => clientPriceCents(1, 0)).toThrow());
   it("reads the ECB daily file", () => {
