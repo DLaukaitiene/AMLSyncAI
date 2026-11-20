@@ -15,7 +15,7 @@ import {
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
-  kybAddPersonAction,
+  kybAddPersonAction, aiOwnershipDraftAction,
   setScopeAction,
   declareLookThroughAction,
   reopenLookThroughAction,
@@ -25,6 +25,7 @@ import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
+import { aiForFirm } from "@/lib/server/ai";
 import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
 import { kybSearchStatus, searchLimitMessage } from "@/lib/server/kyb";
@@ -113,11 +114,12 @@ export default async function ClientFilePage({ params, searchParams }: { params:
     const riskHistory = await tx.clientRiskAssessment.findMany({ where: { cddFileId: fileId }, orderBy: { createdAt: "desc" }, take: 50 });
     const matters = await tx.matterParty.findMany({ where: { partyId: cf.party.id }, include: { matter: { select: { id: true, title: true, status: true, type: true, createdAt: true } } } });
     const transactions = await tx.transaction.findMany({ where: { customerId: cf.party.id }, orderBy: { date: "desc" }, take: 100, include: { matter: { select: { id: true, title: true } } } });
-    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions };
+    const aiOn = cf.party.kind !== "NATURAL" && (await aiForFirm(tx, s.firm.id));
+    return { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions, aiOn };
   });
   if (!data) notFound();
   const kybStatus = data.cf.party.kind !== "NATURAL" && diditEnabled() ? await kybSearchStatus(s.firm.id) : null;
-  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions } = data;
+  const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions, aiOn } = data;
   const flaggedTx = transactions.filter((t) => t.monitorStatus === "flagged").length;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
   const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
@@ -368,7 +370,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             {cf.extracts.length ? (
               <ul className="space-y-3 text-sm">
                 {cf.extracts.map((x) => {
-                  const xd = x.data as { level?: string; kybResponseId?: string | null; extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
+                  const xd = x.data as { level?: string; kybResponseId?: string | null; extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; warnings?: string[]; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
                   return (
                     <li key={x.id} className="space-y-2">
                       <p>
@@ -384,10 +386,16 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                         </div>
                       )}
                       {xd.provider === "Didit" && xd.level !== "lite" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
+                      {xd.provider === "AI" && (
+                        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100" data-testid="ai-ownership-note">
+                          <p className="font-medium">Drafted by AI. Check every name and percentage against the document before you add it.</p>
+                          {xd.warnings?.length ? <ul className="mt-1 list-disc pl-4">{xd.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul> : null}
+                        </div>
+                      )}
                       {xd.people?.length ? (
                         <ul className="divide-y divide-border rounded-lg border border-border" data-testid="register-people">
                           {xd.people.map((p, i) => {
-                            const canAdd = !p.addedPartyId && ((p.ownershipPct ?? 0) > 0 || (p.roles.includes("ubo") && p.entityType === "person"));
+                            const canAdd = !p.addedPartyId && ((p.ownershipPct ?? 0) > 0 || (p.roles.includes("ubo") && p.entityType === "person") || p.roles.some((r) => ["trustee", "settlor", "protector", "beneficiary", "nominee"].includes(r)));
                             return (
                               <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                                 <span>
@@ -406,6 +414,24 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               </ul>
             ) : (
               <p className="text-sm text-muted">No register extract yet. Check the company register below, or record an extract you obtained yourself.</p>
+            )}
+            {edit && aiOn && (
+              <details className="rounded border border-border p-3" data-testid="ai-ownership">
+                <summary className="cursor-pointer text-sm font-medium">Draft the owners from a document (AI)</summary>
+                <div className="mt-3 space-y-2 text-sm">
+                  <p className="text-muted">Upload the shareholder register, articles or trust deed under Documents first. The AI reads it and lists the owners and controllers it names; you then check each one and add it. Nothing is added automatically.</p>
+                  {documents.filter((doc) => ["application/pdf", "image/png", "image/jpeg"].includes(doc.mimeType) && doc.malwareScan !== "quarantined").length ? (
+                    <ActionForm action={aiOwnershipDraftAction.bind(null, fileId)}>
+                      <Field label="Document" name="documentId" required>
+                        <select name="documentId" className={sel} aria-label="Document">
+                          {documents.filter((doc) => ["application/pdf", "image/png", "image/jpeg"].includes(doc.mimeType) && doc.malwareScan !== "quarantined").map((doc) => <option key={doc.id} value={doc.id}>{doc.fileName} · {doc.kind} · {doc.uploadedAt.toISOString().slice(0, 10)}</option>)}
+                        </select>
+                      </Field>
+                      <Submit variant="secondary">Draft the owners</Submit>
+                    </ActionForm>
+                  ) : <p>No PDF or image documents yet. <Link className="underline" href={`/app/clients/${fileId}?tab=documents#documents`}>Upload one</Link>.</p>}
+                </div>
+              </details>
             )}
             {kybSessions.filter((k) => !k.importedAt).map((k) => (
               <div key={k.id} className="flex items-center justify-between gap-2 text-sm">

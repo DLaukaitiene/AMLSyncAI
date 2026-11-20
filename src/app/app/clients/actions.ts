@@ -23,6 +23,7 @@ import { formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/did
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 import { addPersonFromRegister, buySearchPack, refreshCompanyCheck, retrieveCompany, searchCompanyRegister } from "@/lib/server/kyb";
 import { sendEmail } from "@/lib/server/email";
+import { draftOwnershipFromDocument } from "@/lib/server/ai";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
 const STEP_UP = (path: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: path } });
@@ -513,6 +514,21 @@ export async function kybRefreshAction(fileId: string, requestId: string): Promi
   } catch (e) {
     return { error: e instanceof DiditError ? e.message : "Couldn't refresh the register check." };
   }
+}
+
+export async function aiOwnershipDraftAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  const documentId = String(fd.get("documentId") ?? "");
+  if (!documentId) return { error: "Choose a document.", fieldErrors: { documentId: ["Required."] } };
+  const r = await withTenant(s.firm.id, async (tx) => {
+    const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
+    const out = await draftOwnershipFromDocument(tx, { firmId: s.firm.id, userId: s.user.id }, file.partyId, documentId);
+    if (out.ok) await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "RegistryExtract", objectId: out.extractId, fields: ["source:ai-draft"] });
+    return out;
+  }, { timeoutMs: 150_000 });
+  if (!r.ok) return { error: r.error };
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: `The AI found ${r.people} ${r.people === 1 ? "person or company" : "people and companies"}. Check each one against the document, then add the owners to the structure.${r.warnings.length ? " Read the AI's warnings first." : ""}` };
 }
 
 export async function kybAddPersonAction(fileId: string, extractId: string, index: number): Promise<ActionState> {

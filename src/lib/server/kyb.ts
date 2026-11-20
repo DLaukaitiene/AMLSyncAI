@@ -1,4 +1,5 @@
 import "server-only";
+import { TRUST_ROLE_LINK } from "@/lib/ai/ownership";
 import type { Prisma } from "@prisma/client";
 import { adminDb, withTenant, type Tx } from "./db";
 import { audit } from "./audit";
@@ -208,12 +209,14 @@ export async function addPersonFromRegister(ctx: { firmId: string; userId: strin
     const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
     if (file.partyId !== x.partyId) throw new Error("This extract belongs to another client.");
     const direct = p.ownershipPct !== null && p.ownershipPct > 0;
-    if (!direct && !p.roles.includes("ubo")) throw new Error("Only owners and beneficial owners can be added to the ownership structure.");
-    if (!direct && p.entityType === "company") throw new Error("Add the company's own owners instead.");
+    const fromAi = (data as { provider?: string }).provider === "AI";
+    const trustRole = (Object.keys(TRUST_ROLE_LINK) as (keyof typeof TRUST_ROLE_LINK)[]).find((r) => p.roles.includes(r));
+    if (!direct && !trustRole && !p.roles.includes("ubo")) throw new Error("Only owners, beneficial owners and trust parties can be added to the ownership structure.");
+    if (!direct && !trustRole && p.entityType === "company") throw new Error("Add the company's own owners instead.");
     const kind = p.entityType === "company" ? "LEGAL" : "NATURAL";
     const details: Record<string, unknown> = kind === "NATURAL"
-      ? { firstNames: p.firstName ?? p.name.split(" ").slice(0, -1).join(" ") ?? p.name, lastName: p.lastName ?? p.name.split(" ").slice(-1)[0], nationalities: p.nationality ? [normalizeCountry(p.nationality)].filter(Boolean) : [], ...(p.birthDate ? { birthDate: p.birthDate } : {}), source: "register" }
-      : { name: p.name, ...(p.registrationNumber ? { registrationNumber: p.registrationNumber } : {}), source: "register" };
+      ? { firstNames: p.firstName ?? p.name.split(" ").slice(0, -1).join(" ") ?? p.name, lastName: p.lastName ?? p.name.split(" ").slice(-1)[0], nationalities: p.nationality ? [normalizeCountry(p.nationality)].filter(Boolean) : [], ...(p.birthDate ? { birthDate: p.birthDate } : {}), source: fromAi ? "document" : "register" }
+      : { name: p.name, ...(p.registrationNumber ? { registrationNumber: p.registrationNumber } : {}), source: fromAi ? "document" : "register" };
     const owner = await tx.party.create({ data: { firmId: ctx.firmId, kind, displayName: p.name, details: details as Prisma.InputJsonValue } });
     if (direct) {
       const existing = (await tx.ownershipLink.findMany({ where: { ownedId: x.partyId, type: "SHAREHOLDING" } })).reduce((a, l) => a + Number(l.pct ?? 0), 0);
@@ -221,15 +224,17 @@ export async function addPersonFromRegister(ctx: { firmId: string; userId: strin
     }
     await tx.ownershipLink.create({
       data: {
-        firmId: ctx.firmId, ownerId: owner.id, ownedId: x.partyId, source: "REGISTER",
+        firmId: ctx.firmId, ownerId: owner.id, ownedId: x.partyId, source: fromAi ? "UPLOADED_EXTRACT" : "REGISTER",
         ...(direct
           ? { type: "SHAREHOLDING", pct: p.ownershipPct }
-          : { type: "CONTROL", controlDescription: `Beneficial owner per company register${p.effectivePct ? ` (indirect, about ${p.effectivePct}%)` : ""}` }),
+          : trustRole
+            ? { type: TRUST_ROLE_LINK[trustRole], controlDescription: `${trustRole[0].toUpperCase()}${trustRole.slice(1)} per ${fromAi ? x.register.replace(/^Drafted by AI from /, "") : "register"}` }
+            : { type: "CONTROL", controlDescription: `Beneficial owner per ${fromAi ? x.register.replace(/^Drafted by AI from /, "") : "company register"}${p.effectivePct ? ` (indirect, about ${p.effectivePct}%)` : ""}` }),
       },
     });
     p.addedPartyId = owner.id;
     await tx.registryExtract.update({ where: { id: x.id }, data: { data: data as unknown as Prisma.InputJsonValue } });
-    await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "OwnershipLink", objectId: owner.id, fields: ["source:register"] });
+    await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "OwnershipLink", objectId: owner.id, fields: [fromAi ? "source:ai-draft" : "source:register"] });
     await runScreening(tx, ctx.firmId, [owner.id]);
     await persistRiskIfChanged(tx, ctx.firmId, await loadClientFile(tx, ctx.firmId, fileId));
     return p.name;

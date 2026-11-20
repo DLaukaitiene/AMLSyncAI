@@ -60,7 +60,7 @@ export default async function FirmPage() {
       </ul>
       <section className="space-y-2 rounded-2xl border border-border p-4" data-testid="ai-drafting">
         <h2 className="text-lg font-semibold">AI drafting</h2>
-        <p className="text-sm text-muted">AI can write a first draft of a suspicious transaction report narrative and help redraft your policy sections. A person always reviews and approves the text; AI never decides anything. The text you ask it to draft is sent to the AI provider ({aiProviderLabel()}) and is not used to train AI models. Your plan includes {aiUsage.strCap} report drafts a month; used this month: {aiUsage.str}.</p>
+        <p className="text-sm text-muted">AI can write a first draft of a suspicious transaction report narrative, help redraft your policy sections, and read a client&apos;s shareholder register or trust deed to propose the owners. A person always reviews and approves the text; AI never decides anything. The text you ask it to draft is sent to the AI provider ({aiProviderLabel()}) and is not used to train AI models. Your plan includes {aiUsage.strCap} report drafts a month; used this month: {aiUsage.str}. Ownership drafts from documents: {Math.round((aiUsage.ownershipCents / aiUsage.ownershipCapCents) * 100)}% of this month&apos;s allowance used.</p>
         {!aiEnabled() ? (
           <p className="text-sm">AI drafting isn&apos;t available yet. We&apos;ll let you know when it is.</p>
         ) : edit ? (
