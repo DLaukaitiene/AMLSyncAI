@@ -57,8 +57,8 @@ export interface RiskResult {
   countryProfileVersion?: number;
 }
 
-const MEDIUM_FROM = 3;
-const HIGH_FROM = 7;
+export const MEDIUM_FROM = 3;
+export const HIGH_FROM = 7;
 
 export function scoreClientRisk(input: RiskInput, profile?: CountryProfile, countryProfileVersion?: number): RiskResult {
   const f: RiskFactor[] = [];

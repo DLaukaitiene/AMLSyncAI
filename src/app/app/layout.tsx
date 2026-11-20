@@ -54,6 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
         { href: "/app/firm/privacy", label: "Data Protection", icon: "privacy" },
         { href: "/app/firm/documents", label: "My Firm Compliance", icon: "folder" },
+        { href: "/app/firm/review-pack", label: "Review Pack", icon: "report" },
       ],
     },
     { href: "/app/firm/training", label: "My Compliance", icon: "training" },

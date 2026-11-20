@@ -60,7 +60,7 @@ export const OBLIGATIONS: Obligation[] = [
     title: "Approve your AML Program",
     what: "Written policies and procedures for client checks, reporting, record keeping and training, approved by management and followed by everyone.",
     when: "After your risk assessment; review every year. Staff confirm they have read it.",
-    how: ["Compliance Hub → AML Program: generate it from your risk assessment.", "Edit where needed, approve, and ask staff to acknowledge it."],
+    how: ["Compliance Hub → AML Program: generate it from your risk assessment.", "Edit where needed, approve, and ask staff to acknowledge it.", "Compliance Hub → Review Pack: give your lawyer or accountant the list of rules the app applies, to confirm they fit your firm."],
     article: "AMLR Art. 9",
     duty: "Everyone in the firm must follow the approved AML Program.",
     action: { href: "/app/firm/policies", label: "AML Program" },

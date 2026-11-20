@@ -47,7 +47,7 @@ function statusWhere(st: Status, soon: Date, now: Date): Prisma.CddFileWhereInpu
 }
 
 /** Ready-to-decide is worked out for small open lists only (it runs the full gate check per file). */
-const READY_CHECK_LIMIT = 60;
+const READY_CHECK_LIMIT = 15;
 const pick = <T extends readonly { id: string }[]>(list: T, v: string | undefined) => (list.find((x) => x.id === v) ?? list[0]).id as T[number]["id"];
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ q?: string; tab?: string; status?: string; type?: string; risk?: string; sort?: string; bulk?: string; sent?: string; skipped?: string; n?: string }> }) {
@@ -96,9 +96,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     }
     const open = files.filter((f) => f.status === "OPEN");
     const openItems = new Map<string, number>();
-    if (open.length <= READY_CHECK_LIMIT) {
-      for (const f of open) openItems.set(f.id, openCddItems((await loadClientFile(tx, s.firm.id, f.id)).state).length);
-    }
+    // Worked out for the first in-progress files shown (it runs the full gate check per file).
+    for (const f of open.slice(0, READY_CHECK_LIMIT)) openItems.set(f.id, openCddItems((await loadClientFile(tx, s.firm.id, f.id)).state).length);
     return { files, total, openItems, verification, screening };
   });
   const filtered = status !== "all" || type !== "all" || risk !== "all" || !!q;

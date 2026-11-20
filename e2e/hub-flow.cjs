@@ -74,6 +74,13 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   if (head !== "%PDF-") throw new Error("✘ risk report is not a PDF: " + head);
   log("risk report downloads as PDF");
 
+  // Review pack
+  await p.goto(BASE + "/app/firm/review-pack");
+  await p.getByTestId("review-pack").getByText("4. Who needs which check").waitFor();
+  const [rp] = await Promise.all([p.waitForEvent("download"), p.getByRole("link", { name: "Download PDF" }).click()]);
+  if (require("fs").readFileSync(await rp.path()).subarray(0, 5).toString() !== "%PDF-") throw new Error("✘ review pack is not a PDF");
+  log("Review Pack: rules shown in plain words and downloadable as PDF");
+
   // Section tabs
   await p.goto(BASE + "/app/team/responsibilities");
   await p.getByRole("navigation", { name: "Team sections" }).getByRole("link", { name: "Training Register" }).waitFor();
