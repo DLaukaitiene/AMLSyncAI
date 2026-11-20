@@ -200,6 +200,7 @@ model Firm {
   status        String    @default("active") // active | paused | suspended (Backoffice) | cancelled
   cancelledAt   DateTime?
   archiveUntil  String?   // YYYY-MM-DD
+  shareCode     String?  @unique // given to another firm so it can send this firm a client file
   plan          String   @default("starter") // solo | starter | custom (src/lib/billing/plans.ts)
   trialEndsOn   String?  // YYYY-MM-DD; no subscription fee before this date
   // Screening limits (adjusted by AMLSyncAI on request, within 1 business day)
@@ -1532,4 +1533,29 @@ model JobRun {
   summary    Json      @default("{}")
 
   @@index([job, startedAt])
+}
+
+/// A client file sent by one firm to another (with the client's agreement or another legal basis).
+/// Not tenant-scoped: read and written only through src/lib/server/sharing.ts, which checks both firm ids.
+/// The package is encrypted with the receiving firm's key; document copies are written under its key too.
+model ClientShare {
+  id            String    @id @default(uuid()) @db.Uuid
+  fromFirmId    String    @db.Uuid
+  toFirmId      String    @db.Uuid
+  sourceFileId  String    @db.Uuid
+  clientName    String
+  note          String    @default("")
+  legalBasis    String
+  status        String    @default("pending") // pending | accepted | declined | withdrawn | expired
+  packageEnc    Bytes
+  documents     Json      // [{ key, fileName, kind, mimeType, sizeBytes, sha256 }]
+  createdBy     String    @db.Uuid
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+  decidedAt     DateTime?
+  decidedBy     String?   @db.Uuid
+  importedFileId String?  @db.Uuid
+
+  @@index([toFirmId, status])
+  @@index([fromFirmId])
 }

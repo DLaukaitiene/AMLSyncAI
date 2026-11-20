@@ -81,6 +81,14 @@ export async function readBlob(firmId: string, key: string): Promise<Buffer> {
   return Buffer.concat([d.update(buf.subarray(28)), d.final()]);
 }
 
+/** Copies a firm's file to another firm, re-encrypted with the receiving firm's key (client sharing). */
+export async function copyBlobToFirm(fromFirmId: string, key: string, toFirmId: string): Promise<string> {
+  const bytes = await readBlob(fromFirmId, key);
+  const newKey = `${toFirmId}/${randomUUID()}`;
+  await writeBlob(toFirmId, newKey, bytes);
+  return newKey;
+}
+
 export async function deleteBlob(key: string) {
   if (dbEnabled()) {
     await adminDb.blob.deleteMany({ where: { key } });

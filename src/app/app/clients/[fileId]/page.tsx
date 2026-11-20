@@ -26,6 +26,8 @@ import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
 import { aiForFirm } from "@/lib/server/ai";
+import { SHARE_BASES } from "@/lib/server/sharing";
+import { shareClientAction } from "../shared/actions";
 import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS } from "@/lib/didit/map";
 import { KybSearch } from "./kyb-panel";
 import { kybSearchStatus, searchLimitMessage } from "@/lib/server/kyb";
@@ -197,6 +199,16 @@ export default async function ClientFilePage({ params, searchParams }: { params:
           ))}
         </ol>
       </nav>
+
+      {(d.receivedFrom as { firm: string; sentAt: string; receivedAt: string; summary: string[] } | undefined) && (() => {
+        const rf = d.receivedFrom as { firm: string; sentAt: string; receivedAt: string; summary: string[] };
+        return (
+          <details className="rounded-2xl border border-sky-300 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-50" data-testid="received-from">
+            <summary className="cursor-pointer font-medium">Received from {rf.firm} on {rf.receivedAt}. Review it before you accept the client: your firm is responsible for its own checks (Art. 48 AMLR).</summary>
+            <ul className="mt-2 list-disc pl-5">{rf.summary.map((x, i) => <li key={i}>{x}</li>)}</ul>
+          </details>
+        );
+      })()}
 
       <nav aria-label="Profile tabs" className="overflow-x-auto border-b border-border">
         <ul className="flex min-w-max gap-1">
@@ -540,6 +552,25 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             )}
           </div>
         </div>
+        {can(r, "approve.compliance") && (
+          <details className="mt-4 rounded border border-border p-3" data-testid="share-file">
+            <summary className="cursor-pointer text-sm font-medium">Share with another firm</summary>
+            <div className="mt-3 space-y-2 text-sm">
+              <p className="text-muted">Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Ask them for their firm code (Clients → Shared Files). Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off (Art. 73).</p>
+              <ActionForm action={shareClientAction.bind(null, fileId)}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Their firm code" name="code" required hint="e.g. ABCD-EFGH" autoComplete="off" />
+                  <Field label="Legal basis" name="legalBasis" required>
+                    <select name="legalBasis" className={sel} aria-label="Legal basis">{Object.entries(SHARE_BASES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+                  </Field>
+                </div>
+                <Field label="Note to the other firm" name="note" hint="Optional, e.g. why you are sending it." />
+                <label className="flex items-start gap-2"><input type="checkbox" name="confirm" className="mt-1" /> <span>I confirm we may share this file on the basis above, and the client is not the subject of a suspicion report.</span></label>
+                <Submit variant="secondary">Send the file</Submit>
+              </ActionForm>
+            </div>
+          </details>
+        )}
       </Card>
 
       {cf.bo && (
