@@ -6,10 +6,10 @@ import { DocView } from "@/components/doc-view";
 import type { GeneratedDoc } from "@/lib/docs/model";
 import { noChangeAction, requestCodeAction, saveAction, startIdvAction, uploadAction, verifyCodeAction } from "./actions";
 import { diditEnabled } from "@/lib/server/didit";
+import { PEOPLE_ROWS, PERSON_ROLES } from "@/lib/portal/people";
 import { ActionButton } from "@/components/action-button";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
-const area = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
 
 function YesNo({ name, label, value }: { name: string; label: string; value?: string }) {
   return (
@@ -79,7 +79,8 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
   const yn = (k: string) => (prev[k] === true || prev[k] === "yes" ? "yes" : prev[k] === false || prev[k] === "no" ? "no" : undefined);
   const kinds = natural
     ? ["id", "proof-of-address", "sof-evidence", ...(ctx.eddRequired ? ["sow-evidence"] : []), "other"]
-    : ["company-extract", "sof-evidence", "power-of-attorney", "other"];
+    : ["company-extract", "articles", "shareholder-register", "id", "proof-of-address", "sof-evidence", "power-of-attorney", "other"];
+
 
   return (
     <div className="space-y-8">
@@ -89,7 +90,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           It takes about 10 minutes. Fields marked * are required. You can save and come back later. Only you can see this page; it shows only your own information.
         </p>
         <ol className="flex flex-wrap gap-2 pt-2 text-xs" aria-label="Steps">
-          {[...(natural && diditEnabled() ? [ctx.verified ? "✓ Identity" : "Identity"] : []), "Documents", natural ? "About you" : "The company", "Service and money", "Sign"].map((x, i) => (
+          {[...(natural && diditEnabled() ? [ctx.verified ? "✓ Identity" : "Identity"] : []), "Documents", natural ? "About you" : "The company", ...(natural ? [] : ["People"]), "Service and money", "Sign"].map((x, i) => (
             <li key={x} className="rounded-full border border-border bg-background px-2.5 py-1"><span className="font-semibold">{i + 1}.</span> {x}</li>
           ))}
         </ol>
@@ -137,6 +138,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           <Field label="Document" name="kind">
             <select name="kind" className={sel} aria-label="Document">{kinds.map((k) => <option key={k} value={k}>{DOCUMENT_KINDS[k]}</option>)}</select>
           </Field>
+          {!natural && <Field label="Whose document? (for an ID or proof of address)" name="whose" hint="The person's full name, as you list them below." />}
           <Field label="File (PDF, JPG, PNG, HEIC or DOCX, max 15 MB)" name="file">
             <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.docx" aria-label="File" className="text-sm" />
           </Field>
@@ -168,6 +170,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             <Field label="If yes, for whom?" name="actingForWhom" defaultValue={v("actingForWhom")} />
           </section>
         ) : (
+          <>
           <section className="space-y-4 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
             <h2 className="font-semibold">About the company</h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -178,11 +181,39 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             </div>
             <Field label="Registered office" name="registeredOffice" required defaultValue={v("registeredOffice")} />
             <Field label="What the company does" name="natureOfBusiness" required defaultValue={v("natureOfBusiness")} />
-            <Field label="Owners with 25% or more (one per line: name; date of birth; nationality; %)" name="owners" hint="e.g. Jonas Jonaitis; 1980-05-01; Lithuania; 60 — any country name or code">
-              <textarea name="owners" rows={4} className={area} aria-label="Owners" defaultValue={v("owners")} />
-            </Field>
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="noOwnerOver25" defaultChecked={prev.noOwnerOver25 === "on"} /> Nobody owns or controls 25% or more</label>
+            <YesNo name="sanctions" label="Is the company, or anyone listed below, subject to EU or UN sanctions, or owned or controlled by someone who is? *" value={yn("sanctions")} />
+            <Field label="If yes, give details" name="sanctionsDetails" defaultValue={v("sanctionsDetails")} />
           </section>
+
+          <section className="space-y-4 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" data-testid="company-people">
+            <h2 className="font-semibold">Directors, owners and beneficial owners</h2>
+            <p className="text-sm text-muted">List every director (board member or manager), every shareholder, and every person who owns or controls 25% or more, directly or through other companies. Add yourself too if you sign for the company. If a shareholder is a company, list it as a company. Leave unused rows empty. Upload each person&apos;s ID document above, with their name in &quot;Whose document&quot;.</p>
+            {Array.from({ length: PEOPLE_ROWS }, (_, i) => (
+              <fieldset key={i} className="space-y-3 rounded-xl border border-border p-4" data-testid={`person-${i}`}>
+                <legend className="px-1 text-sm font-semibold">Person or company {i + 1}{i > 1 ? " (optional)" : ""}</legend>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label="Full name" name={`p${i}_name`} defaultValue={v(`p${i}_name`)} />
+                  <Field label="Type" name={`p${i}_type`}>
+                    <select name={`p${i}_type`} className={sel} aria-label={`Type ${i + 1}`} defaultValue={v(`p${i}_type`) || "person"}><option value="person">Person</option><option value="company">Company</option></select>
+                  </Field>
+                  <Field label="% of shares held directly" name={`p${i}_pct`} inputMode="decimal" defaultValue={v(`p${i}_pct`)} />
+                  <Field label="Date of birth (people)" name={`p${i}_birthDate`} type="date" defaultValue={v(`p${i}_birthDate`)} />
+                  <Field label="Nationality / country of registration" name={`p${i}_nationality`} defaultValue={v(`p${i}_nationality`)} />
+                  <Field label="Email (for the identity check)" name={`p${i}_email`} type="email" defaultValue={v(`p${i}_email`)} />
+                  <Field label="Registration number (companies)" name={`p${i}_regNo`} defaultValue={v(`p${i}_regNo`)} />
+                  <Field label="Control other than through shares, if any" name={`p${i}_control`} defaultValue={v(`p${i}_control`)} hint="e.g. right to appoint the board" />
+                </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm" role="group" aria-label={`Roles of person ${i + 1}`}>
+                  {PERSON_ROLES.map(([r, label]) => (
+                    <label key={r} className="flex items-center gap-2"><input type="checkbox" name={`p${i}_role_${r}`} defaultChecked={prev[`p${i}_role_${r}`] === "on"} /> {label}</label>
+                  ))}
+                </div>
+                <YesNo name={`p${i}_pep`} label="Does this person hold, or have they held in the last 12 months, a prominent public function, or are they a family member or close associate of someone who does?" value={yn(`p${i}_pep`)} />
+                <Field label="If yes, which function?" name={`p${i}_pepFunction`} defaultValue={v(`p${i}_pepFunction`)} />
+              </fieldset>
+            ))}
+          </section>
+          </>
         )}
 
         <section className="space-y-4 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">
@@ -190,6 +221,7 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
           <Field label="What do you need the service for?" name="purpose" required defaultValue={v("purpose")} />
           <Field label="Where does the money for this come from?" name="sourceOfFunds" required defaultValue={v("sourceOfFunds")} hint="e.g. salary savings, sale of a flat, business income, mortgage" />
           {natural && ctx.eddRequired && <Field label="How did you build up your wealth overall?" name="sourceOfWealth" defaultValue={v("sourceOfWealth")} />}
+          {!natural && <Field label="How did the owners build up the company's wealth? (if the amount is large)" name="sourceOfWealth" defaultValue={v("sourceOfWealth")} />}
         </section>
 
         <section className="space-y-3 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]">

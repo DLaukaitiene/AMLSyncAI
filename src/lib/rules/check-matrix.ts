@@ -17,6 +17,7 @@ export type StructureRole =
   | "trust-protector"
   | "trust-beneficiary"
   | "nominee"
+  | "director"
   | "unknown";
 
 /** Strictest first. */
@@ -62,6 +63,8 @@ function forRole(kind: "natural" | "legal" | "arrangement", role: StructureRole,
       return { level: person ? "full" : "register", article: "Art. 62(1), 66", why: "Nominees and their nominators must be identified and verified." };
     case "intermediate-owner":
       return { level: "reasonable", article: "Art. 20(1)(b)", why: "Understand the ownership chain." };
+    case "director":
+      return { level: "identify", article: "Art. 22(1)(b)", why: "Identify the people in the company's senior management (directors)." };
     case "minority-owner":
       return { level: "screen-only", article: "Art. 20(1)(d)", why: "Below the threshold: screened for sanctions (including the 50% rule)." };
     default:

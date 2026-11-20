@@ -31,7 +31,7 @@ const CHECK = " [check]";
 const ROLES: [StructureRole, string][] = [
   ["client", "The client"], ["beneficial-owner", "Beneficial owner (25% or more, or control)"], ["intermediate-owner", "Company in the ownership chain"],
   ["minority-owner", "Owner below 25%"], ["senior-managing-official", "Senior managing official (no owner found)"], ["trustee", "Trustee"],
-  ["trust-settlor", "Settlor / protector of a trust"], ["trust-beneficiary", "Beneficiary of a trust"], ["nominee", "Nominee shareholder or director"],
+  ["trust-settlor", "Settlor / protector of a trust"], ["trust-beneficiary", "Beneficiary of a trust"], ["nominee", "Nominee shareholder or director"], ["director", "Director / senior management"],
 ];
 
 export function buildReviewPack(i: ReviewPackInput): GeneratedDoc {

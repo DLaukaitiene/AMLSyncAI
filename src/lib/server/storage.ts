@@ -163,6 +163,8 @@ export const DOCUMENT_KINDS: Record<string, string> = {
   id: "Identity document",
   "proof-of-address": "Proof of address",
   "company-extract": "Company / BO register extract",
+  articles: "Articles of association / founding documents",
+  "shareholder-register": "Shareholder register",
   "sof-evidence": "Source of funds evidence",
   "sow-evidence": "Source of wealth evidence",
   "power-of-attorney": "Power of attorney",

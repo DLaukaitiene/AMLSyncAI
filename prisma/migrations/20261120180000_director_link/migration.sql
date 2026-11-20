@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "OwnershipLinkType" ADD VALUE IF NOT EXISTS 'DIRECTOR';
+

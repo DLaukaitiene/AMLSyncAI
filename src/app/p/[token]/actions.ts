@@ -9,8 +9,9 @@ import { confirmNoChange, portalContext, portalLegalSchema, portalNaturalSchema,
 import { withTenant } from "@/lib/server/db";
 import { storeDocument } from "@/lib/server/storage";
 import { formToObject, zodErrors } from "@/lib/server/form";
+import { parseCompanyPeople, type DeclaredPerson } from "@/lib/portal/people";
 
-const PORTAL_KINDS = ["id", "proof-of-address", "company-extract", "sof-evidence", "sow-evidence", "power-of-attorney", "other"];
+const PORTAL_KINDS = ["id", "proof-of-address", "company-extract", "articles", "shareholder-register", "sof-evidence", "sow-evidence", "power-of-attorney", "other"];
 
 export async function requestCodeAction(token: string): Promise<ActionState> {
   const { ip } = await requestMeta();
@@ -28,7 +29,7 @@ export async function verifyCodeAction(token: string, _: ActionState, fd: FormDa
 
 function readAnswers(fd: FormData, kind: string) {
   const o = formToObject(fd);
-  return kind === "NATURAL" ? portalNaturalSchema.safeParse(o) : portalLegalSchema.safeParse({ ...o, noOwnerOver25: o.noOwnerOver25 === "on" });
+  return kind === "NATURAL" ? portalNaturalSchema.safeParse(o) : portalLegalSchema.safeParse(o);
 }
 
 export async function saveAction(token: string, _: ActionState, fd: FormData): Promise<ActionState> {
@@ -41,16 +42,18 @@ export async function saveAction(token: string, _: ActionState, fd: FormData): P
   }
   const parsed = readAnswers(fd, ctx.party.kind);
   if (!parsed.success) return zodErrors(parsed.error);
-  if (ctx.party.kind === "LEGAL") {
-    const d = parsed.data as { owners: string; noOwnerOver25: boolean };
-    if (!d.owners.trim() && !d.noOwnerOver25) return { error: "List the owners, or confirm that nobody owns 25% or more.", fieldErrors: { owners: ["Required."] } };
+  let people: DeclaredPerson[] | undefined;
+  if (ctx.party.kind !== "NATURAL") {
+    const pr = parseCompanyPeople(formToObject(fd));
+    if (!pr.ok) return { error: "Check the people you listed.", fieldErrors: pr.fieldErrors };
+    people = pr.people;
   }
   const signature = String(fd.get("signature") ?? "").trim();
   if (fd.get("confirm") !== "on" || signature.length < 3) {
     return { error: "Confirm the declaration and type your full name to sign.", fieldErrors: { signature: ["Type your full name."] } };
   }
   const { ip } = await requestMeta();
-  const r = await submitPortal(token, parsed.data, { confirm: true, signature }, ip);
+  const r = await submitPortal(token, parsed.data, { confirm: true, signature }, ip, people);
   if (!r.ok) return { error: r.error };
   revalidatePath(`/p/${token}`);
   return { message: "Submitted." };
@@ -64,8 +67,11 @@ export async function uploadAction(token: string, _: ActionState, fd: FormData):
   if (!PORTAL_KINDS.includes(kind)) return { error: "Choose what the document is." };
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a file." };
   const bytes = new Uint8Array(await file.arrayBuffer());
+  // Companies: whose ID or proof of address this is goes into the file name, so staff can match it to the person.
+  const whose = String(fd.get("whose") ?? "").trim().replace(/[^\p{L}\p{N} .'-]/gu, "").slice(0, 80);
+  const fileName = whose && (kind === "id" || kind === "proof-of-address") ? `${whose} – ${file.name}` : file.name;
   const r = await withTenant(ctx.link.firmId, (tx) =>
-    storeDocument(tx, { firmId: ctx.link.firmId, partyId: ctx.party.id, kind, fileName: file.name, bytes, uploadedBy: `portal:${ctx.link.id}` }),
+    storeDocument(tx, { firmId: ctx.link.firmId, partyId: ctx.party.id, kind, fileName, bytes, uploadedBy: `portal:${ctx.link.id}` }),
   );
   if (!r.ok) return { error: r.error };
   revalidatePath(`/p/${token}`);

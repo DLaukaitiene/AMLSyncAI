@@ -221,32 +221,42 @@ export async function addPersonFromRegister(ctx: { firmId: string; userId: strin
     const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId } });
     if (file.partyId !== x.partyId) throw new Error("This extract belongs to another client.");
     const direct = p.ownershipPct !== null && p.ownershipPct > 0;
-    const fromAi = (data as { provider?: string }).provider === "AI";
+    const provider = (data as { provider?: string }).provider;
+    const fromAi = provider === "AI";
+    const fromClient = provider === "CLIENT";
+    const dp = p as typeof p & { email?: string; isPep?: boolean; pepFunction?: string; controlDescription?: string };
     const trustRole = (Object.keys(TRUST_ROLE_LINK) as (keyof typeof TRUST_ROLE_LINK)[]).find((r) => p.roles.includes(r));
-    if (!direct && !trustRole && !p.roles.includes("ubo")) throw new Error("Only owners, beneficial owners and trust parties can be added to the ownership structure.");
-    if (!direct && !trustRole && p.entityType === "company") throw new Error("Add the company's own owners instead.");
+    const director = p.roles.includes("director") && p.entityType === "person";
+    const controls = p.roles.includes("ubo") && !direct && p.entityType === "person";
+    if (!direct && !trustRole && !controls && !director) {
+      throw new Error(p.entityType === "company" && p.roles.includes("ubo") ? "Add the company's own owners instead." : "Only owners, beneficial owners, directors and trust parties can be added to the structure.");
+    }
     const kind = p.entityType === "company" ? "LEGAL" : "NATURAL";
+    const source = fromAi ? "document" : fromClient ? "client-declaration" : "register";
     const details: Record<string, unknown> = kind === "NATURAL"
-      ? { firstNames: p.firstName ?? p.name.split(" ").slice(0, -1).join(" ") ?? p.name, lastName: p.lastName ?? p.name.split(" ").slice(-1)[0], nationalities: p.nationality ? [normalizeCountry(p.nationality)].filter(Boolean) : [], ...(p.birthDate ? { birthDate: p.birthDate } : {}), source: fromAi ? "document" : "register" }
-      : { name: p.name, ...(p.registrationNumber ? { registrationNumber: p.registrationNumber } : {}), source: fromAi ? "document" : "register" };
+      ? {
+          firstNames: p.firstName ?? p.name.split(" ").slice(0, -1).join(" ") ?? p.name, lastName: p.lastName ?? p.name.split(" ").slice(-1)[0],
+          nationalities: p.nationality ? [normalizeCountry(p.nationality)].filter(Boolean) : [], ...(p.birthDate ? { birthDate: p.birthDate } : {}),
+          ...(dp.email ? { email: dp.email } : {}), ...(dp.isPep !== undefined ? { isPep: dp.isPep } : {}), ...(dp.pepFunction ? { pepFunction: dp.pepFunction } : {}), source,
+        }
+      : { name: p.name, ...(p.registrationNumber ? { registrationNumber: p.registrationNumber } : {}), ...(p.nationality ? { countryOfCreation: normalizeCountry(p.nationality) ?? undefined } : {}), source };
     const owner = await tx.party.create({ data: { firmId: ctx.firmId, kind, displayName: p.name, details: details as Prisma.InputJsonValue } });
     if (direct) {
       const existing = (await tx.ownershipLink.findMany({ where: { ownedId: x.partyId, type: "SHAREHOLDING" } })).reduce((a, l) => a + Number(l.pct ?? 0), 0);
       if (existing + p.ownershipPct! > 100.0001) throw new Error(`Shareholdings would add up to ${existing + p.ownershipPct!}%. Check the structure first.`);
     }
-    await tx.ownershipLink.create({
-      data: {
-        firmId: ctx.firmId, ownerId: owner.id, ownedId: x.partyId, source: fromAi ? "UPLOADED_EXTRACT" : "REGISTER",
-        ...(direct
-          ? { type: "SHAREHOLDING", pct: p.ownershipPct }
-          : trustRole
-            ? { type: TRUST_ROLE_LINK[trustRole], controlDescription: `${trustRole[0].toUpperCase()}${trustRole.slice(1)} per ${fromAi ? x.register.replace(/^Drafted by AI from /, "") : "register"}` }
-            : { type: "CONTROL", controlDescription: `Beneficial owner per ${fromAi ? x.register.replace(/^Drafted by AI from /, "") : "company register"}${p.effectivePct ? ` (indirect, about ${p.effectivePct}%)` : ""}` }),
-      },
-    });
+    const per = fromAi ? x.register.replace(/^Drafted by AI from /, "") : fromClient ? "the client's declaration" : "register";
+    const linkSource = fromAi ? "UPLOADED_EXTRACT" : fromClient ? "DECLARATION" : "REGISTER";
+    const links: Prisma.OwnershipLinkUncheckedCreateInput[] = [];
+    const base = { firmId: ctx.firmId, ownerId: owner.id, ownedId: x.partyId, source: linkSource } as const;
+    if (direct) links.push({ ...base, type: "SHAREHOLDING", pct: p.ownershipPct });
+    else if (trustRole) links.push({ ...base, type: TRUST_ROLE_LINK[trustRole], controlDescription: `${trustRole[0].toUpperCase()}${trustRole.slice(1)} per ${per}` });
+    else if (controls) links.push({ ...base, type: "CONTROL", controlDescription: dp.controlDescription ? `${dp.controlDescription} (per ${per})` : `Beneficial owner per ${fromAi || fromClient ? per : "company register"}${p.effectivePct ? ` (indirect, about ${p.effectivePct}%)` : ""}` });
+    if (director) links.push({ ...base, type: "DIRECTOR", controlDescription: `per ${per}` });
+    for (const l of links) await tx.ownershipLink.create({ data: l });
     p.addedPartyId = owner.id;
     await tx.registryExtract.update({ where: { id: x.id }, data: { data: data as unknown as Prisma.InputJsonValue } });
-    await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "OwnershipLink", objectId: owner.id, fields: [fromAi ? "source:ai-draft" : "source:register"] });
+    await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "OwnershipLink", objectId: owner.id, fields: [`source:${source}`] });
     await runScreening(tx, ctx.firmId, [owner.id]);
     await persistRiskIfChanged(tx, ctx.firmId, await loadClientFile(tx, ctx.firmId, fileId));
     return p.name;

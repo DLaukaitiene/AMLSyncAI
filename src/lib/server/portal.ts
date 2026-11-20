@@ -1,4 +1,5 @@
 import "server-only";
+import type { DeclaredPerson } from "@/lib/portal/people";
 import { normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
 import { cookies } from "next/headers";
 import { randomInt } from "node:crypto";
@@ -45,6 +46,14 @@ export async function createPortalLink(tx: Tx, ctx: { firmId: string; userId: st
   if (purpose === "refresh") {
     await sendEmail(email, `${firm.name}: please confirm your information is up to date`,
       `Hello,\n\nEU anti-money-laundering rules require ${firm.name} to keep your client information up to date. It takes a minute: confirm that nothing has changed, or update what has.\n\n${appUrl(`/p/${token}`)}\n\nYou'll get a one-time code by email to open the page.`);
+    return link.id;
+  }
+  if (file.party.kind !== "NATURAL") {
+    await sendEmail(
+      email,
+      `${firm.name}: information needed about ${file.party.displayName}`,
+      `Hello,\n\n${firm.name} needs information about ${file.party.displayName} to meet its obligations under EU anti-money-laundering rules.\n\nOn one secure page, please:\n- confirm the company's details\n- list its directors, shareholders and beneficial owners\n- upload the company documents and each person's ID document\n- tell us where the money for the service comes from\n- answer two short questions about public functions and sanctions, and sign\n\nIt takes about 15 minutes, and you can save and come back.\n\n${appUrl(`/p/${token}`)}\n\nYou'll get a one-time code by email to open it. The link expires in ${days} days. If you weren't expecting this, contact ${firm.name}.`,
+    );
     return link.id;
   }
   await sendEmail(
@@ -191,12 +200,9 @@ export const portalLegalSchema = z.object({
   natureOfBusiness: z.string().trim().min(3, "Required").max(500),
   purpose: z.string().trim().min(5, "Describe what you need the service for").max(1000),
   sourceOfFunds: z.string().trim().min(5, "Describe where the money comes from").max(2000),
-  owners: z
-    .string()
-    .trim()
-    .max(5000)
-    .refine((v) => v.split(/\r?\n/).filter(Boolean).every((l) => ownerLine.test(l.trim())), "One owner per line: name; date of birth; nationality; %"),
-  noOwnerOver25: z.boolean().default(false),
+  sourceOfWealth: t(2000),
+  sanctions: z.enum(["yes", "no"], { error: "Answer this question" }),
+  sanctionsDetails: t(1000),
   signatoryRole: z.string().trim().min(2, "Your role in the company").max(200),
 });
 
@@ -205,6 +211,7 @@ export interface PortalDeclaration {
   signature: string;
 }
 
+/** @deprecated company owners are now listed person by person (src/lib/portal/people.ts) */
 export function parseOwners(text: string) {
   return text
     .split(/\r?\n/)
@@ -233,6 +240,7 @@ export async function submitPortal(
   data: z.infer<typeof portalNaturalSchema> | z.infer<typeof portalLegalSchema>,
   declaration: PortalDeclaration,
   ip: string | null,
+  people?: DeclaredPerson[],
 ) {
   const ctx = await portalContext(token);
   if (!ctx || ctx.link.status === "SUBMITTED") return { ok: false as const, error: "This page can no longer be submitted." };
@@ -240,7 +248,7 @@ export async function submitPortal(
   await withTenant(link.firmId, async (tx) => {
     const signed = { signedName: declaration.signature, signedAt: new Date().toISOString(), ip, method: "simple electronic signature (typed name + one-time code)" };
     const prev = (party.details ?? {}) as Record<string, unknown>;
-    let newPartyIds: string[] = [party.id];
+    const newPartyIds: string[] = [party.id];
     if (party.kind === "NATURAL") {
       const d = data as z.infer<typeof portalNaturalSchema>;
       const details = {
@@ -253,21 +261,30 @@ export async function submitPortal(
       await tx.party.update({ where: { id: party.id }, data: { details: details as Prisma.InputJsonValue, displayName: displayName("NATURAL", details) } });
     } else {
       const d = data as z.infer<typeof portalLegalSchema>;
-      const details = {
-        ...prev, name: d.name, registrationNumber: d.registrationNumber, countryOfCreation: d.countryOfCreation, registeredOffice: d.registeredOffice,
-        natureOfBusiness: d.natureOfBusiness, sourceOfFunds: d.sourceOfFunds, declaredNoOwnerOver25: d.noOwnerOver25, signatoryRole: d.signatoryRole, portalDeclaration: signed,
+      // The client's answers fill blanks only; where the file already holds a different value it is kept
+      // and the client's value is shown to staff to accept or ignore.
+      const answers: Record<string, unknown> = {
+        name: d.name, registrationNumber: d.registrationNumber, countryOfCreation: d.countryOfCreation, registeredOffice: d.registeredOffice,
+        natureOfBusiness: d.natureOfBusiness, sourceOfFunds: d.sourceOfFunds, sourceOfWealth: d.sourceOfWealth || undefined,
       };
-      await tx.party.update({ where: { id: party.id }, data: { details: details as Prisma.InputJsonValue, displayName: d.name } });
-      // Declared direct owners: added as declarations (source DECLARATION), to be compared with the register.
-      for (const o of parseOwners(d.owners)) {
-        const p = await tx.party.create({
+      const details: Record<string, unknown> = { ...prev, signatoryRole: d.signatoryRole, portalDeclaration: signed, declaredSanctions: d.sanctions === "yes", declaredSanctionsDetails: d.sanctionsDetails || undefined };
+      const proposed: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(answers)) {
+        if (val === undefined || val === "") continue;
+        const cur = prev[k];
+        if (cur === undefined || cur === null || cur === "") details[k] = val;
+        else if (String(cur).trim() !== String(val).trim()) proposed[k] = val;
+      }
+      details.clientProposed = Object.keys(proposed).length ? proposed : undefined;
+      await tx.party.update({ where: { id: party.id }, data: { details: details as Prisma.InputJsonValue, ...(prev.name ? {} : { displayName: d.name }) } });
+      // Declared people: a list for staff to review and add one by one (never added automatically).
+      if (people?.length) {
+        await tx.registryExtract.create({
           data: {
-            firmId: link.firmId, kind: "NATURAL", displayName: o.name,
-            details: { firstNames: o.firstNames, lastName: o.lastName, birthDate: o.birthDate, nationalities: o.nationality ? [o.nationality] : [] } as Prisma.InputJsonValue,
+            firmId: link.firmId, partyId: party.id, register: `Declared by ${declaration.signature} (${d.signatoryRole}) in the client portal`, source: "DECLARATION", retrievedAt: new Date(),
+            data: { provider: "CLIENT", extractDate: new Date().toISOString().slice(0, 10), notes: "Declared by the client. Check each person against the register and documents before adding.", people } as unknown as Prisma.InputJsonValue,
           },
         });
-        await tx.ownershipLink.create({ data: { firmId: link.firmId, ownerId: p.id, ownedId: party.id, type: "SHAREHOLDING", pct: o.pct, source: "DECLARATION" } });
-        newPartyIds = [...newPartyIds, p.id];
       }
     }
     await tx.cddFile.update({ where: { id: link.cddFileId }, data: { purpose: data.purpose } });

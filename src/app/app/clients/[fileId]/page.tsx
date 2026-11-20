@@ -15,7 +15,7 @@ import {
   removeLinkAction, rescreenAction, riskOverrideAction, saveSmoAction, seniorApprovalAction, updatePurposeAction,
   revokePortalLinkAction, sendPortalLinkAction, staffUploadAction, openDiscrepancyAction, markRefreshedAction,
   diditIdvAction, diditRefreshAction, diditScreenAction,
-  kybAddPersonAction, aiOwnershipDraftAction,
+  kybAddPersonAction, aiOwnershipDraftAction, useClientValueAction,
   setScopeAction,
   declareLookThroughAction,
   reopenLookThroughAction,
@@ -306,8 +306,22 @@ export default async function ClientFilePage({ params, searchParams }: { params:
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Client data" id="client-data" hide={!show("client-data")}>
+          {!!d.declaredSanctions && <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-950 dark:border-red-800 dark:bg-red-950 dark:text-red-50">The client declared a sanctions link: {String(d.declaredSanctionsDetails ?? "no details given")}. Check it before doing anything else.</p>}
+          {!!d.clientProposed && Object.keys(d.clientProposed as object).length > 0 && (
+            <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50" data-testid="client-proposed">
+              <p className="font-medium">The client gave different values in the portal. The file keeps the current ones until you choose.</p>
+              <ul className="space-y-1">
+                {Object.entries(d.clientProposed as Record<string, string>).map(([k, val]) => (
+                  <li key={k} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>{LABELS[k] ?? k}: <strong>{String(val)}</strong> <span className="opacity-80">(on file: {String(d[k] ?? "—")})</span></span>
+                    {edit && <ActionButton action={useClientValueAction.bind(null, fileId, k)}>Use client&apos;s value</ActionButton>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            {Object.entries(d).filter(([k]) => k !== "portalDeclaration" && k !== "additionalEddCaseIds").filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0) && typeof v !== "boolean").map(([k, v]) => (
+            {Object.entries(d).filter(([k]) => k !== "portalDeclaration" && k !== "additionalEddCaseIds" && k !== "clientProposed" && k !== "receivedFrom").filter(([, v]) => v !== undefined && v !== "" && v !== false && !(Array.isArray(v) && v.length === 0) && typeof v !== "boolean").map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-muted">{LABELS[k] ?? k}</dt>
                 <dd>{Array.isArray(v) ? v.join(", ") : String(v)}</dd>
@@ -386,7 +400,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             {cf.extracts.length ? (
               <ul className="space-y-3 text-sm">
                 {cf.extracts.map((x) => {
-                  const xd = x.data as { level?: string; kybResponseId?: string | null; extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; warnings?: string[]; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean }[] };
+                  const xd = x.data as { level?: string; kybResponseId?: string | null; extractDate?: string; notes?: string; provider?: string; registryStatus?: string | null; tierDelivered?: string | null; ownershipStatus?: string | null; sandbox?: boolean; warnings?: string[]; people?: { name: string; entityType: string; roles: string[]; designation?: string; ownershipPct: number | null; effectivePct: number | null; addedPartyId: string | null; active: boolean; isPep?: boolean; pepFunction?: string; email?: string; birthDate?: string }[] };
                   return (
                     <li key={x.id} className="space-y-2">
                       <p>
@@ -402,6 +416,11 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                         </div>
                       )}
                       {xd.provider === "Didit" && xd.level !== "lite" && xd.ownershipStatus && xd.ownershipStatus !== "delivered" && <p className="text-xs text-muted">The register gave no ownership data ({xd.ownershipStatus}). Ask the client for the shareholder register and declare the owners below.</p>}
+                      {xd.provider === "CLIENT" && (
+                        <div className="rounded-lg border border-sky-300 bg-sky-50 p-3 text-xs text-sky-950 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-50" data-testid="client-declared-note">
+                          <p className="font-medium">Declared by the client. Check each person against the register and their documents, then add them. Nothing was added automatically.</p>
+                        </div>
+                      )}
                       {xd.provider === "AI" && (
                         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100" data-testid="ai-ownership-note">
                           <p className="font-medium">Drafted by AI. Check every name and percentage against the document before you add it.</p>
@@ -411,14 +430,14 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                       {xd.people?.length ? (
                         <ul className="divide-y divide-border rounded-lg border border-border" data-testid="register-people">
                           {xd.people.map((p, i) => {
-                            const canAdd = !p.addedPartyId && ((p.ownershipPct ?? 0) > 0 || (p.roles.includes("ubo") && p.entityType === "person") || p.roles.some((r) => ["trustee", "settlor", "protector", "beneficiary", "nominee"].includes(r)));
+                            const canAdd = !p.addedPartyId && ((p.ownershipPct ?? 0) > 0 || (p.entityType === "person" && (p.roles.includes("ubo") || p.roles.includes("director"))) || p.roles.some((r) => ["trustee", "settlor", "protector", "beneficiary", "nominee"].includes(r)));
                             return (
                               <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                                 <span>
                                   {p.name}
-                                  <span className="text-muted"> · {[p.entityType === "company" ? "company" : null, ...p.roles.filter((r) => r !== "officer").map((r) => (r === "ubo" ? "beneficial owner" : r)), p.designation, p.ownershipPct !== null ? `${p.ownershipPct}% direct` : null, p.effectivePct !== null && p.effectivePct !== p.ownershipPct ? `${p.effectivePct}% effective` : null, p.active ? null : "former"].filter(Boolean).join(" · ")}</span>
+                                  <span className="text-muted"> · {[p.entityType === "company" ? "company" : null, ...p.roles.filter((r) => r !== "officer").map((r) => (r === "ubo" ? "beneficial owner" : r)), p.designation, p.ownershipPct !== null ? `${p.ownershipPct}% direct` : null, p.effectivePct !== null && p.effectivePct !== p.ownershipPct ? `${p.effectivePct}% effective` : null, p.birthDate ? `born ${p.birthDate}` : null, p.isPep ? `declared PEP${p.pepFunction ? `: ${p.pepFunction}` : ""}` : null, p.email ?? null, p.active ? null : "former"].filter(Boolean).join(" · ")}</span>
                                 </span>
-                                {p.addedPartyId ? <span className="text-xs text-muted">In the structure</span> : canAdd && edit ? <ActionButton action={kybAddPersonAction.bind(null, fileId, x.id, i)}>Add to ownership</ActionButton> : null}
+                                {p.addedPartyId ? <span className="text-xs text-muted">In the structure</span> : canAdd && edit ? <ActionButton action={kybAddPersonAction.bind(null, fileId, x.id, i)}>{(p.ownershipPct ?? 0) > 0 || p.roles.includes("ubo") ? "Add to ownership" : "Add as director"}</ActionButton> : null}
                               </li>
                             );
                           })}
@@ -518,7 +537,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             )}
             {edit && (
               <ActionForm action={sendPortalLinkAction.bind(null, fileId)}>
-                <Field label={activeLink ? "Send a new link (the current one stops working)" : "Send the client a secure link to fill in their details"} name="email" type="email" defaultValue={String(d.email ?? activeLink?.sentTo ?? "")} hint="The client answers the questions, uploads documents and signs. Links expire after 14 days." />
+                <Field label={activeLink ? "Send a new link (the current one stops working)" : cf.party.kind === "NATURAL" ? "Send the client a secure link to fill in their details" : "Send the company's representative a request"} name="email" type="email" defaultValue={String(d.email ?? activeLink?.sentTo ?? "")} hint={cf.party.kind === "NATURAL" ? "The client answers the questions, uploads documents and signs. Links expire after 14 days." : "One link for the whole company: the representative lists the directors and owners (with PEP and sanctions answers), uploads the company documents and everyone's ID, and signs. You review each person before adding them. Links expire after 14 days."} />
                 <Submit variant="secondary">Send link</Submit>
               </ActionForm>
             )}
@@ -587,7 +606,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                 <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-1">
                   <span>
                     {cf.tree.parties.get(l.ownerId)?.displayName} → {cf.tree.parties.get(l.ownedId)?.displayName}:{" "}
-                    {l.type === "SHAREHOLDING" ? `${Number(l.pct)}%` : `control — ${l.controlDescription}`}
+                    {l.type === "SHAREHOLDING" ? `${Number(l.pct)}%` : l.type === "DIRECTOR" ? `director${l.controlDescription ? ` — ${l.controlDescription}` : ""}` : `control — ${l.controlDescription}`}
                   </span>
                   {edit && <ActionButton action={removeLinkAction.bind(null, fileId, l.id)}>Remove</ActionButton>}
                 </li>

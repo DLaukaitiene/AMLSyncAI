@@ -109,6 +109,7 @@ enum OwnershipLinkType {
   TRUST_BENEFICIARY
   NOMINEE
   SENIOR_MANAGING_OFFICIAL
+  DIRECTOR // board member / senior management of a legal entity (identified, not an owner)
 }
 
 enum DataSource {

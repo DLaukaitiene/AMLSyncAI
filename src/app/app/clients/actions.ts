@@ -520,6 +520,25 @@ export async function kybRefreshAction(fileId: string, requestId: string): Promi
   }
 }
 
+/** Takes over a value the client gave in the portal that differs from the file. */
+export async function useClientValueAction(fileId: string, field: string): Promise<ActionState> {
+  const s = await requireUser("client.edit");
+  await withTenant(s.firm.id, async (tx) => {
+    const file = await tx.cddFile.findUniqueOrThrow({ where: { id: fileId }, include: { party: true } });
+    const d = { ...(file.party.details as Record<string, unknown>) };
+    const proposed = { ...((d.clientProposed ?? {}) as Record<string, unknown>) };
+    if (!(field in proposed)) return;
+    d[field] = proposed[field];
+    delete proposed[field];
+    d.clientProposed = Object.keys(proposed).length ? proposed : undefined;
+    await tx.party.update({ where: { id: file.partyId }, data: { details: d as Prisma.InputJsonValue, ...(field === "name" ? { displayName: String(d.name) } : {}) } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Party", objectId: file.partyId, fields: [field, "source:client-declaration"] });
+    await persistRiskIfChanged(tx, s.firm.id, await loadClientFile(tx, s.firm.id, fileId));
+  });
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Updated with the client's value." };
+}
+
 export async function aiOwnershipDraftAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("client.edit");
   const documentId = String(fd.get("documentId") ?? "");

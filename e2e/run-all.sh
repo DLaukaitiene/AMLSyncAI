@@ -9,7 +9,7 @@ bash scripts/seed-test-fx.sh
 LOG=$(mktemp)
 exec > >(tee "$LOG") 2>&1
 code() { npx tsx scripts/create-signup-code.mts 1 1 e2e; }
-for suite in auth portal cases firm governance backbook monitoring billing scope archive menu transactions hub obligations; do
+for suite in auth portal company-request cases firm governance backbook monitoring billing scope archive menu transactions hub obligations; do
   reset; echo "== $suite"; CODE=$(code) node "e2e/$suite-flow.cjs" | grep -E "✘|errors" || true
 done
 reset; echo "== cdd"; CODE1=$(code) CODE2=$(code) node e2e/cdd-flow.cjs | grep -E "✘|errors" || true

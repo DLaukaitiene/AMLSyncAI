@@ -270,7 +270,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
   for (const id of boIds) addRole(id, "beneficial-owner");
   const LINK_ROLE: Record<string, StructureRole> = {
     CONTROL: "controller", TRUST_SETTLOR: "trust-settlor", TRUSTEE: "trustee", TRUST_PROTECTOR: "trust-protector",
-    TRUST_BENEFICIARY: "trust-beneficiary", NOMINEE: "nominee", SENIOR_MANAGING_OFFICIAL: "senior-managing-official",
+    TRUST_BENEFICIARY: "trust-beneficiary", NOMINEE: "nominee", SENIOR_MANAGING_OFFICIAL: "senior-managing-official", DIRECTOR: "director",
   };
   for (const l of tree.links) {
     const owner = tree.parties.get(l.ownerId);
