@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Security and responsible disclosure · AMLSync App" };
+export const metadata: Metadata = { title: "Security and responsible disclosure · AMLSync App", description: "How AMLSync App protects your firm's data, and how to report a security issue responsibly." };
 
 export default function SecurityPage() {
   return (

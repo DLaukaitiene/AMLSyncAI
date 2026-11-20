@@ -5,8 +5,11 @@ import "@fontsource-variable/manrope";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_URL ?? "https://app.amlsync.com"),
   title: "AMLSync App",
-  description: "AML compliance for EU non-financial obliged entities under AMLR (EU) 2024/1624.",
+  description: "AML compliance software for accountants, lawyers, estate agents and dealers under the EU AML Regulation (EU) 2024/1624: client checks, screening, transaction monitoring and FIU reporting.",
+  openGraph: { siteName: "AMLSync App", type: "website", locale: "en_GB" },
+  robots: { index: true, follow: true },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

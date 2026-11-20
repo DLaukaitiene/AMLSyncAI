@@ -3,7 +3,7 @@ import { SUBPROCESSORS, SUBPROCESSORS_UPDATED } from "@/lib/legal/subprocessors"
 import { SELLER } from "@/lib/billing/invoice";
 import { CONTACT_EMAIL } from "@/lib/billing/plans";
 
-export const metadata: Metadata = { title: "Sub-processors and data location · AMLSync App" };
+export const metadata: Metadata = { title: "Sub-processors and data location · AMLSync App", description: "The suppliers that process data for AMLSync App, what they do and where the data is stored." };
 
 export default function Subprocessors() {
   return (

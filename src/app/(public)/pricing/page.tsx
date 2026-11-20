@@ -4,7 +4,7 @@ import { CONTACT_EMAIL, PLANS, SELF_SERVE_PLANS, TRIAL_DAYS } from "@/lib/billin
 import { IDV_PRICE_CENTS, SCREEN_PRICE_CENTS, formatEur, KYB_FULL_PRICE_CENTS, KYB_LITE_PRICE_CENTS, TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
 import { DEFAULT_LIMITS } from "@/lib/security/screening-caps";
 
-export const metadata: Metadata = { title: "Pricing · AMLSync App" };
+export const metadata: Metadata = { title: "Pricing · AMLSync App", description: "Simple monthly plans billed by invoice: Solo €49 and Starter €149 a month, with a 14-day free trial. Identity checks, screening and company checks charged per check." };
 
 export default function Pricing() {
   return (
