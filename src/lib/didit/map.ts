@@ -10,6 +10,7 @@ const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v 
 
 export interface MappedVerification {
   method: "EID" | "DOCUMENT_NFC_LIVENESS" | "DOCUMENT_LIVENESS";
+  walletProvider?: string; // e.g. Smart-ID, Mobile-ID, when verified with an eID wallet
   assuranceLevel: string;
   fallbackReason: string | null;
   status: string; // Didit feature status of the ID step
@@ -77,6 +78,7 @@ export function mapDecision(decision: Obj): MappedDecision {
     const fb = idv.fallback_from as Obj | null | undefined;
     verification = {
       method,
+      ...(viaWallet && str(idv.wallet_provider) ? { walletProvider: str(idv.wallet_provider) } : {}),
       assuranceLevel: viaWallet ? `eID wallet ${str(idv.wallet_provider) ?? ""} (${str(idv.assurance) ?? "cryptographic"})`.trim() : `${str(idv.assurance) ?? "documentary"}${chipOk ? " + chip" : ""}`,
       fallbackReason: viaWallet
         ? null

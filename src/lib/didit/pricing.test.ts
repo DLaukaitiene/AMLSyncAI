@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientPriceCents, marginCents, parseEcbXml, pricesAt, SERVICE_USD } from "./pricing";
+import { clientPriceCents, marginCents, parseEcbXml, pricesAt, SERVICE_USD, walletIdvUsd } from "./pricing";
 
 // The rule's worked example uses EUR_PER_USD = 0.86, i.e. USD per EUR = 1 / 0.86.
 const R = 1 / 0.86;
@@ -21,6 +21,15 @@ describe("pricing rule", () => {
     const p = pricesAt(R, "2026-11-20");
     expect(SERVICE_USD.idv).toBeCloseTo(0.68);
     expect([p.idv, p.screen, p.kybLite, p.kybShareholders("LT"), p.kybFull("LT"), p.kybFull("DE")]).toEqual([260, 120, 375, 730, 1075, 730]);
+  });
+  it("eID wallets: wallet + AML, one margin; Lithuania on the higher KYB rate, Latvia on the European one", () => {
+    expect(walletIdvUsd("Smart-ID")).toBeCloseTo(0.41);
+    expect(walletIdvUsd("mobile_id")).toBeCloseTo(0.41);
+    expect(walletIdvUsd("something new")).toBeCloseTo(0.45);
+    expect(clientPriceCents(walletIdvUsd("Smart-ID"), 1.0992)).toBe(140);
+    const p = pricesAt(R, "2026-11-20");
+    expect(p.kybFull("LV")).toBe(730);
+    expect(p.kybFull("LT")).toBe(1075);
   });
   it("never runs without a rate", () => expect(() => clientPriceCents(1, 0)).toThrow());
   it("reads the ECB daily file", () => {

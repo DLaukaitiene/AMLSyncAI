@@ -20,8 +20,20 @@ export const DIDIT_USD = {
   kybUboRest: 9.0,
 } as const;
 
-/** Countries Didit prices on its "most of Europe" KYB rate. Others (including Lithuania, per Didit) use the rest-of-world rate. */
-export const KYB_EUROPE_RATE = new Set(["AT", "BE", "DE", "FR", "NL", "GB", "SE", "CH"]);
+/** eID wallets (per completed verification). */
+export const WALLET_USD: Record<string, number> = { "smart-id": 0.21, "mobile-id": 0.21, mitid: 0.25, bankid: 0.2, ftn: 0.25 };
+/** Didit cost of a verification done with an eID wallet: the wallet plus AML screening. Unknown wallets: the dearest one. */
+export function walletIdvUsd(provider: string | null | undefined): number {
+  const k = (provider ?? "").toLowerCase().replace(/[_\s]+/g, " ").trim();
+  const key = /smart/.test(k) ? "smart-id" : /mobile/.test(k) ? "mobile-id" : /mitid/.test(k) ? "mitid" : /bankid/.test(k) ? "bankid" : /finnish|ftn|trust network/.test(k) ? "ftn" : "";
+  return (WALLET_USD[key] ?? Math.max(...Object.values(WALLET_USD))) + DIDIT_USD.amlScreening;
+}
+
+/**
+ * Countries on Didit's cheaper "most of Europe" KYB rate (didit.me/pricing, 20 Nov 2026). Exception: Lithuania stays on
+ * the higher rate for now, because Didit told us directly it uses that rate [being confirmed with Didit].
+ */
+export const KYB_EUROPE_RATE = new Set(["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IS", "IE", "IT", "LV", "LI", "LU", "MT", "NL", "NO", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH", "GB"]);
 
 /** What each service sold in AMLSync App is made of (one billable unit each). */
 export const SERVICE_USD = {

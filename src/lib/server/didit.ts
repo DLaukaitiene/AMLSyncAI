@@ -6,7 +6,8 @@ import { encryptField } from "./crypto";
 import { storeDocument } from "./storage";
 import { loadClientFile, persistRiskIfChanged, upsertTask } from "./cdd";
 import { appUrl } from "./email";
-import { autoClear, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
+import { autoClear, formatEur, iso2, mapDecision, type MappedDecision } from "@/lib/didit/map";
+import { clientPriceCents, walletIdvUsd } from "@/lib/didit/pricing";
 import { currentPrices, PriceUnavailable } from "./prices";
 import { toIsoDate } from "@/lib/rules/dates";
 import { assertCanSpend, SpendError } from "./invoicing";
@@ -88,6 +89,22 @@ export async function pricesOrError() {
     if (e instanceof PriceUnavailable) throw new DiditError(e.message);
     throw e;
   }
+}
+
+/**
+ * The identity check is charged at the document price when it is sent. When the client verifies with an
+ * eID wallet (Smart-ID, Mobile-ID…), which costs less, the difference is returned as credit, once.
+ */
+async function refundWalletDifference(tx: Tx, firmId: string, chargeId: string, provider: string | undefined) {
+  if (await tx.creditEntry.count({ where: { kind: "refund", reference: chargeId } })) return;
+  const c = await tx.creditEntry.findUnique({ where: { id: chargeId } });
+  if (!c) return;
+  const prices = await currentPrices().catch(() => null);
+  if (!prices) return; // no rate: nothing is refunded rather than a guessed amount; staff can correct it later
+  const walletPrice = clientPriceCents(walletIdvUsd(provider), prices.rate.usdPerEur);
+  const diff = -c.amountCents - walletPrice;
+  if (diff <= 0) return;
+  await tx.creditEntry.create({ data: { firmId, amountCents: diff, kind: "refund", reference: chargeId, clientRef: c.clientRef, description: `Refund: verified with ${provider ?? "an eID wallet"}, which costs less (you pay ${formatEur(walletPrice)} instead of ${formatEur(-c.amountCents)})` } });
 }
 
 export async function refund(tx: Tx, firmId: string, chargeId: string, why: string) {
@@ -173,6 +190,7 @@ export async function refreshDiditSession(firmId: string, diditSessionId: string
     if (NO_RESULT.has(status) && s.creditEntryId) await refund(tx, firmId, s.creditEntryId, `check ${status.toLowerCase()} without a result`);
     if (!willImport || s.importedAt) return { status, imported: false }; // a concurrent webhook got there first
     await importDecision(tx, firmId, s, m, diditSessionId, files);
+    if (s.kind === "idv" && s.creditEntryId && m.verification?.method === "EID" && m.verification.status === "Approved") await refundWalletDifference(tx, firmId, s.creditEntryId, m.verification.walletProvider);
     await tx.diditSession.update({ where: { id: s.id }, data: { importedAt: new Date() } });
     return { status, imported: true };
   }, { timeoutMs: 120_000 });
