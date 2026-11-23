@@ -1,31 +1,49 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
-import type { Tx } from "./db";
+import { adminDb, type Tx } from "./db";
 import { audit } from "./audit";
 import { raiseSuspicion } from "./cases";
-import { flagTransaction, type Flag } from "@/lib/rules/transaction-flags";
+import { normalizeFlags, runRules, statusFor, type MonitoringFlag, type RuleContext, type RuleTx } from "@/lib/monitoring/rules";
+import { EU_HIGH_RISK_THIRD_COUNTRIES } from "@/lib/rules/high-risk-countries";
 import { toIsoDate } from "@/lib/rules/dates";
 
 type Ctx = { firmId: string; userId: string };
 
-/** Runs the red-flag rules on a newly recorded transaction and stores the result. */
-export async function applyTransactionFlags(tx: Tx, ctx: Ctx, transactionId: string): Promise<Flag[]> {
-  const t = await tx.transaction.findUniqueOrThrow({ where: { id: transactionId } });
-  const firm = await tx.firm.findUniqueOrThrow({ where: { id: ctx.firmId }, select: { txCashThresholdEUR: true, txHighValueThresholdEUR: true } });
-  const party = await tx.party.findUnique({ where: { id: t.customerId }, select: { details: true } });
-  const file = await tx.cddFile.findFirst({ where: { partyId: t.customerId }, include: { riskAssessments: { orderBy: { createdAt: "desc" }, take: 1 } } });
-  const since = new Date(t.date.getTime() - 31 * 86_400_000);
-  const history = await tx.transaction.findMany({ where: { customerId: t.customerId, id: { not: t.id }, date: { gte: since } } });
-  const shape = (x: typeof t) => ({ id: x.id, date: toIsoDate(x.date), amountEUR: Number(x.amountEUR), method: x.method, thirdPartyPayer: x.thirdPartyPayer, fromCountry: x.fromCountry });
-  const flags = flagTransaction(shape(t), {
-    cashThresholdEUR: firm.txCashThresholdEUR,
-    highValueThresholdEUR: firm.txHighValueThresholdEUR,
-    clientHighRisk: file?.riskAssessments[0]?.final === "HIGH",
+/** EU high-risk third countries from the admin-maintained table (falls back to the built-in list if it is empty). */
+export async function highRiskCountrySet(): Promise<Set<string>> {
+  const rows = await adminDb.highRiskCountry.findMany({ select: { code: true } });
+  return new Set(rows.length ? rows.map((r) => r.code.toUpperCase()) : EU_HIGH_RISK_THIRD_COUNTRIES);
+}
+
+/** Everything the rules need about a client, read once (also used by the import preview). */
+export async function ruleContextFor(tx: Tx, firmId: string, customerId: string, date: string, highRisk?: Set<string>, excludeId?: string): Promise<RuleContext> {
+  const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { txCashThresholdEUR: true, txHighValueThresholdEUR: true, txCashLegalLimitEUR: true, txRulesOff: true } });
+  const party = await tx.party.findUnique({ where: { id: customerId }, select: { details: true } });
+  const files = await tx.cddFile.findMany({ where: { partyId: customerId }, include: { riskAssessments: { orderBy: { createdAt: "desc" }, take: 1 } } });
+  const end = new Date(date + "T23:59:59Z");
+  const kycComplete = files.some((f) => ["COMPLETE", "SDD", "EDD"].includes(f.status) && !!f.decidedAt && f.decidedAt <= end);
+  const from = new Date(Date.parse(date) - 366 * 86_400_000), to = new Date(Date.parse(date) + 31 * 86_400_000);
+  const history = await tx.transaction.findMany({ where: { customerId, date: { gte: from, lte: to }, ...(excludeId ? { id: { not: excludeId } } : {}) } });
+  return {
+    settings: { cashThresholdEUR: firm.txCashThresholdEUR, cashLegalLimitEUR: firm.txCashLegalLimitEUR, highValueThresholdEUR: firm.txHighValueThresholdEUR, occasionalThresholdEUR: 10_000, rulesOff: firm.txRulesOff ?? [] },
+    highRiskCountries: highRisk ?? (await highRiskCountrySet()),
+    kycComplete,
+    clientHighRisk: files.some((f) => f.riskAssessments[0]?.final === "HIGH"),
     clientIsPep: !!(party?.details as { isPep?: boolean } | null)?.isPep,
-    history: history.map(shape),
-  });
-  await tx.transaction.update({ where: { id: t.id }, data: { flags: flags as unknown as Prisma.InputJsonValue, monitorStatus: flags.length ? "flagged" : "pending" } });
-  if (flags.length) await audit(tx, { firmId: ctx.firmId, userId: null, action: "update", objectType: "Transaction", objectId: t.id, fields: ["monitorStatus", ...flags.map((f) => `flag:${f.code}`)] });
+    history: history.map(ruleTx),
+  };
+}
+
+export const ruleTx = (x: { id: string; date: Date; amountEUR: unknown; method: string; occasional: boolean; thirdPartyPayer: boolean; fromCountry: string | null }): RuleTx => ({
+  id: x.id, date: toIsoDate(x.date), amountEUR: Number(x.amountEUR), method: x.method, occasional: x.occasional, thirdPartyPayer: x.thirdPartyPayer, fromCountry: x.fromCountry,
+});
+
+/** Runs the monitoring rules (src/lib/monitoring/rules.ts) on a recorded transaction and stores the flags and status. */
+export async function applyTransactionFlags(tx: Tx, ctx: Ctx, transactionId: string, highRisk?: Set<string>): Promise<MonitoringFlag[]> {
+  const t = await tx.transaction.findUniqueOrThrow({ where: { id: transactionId } });
+  const flags = runRules(ruleTx(t), await ruleContextFor(tx, ctx.firmId, t.customerId, toIsoDate(t.date), highRisk, t.id));
+  await tx.transaction.update({ where: { id: t.id }, data: { flags: flags as unknown as Prisma.InputJsonValue, monitorStatus: statusFor(flags) } });
+  if (flags.length) await audit(tx, { firmId: ctx.firmId, userId: null, action: "update", objectType: "Transaction", objectId: t.id, fields: ["monitorStatus", ...flags.map((f) => `flag:${f.rule}`)] });
   return flags;
 }
 
@@ -51,11 +69,11 @@ export async function reviewTransaction(tx: Tx, ctx: Ctx, id: string, action: Re
 export async function raiseFromTransaction(tx: Tx, ctx: Ctx, id: string, note: string) {
   if (note.trim().length < 20) throw new Error("Describe what makes this suspicious (at least 20 characters).");
   const t = await tx.transaction.findUniqueOrThrow({ where: { id }, include: { matter: { select: { title: true } } } });
-  const flags = (t.flags as unknown as Flag[]) ?? [];
+  const flags = normalizeFlags(t.flags);
   const caseId = await raiseSuspicion(tx, ctx, {
     partyIds: [t.customerId], matterIds: [t.matterId],
     summary: `Transaction of €${Number(t.amountEUR).toLocaleString("en-IE")} on ${toIsoDate(t.date)} (${t.method}) — ${t.matter.title}`,
-    details: [note.trim(), flags.length ? `Flags: ${flags.map((f) => f.text).join("; ")}` : "", t.description ? `Description: ${t.description}` : ""].filter(Boolean).join("\n"),
+    details: [note.trim(), flags.length ? `Flags: ${flags.map((f) => `${f.rule} ${f.message}`).join("; ")}` : "", t.description ? `Description: ${t.description}` : ""].filter(Boolean).join("\n"),
     attempted: false, amountEUR: Number(t.amountEUR),
   });
   // The reason goes into the case only (Compliance Officer); the transaction shows a neutral note,

@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeFlags } from "@/lib/monitoring/rules";
 import type { Tx } from "./db";
 import { STATUS_LABEL } from "@/components/chips";
 
@@ -61,7 +62,7 @@ export async function buildRegister(tx: Tx, id: RegisterId, only?: string[]): Pr
       const ts = await tx.transaction.findMany({ orderBy: { date: "asc" }, include: { matter: { select: { title: true } } } });
       const names = new Map((await tx.party.findMany({ where: { id: { in: [...new Set(ts.map((x) => x.customerId))] } }, select: { id: true, displayName: true } })).map((p) => [p.id, p.displayName]));
       return [["Date", "Client", "Case", "Amount EUR", "Method", "From country", "Third-party payer", "Description", "Status", "Flags", "Review", "Reviewed by"],
-        ...ts.map((x) => [d(x.date), names.get(x.customerId) ?? "", x.matter.title, Number(x.amountEUR), x.method, x.fromCountry ?? "", x.thirdPartyPayer ? "yes" : "", x.description ?? "", x.monitorStatus, ((x.flags as { text: string }[]) ?? []).map((f) => f.text).join("; "), x.reviewNote ?? "", x.reviewedById ? who(x.reviewedById) : ""])];
+        ...ts.map((x) => [d(x.date), names.get(x.customerId) ?? "", x.matter.title, Number(x.amountEUR), x.method, x.fromCountry ?? "", x.thirdPartyPayer ? "yes" : "", x.description ?? "", x.monitorStatus, normalizeFlags(x.flags).map((f) => `${f.rule}: ${f.message}`).join(" "), x.reviewNote ?? "", x.reviewedById ? who(x.reviewedById) : ""])];
     }
     case "matters": {
       const ms = await tx.matter.findMany({ orderBy: { createdAt: "asc" } });

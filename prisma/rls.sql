@@ -13,7 +13,7 @@ BEGIN
     'CddFile','IdentityVerification','RegistryExtract','ScreeningResult',
     'ClientRiskAssessment','Document','Case','Report','Task','Approval','AuditEvent',
     'EmailDomainVerification','Invitation','PortalLink',
-    'Appointment','TrainingModule','TrainingAssignment','IntegrityDeclaration','WhistleblowingReport','OutsourcingArrangement','AiCall','DiditSession','CreditEntry','Invoice','ScreeningEvent','StaffScreening','ExternalTraining','KybSearch'
+    'Appointment','TrainingModule','TrainingAssignment','IntegrityDeclaration','WhistleblowingReport','OutsourcingArrangement','AiCall','DiditSession','CreditEntry','Invoice','ScreeningEvent','StaffScreening','ExternalTraining','KybSearch','TxImportBatch'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
@@ -90,7 +90,7 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'AdminMember','AdminAuditEvent','AdminApproval','FirmAdminMeta','FirmNote','FirmKyb',
     'Incident','IncidentUpdate','DataSubjectRequest','WebEvent','Lead','LeadNote','Ticket','TicketMessage',
-    'Announcement','AnnouncementDismissal','VendorPrice','VendorInvoice','ExpertEngagement','ExpertTask','ClientShare','FxRate'
+    'Announcement','AnnouncementDismissal','VendorPrice','VendorInvoice','ExpertEngagement','ExpertTask','ClientShare','FxRate','HighRiskCountry'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
   END LOOP;

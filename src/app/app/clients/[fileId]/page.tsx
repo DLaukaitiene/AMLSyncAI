@@ -26,6 +26,7 @@ import { RaiseSuspicion } from "@/components/raise-suspicion";
 import { DOCUMENT_KINDS } from "@/lib/server/storage";
 import { diditEnabled } from "@/lib/server/didit";
 import { aiForFirm } from "@/lib/server/ai";
+import { normalizeFlags } from "@/lib/monitoring/rules";
 import { SHARE_BASES } from "@/lib/server/sharing";
 import { shareClientAction } from "../shared/actions";
 import { formatEur } from "@/lib/didit/map";
@@ -126,7 +127,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
   const priceOf = (c: number | undefined) => (c === undefined ? "price updating" : formatEur(c));
   const kybCountryCode = String((data.cf.party.details as { countryOfCreation?: string }).countryOfCreation ?? s.firm.homeState).toUpperCase();
   const { cf, lastRisk, approvals, hasCase, links, documents, didit, activity, names, riskHistory, matters, transactions, aiOn } = data;
-  const flaggedTx = transactions.filter((t) => t.monitorStatus === "flagged").length;
+  const flaggedTx = transactions.filter((t) => t.monitorStatus === "flagged" || (t.monitorStatus === "pending" && normalizeFlags(t.flags).length > 0)).length;
   const idvSessions = didit.filter((x) => x.kind === "idv" && x.partyId === cf.party.id);
   const kybSessions = didit.filter((x) => x.kind === "kyb" && x.partyId === cf.party.id);
   const mismatches = (cf.party.details as { idCheckMismatches?: string[] }).idCheckMismatches;
@@ -251,9 +252,9 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               {transactions.map((t) => (
                 <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                   <span><span className="font-semibold">€{Number(t.amountEUR).toLocaleString("en-IE")}</span> <span className="text-muted">· {t.method} · {t.date.toISOString().slice(0, 10)} · <Link href={`/app/matters/${t.matter.id}`} className="hover:underline">{t.matter.title}</Link></span>
-                    {(t.flags as { text: string }[]).length > 0 && <span className="block text-xs text-red-800 dark:text-red-300">{(t.flags as { text: string }[]).map((f) => f.text).join("; ")}</span>}
+                    {normalizeFlags(t.flags).length > 0 && <span className="block text-xs text-red-800 dark:text-red-300">{normalizeFlags(t.flags).map((f) => f.message).join(" ")}</span>}
                   </span>
-                  <Chip tone={t.monitorStatus === "flagged" ? "red" : t.monitorStatus === "investigated" ? "amber" : t.monitorStatus === "cleared" ? "green" : "grey"}>{t.monitorStatus === "flagged" ? "Flagged" : t.monitorStatus === "investigated" ? "Investigated" : t.monitorStatus === "cleared" ? "Cleared" : "Pending"}</Chip>
+                  <Chip tone={t.monitorStatus === "flagged" ? "red" : t.monitorStatus === "investigated" ? "amber" : t.monitorStatus === "cleared" ? "green" : "grey"}>{t.monitorStatus === "flagged" ? "Flagged" : t.monitorStatus === "investigated" ? "Investigated" : t.monitorStatus === "cleared" ? "Reviewed" : t.monitorStatus === "clear" ? "No flags" : "To review"}</Chip>
                 </li>
               ))}
             </ul>

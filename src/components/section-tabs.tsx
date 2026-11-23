@@ -28,6 +28,7 @@ const GROUPS: { label: string; tabs: { href: string; label: string }[] }[] = [
       { href: "/app/settings/screening-lists", label: "Screening Lists" },
       { href: "/app/billing", label: "Billing" },
       { href: "/app/security", label: "Security" },
+      { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring" },
       { href: "/app/settings/email", label: "Email Settings" },
       { href: "/app/records", label: "Records & Retention" },
     ],

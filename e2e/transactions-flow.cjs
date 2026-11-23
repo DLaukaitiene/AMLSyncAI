@@ -32,16 +32,21 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const logTx = async (amount, method, extra = async () => {}) => {
     const box = p.locator("details", { hasText: "Log Transaction" });
     if ((await box.getAttribute("open")) === null) await box.locator("summary").click();
-    await box.getByLabel("Amount (EUR)").fill(String(amount));
+    await box.getByLabel("Amount", { exact: true }).fill(String(amount));
     await box.locator("select[name=method]").selectOption(method);
     await extra(box);
     await box.getByRole("button", { name: "Record Transaction" }).click();
   };
   await logTx(1500, "bank-transfer");
-  await p.getByText("No CDD trigger, report or red flag").waitFor();
-  // 2) Cash above the €3,000 default threshold → flagged
+  await p.getByText(/Transaction for a client whose KYC isn't complete/).first().waitFor();
+  log("R9: a payment for a client whose due diligence isn't complete is flagged");
+  // 2) Cash above the €3,000 default threshold → R1
   await logTx(4000, "cash", async (box) => { await box.getByLabel("Description").fill("Reservation fee paid in cash"); });
-  await p.getByText(/Flagged for review in Transaction Monitoring: Cash payment of €4,000/).waitFor();
+  await p.getByText(/Cash of €4,000: identify and verify the customer/).first().waitFor();
+  // Validation shared with the import: another currency needs an exchange rate
+  await logTx(100, "card", async (box) => { await box.getByLabel("Currency").fill("USD"); });
+  await p.getByText(/Enter the exchange rate \(euros per 1 USD\)/).first().waitFor();
+  await p.reload();
   // 3) Crypto from a third party in a high-risk country → three flags
   await logTx(20000, "crypto", async (box) => { await box.getByLabel("Paid by someone other than the client").check(); await box.getByLabel("Funds come from (country)").fill("KP"); });
   await p.getByText(/Paid in crypto-assets/).first().waitFor();
@@ -49,26 +54,32 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const rows = p.getByTestId("transaction");
   if ((await rows.count()) !== 3) throw new Error("✘ expected 3 transactions, got " + (await rows.count()));
   if (!/Flagged/.test(await rows.first().innerText())) throw new Error("✘ flagged should be listed first");
-  const flaggedCount = await p.getByText("Flagged exceptions").locator("..").innerText();
-  if (!/\b2\b/.test(flaggedCount)) throw new Error("✘ flagged card: " + flaggedCount);
-  log("cash ≥ €3,000 and crypto / third-party / high-risk-country payments flagged; flagged listed first");
+  const crypto = await rows.filter({ hasText: "€20,000" }).getByTestId("flags").innerText();
+  for (const r of ["R6", "R7", "R9", "R11"]) if (!crypto.includes(r)) throw new Error(`✘ crypto row missing ${r}: ${crypto}`);
+  log("rules R1, R6, R7, R9, R11 flag with rule, severity and message; flagged listed first");
+  await p.goto(BASE + "/app/transactions?rule=R7");
+  if ((await p.getByTestId("transaction").count()) !== 1) throw new Error("✘ rule filter");
+  await p.goto(BASE + "/app/transactions?severity=medium&rule=R1");
+  if ((await p.getByTestId("transaction").count()) !== 1) throw new Error("✘ rule + severity filter");
+  await p.goto(BASE + "/app/transactions");
+  log("filter by rule and severity");
 
   // Clear the cash one: a short reason is refused
   const cashRow = rows.filter({ hasText: "€4,000" });
   await cashRow.getByText("Review", { exact: true }).click();
-  await cashRow.getByRole("radio", { name: /Mark as cleared/ }).check();
+  await cashRow.getByRole("radio", { name: /Mark as reviewed/ }).check();
   await cashRow.getByLabel("Reason *").fill("ok");
   await cashRow.getByRole("button", { name: "Record decision" }).click();
   await cashRow.getByText(/at least 20 characters/).first().waitFor();
   await cashRow.getByLabel("Reason *").fill("Reservation fee, receipt issued, cash below the €10,000 EU limit and client identified");
   await cashRow.getByRole("button", { name: "Record decision" }).click();
-  await p.getByTestId("transaction").filter({ hasText: "€4,000" }).getByText("Cleared", { exact: true }).waitFor();
-  log("clearing needs a reason of at least 20 characters; transaction marked Cleared");
+  await p.getByTestId("transaction").filter({ hasText: "€4,000" }).getByText("Reviewed", { exact: true }).waitFor();
+  log("reviewing needs a reason of at least 20 characters; transaction marked Reviewed");
 
   // Escalate the crypto one to the Compliance Officer
   const cryptoRow = p.getByTestId("transaction").filter({ hasText: "€20,000" });
   await cryptoRow.getByText("Review", { exact: true }).click();
-  await cryptoRow.getByRole("radio", { name: "Raise internal suspicion report" }).check();
+  await cryptoRow.getByRole("radio", { name: /Create investigation/ }).check();
   await cryptoRow.getByLabel("Reason *").fill("Crypto from a third party in North Korea, buyer could not explain the source");
   await cryptoRow.getByRole("button", { name: "Record decision" }).click();
   await p.getByTestId("transaction").filter({ hasText: "€20,000" }).getByText("Investigated", { exact: true }).waitFor();
@@ -83,24 +94,27 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.getByTestId("client-transactions").getByText("€20,000").waitFor();
   log("client profile Transactions tab");
 
-  // CSV import: one good row (cash → flagged), one row with an unknown payer
-  await p.goto(BASE + "/app/transactions");
-  await p.locator("summary", { hasText: "Import from CSV" }).click();
-  const csvIn = "Data;Suma;Būdas;Klientas;Byla;Aprašymas\n05.11.2026;3.500,00;grynieji;Jonas Pirkėjas;Sale of Vokiečių g. 3;Second instalment\n06.11.2026;100;pavedimas;Nobody;Sale of Vokiečių g. 3;x\n";
-  await p.locator("input[type=file][name=file]").setInputFiles({ name: "bank.csv", mimeType: "text/csv", buffer: Buffer.from(csvIn) });
-  await submit(p, "Import", /1 transaction\(s\) imported, 1 flagged for review\. 1 row\(s\) not imported: line 3: "Nobody" is not a party/);
-  log("CSV import: semicolon file with European numbers imported and flagged; bad row reported with its line");
-
-  await p.goto(BASE + "/app/transactions");
-  await p.getByText("Threshold settings").click();
-  await p.getByLabel("Cash monitoring threshold (EUR)").fill("20000");
-  await submit(p, "Save thresholds", /between €100 and €10,000/);
-  await p.getByLabel("Cash monitoring threshold (EUR)").fill("1000");
-  await submit(p, "Save thresholds", "Thresholds saved");
-  log("thresholds: cash threshold can't exceed the EU €10,000 limit; saved");
+  // Settings → Transaction monitoring
+  await p.goto(BASE + "/app/settings/transaction-monitoring");
+  if (await p.getByLabel("Legal cash payment limit (EUR)").count()) throw new Error("✘ cash fields shown without cash");
+  await p.getByLabel("High-value transaction review from (EUR)").waitFor();
+  await p.getByLabel("Our firm accepts or pays cash").check();
+  await submit(p, "Save settings", "Settings saved");
+  await p.reload();
+  await p.getByLabel("Cash: identify and verify the customer from (EUR)").fill("20000");
+  await submit(p, "Save settings", /between €100 and €10,000/);
+  await p.getByLabel("Cash: identify and verify the customer from (EUR)").fill("1000");
+  await p.getByLabel("Legal cash payment limit (EUR)").fill("3000");
+  await p.getByLabel("I checked the legal limit today").check();
+  await p.getByTestId("rule-toggles").getByLabel(/^R8 /).uncheck();
+  await submit(p, "Save settings", "Settings saved");
+  await p.reload();
+  await p.getByTestId("legal-limit-checked").getByText(/Last checked: \d{4}-\d{2}-\d{2}/).waitFor();
+  if (await p.getByTestId("rule-toggles").getByLabel(/^R8 /).isChecked()) throw new Error("✘ R8 still on");
+  log("settings: cash fields only with cash; €10,000 cap enforced; legal limit with 'last checked'; R8 switched off");
 
   const csv = await (await ctx.request.get(BASE + "/api/registers/transactions", { maxRedirects: 0 })).text();
-  if (!csv.includes("Second instalment") || !csv.includes("Reservation fee") || !csv.includes("investigated") || !csv.includes("Paid in crypto-assets")) throw new Error("✘ transaction log CSV: " + csv.slice(0, 300));
+  if (!csv.includes("Reservation fee") || !csv.includes("investigated") || !csv.includes("Paid in crypto-assets")) throw new Error("✘ transaction log CSV: " + csv.slice(0, 300));
   log("Reports: Transaction Log CSV with flags and reviews");
 
   console.log("page errors:", errors);

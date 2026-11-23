@@ -4,7 +4,7 @@
 #   npx tsx scripts/load-list.mts amlsync e2e/fixtures/test-sanctions.csv "TEST sanctions list" 2026-11-13
 set -euo pipefail
 cd "$(dirname "$0")/.."
-reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "WebEvent","Lead","Ticket","Announcement","VendorPrice","VendorInvoice","ExpertEngagement","AdminMember","AdminApproval","FirmAdminMeta","FirmNote","FirmKyb","Incident","DataSubjectRequest","Firm","User","Session","EmailToken","DevEmail","RateLimitBucket","SecurityEvent","Invitation","FeatureRequest","SupportGrant","DiditSession","CreditEntry","Invoice","ScreeningEvent","Blob","PortalLink","Appointment","TrainingModule","AiCall","IntegrityDeclaration","StaffScreening","ExternalTraining","KybSearch","ClientShare" CASCADE' >/dev/null 2>&1; }
+reset() { psql -q "$DATABASE_URL" -c 'TRUNCATE "WebEvent","Lead","Ticket","Announcement","VendorPrice","VendorInvoice","ExpertEngagement","AdminMember","AdminApproval","FirmAdminMeta","FirmNote","FirmKyb","Incident","DataSubjectRequest","Firm","User","Session","EmailToken","DevEmail","RateLimitBucket","SecurityEvent","Invitation","FeatureRequest","SupportGrant","DiditSession","CreditEntry","Invoice","ScreeningEvent","Blob","PortalLink","Appointment","TrainingModule","AiCall","IntegrityDeclaration","StaffScreening","ExternalTraining","KybSearch","ClientShare","TxImportBatch" CASCADE' >/dev/null 2>&1; }
 bash scripts/seed-test-fx.sh
 LOG=$(mktemp)
 exec > >(tee "$LOG") 2>&1
@@ -14,6 +14,7 @@ for suite in auth portal company-request cases firm governance backbook monitori
 done
 reset; echo "== cdd"; CODE1=$(code) CODE2=$(code) node e2e/cdd-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== feedback (needs BACKOFFICE_OWNER_EMAIL=triage@amlsyncai-team.lt)"; CODE1=$(code) CODE2=$(code) CODE3=$(code) node e2e/feedback-flow.cjs | grep -E "✘|errors" || true
+reset; echo "== transactions import"; CODE1=$(code) CODE2=$(code) node e2e/transactions-import-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== sharing"; CODE1=$(code) CODE2=$(code) node e2e/sharing-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== extras"; CODE1=$(code) CODE2=$(code) node e2e/extras-flow.cjs | grep -E "✘|errors" || true
 reset; echo "== isolation + accessibility"; CODE1=$(code) CODE2=$(code) node e2e/isolation-a11y.cjs | grep -E "✘|✔|a11y" || true

@@ -19,6 +19,7 @@ import { toIsoDate } from "@/lib/rules/dates";
 import { encryptField } from "@/lib/server/crypto";
 import { matterHeld } from "@/lib/server/cases";
 import { applyTransactionFlags } from "@/lib/server/transactions";
+import { toEur, validateRow } from "@/lib/transactions/format";
 import { normalizeCountry } from "@/lib/geo/countries";
 
 const ROLES = ["CLIENT", "BUYER", "SELLER", "LANDLORD", "TENANT", "SUPPLIER", "REPRESENTATIVE", "BENEFICIARY", "OTHER"] as const;
@@ -99,10 +100,19 @@ export async function addPartyAction(matterId: string, _: ActionState, fd: FormD
 export async function addTransactionAction(matterId: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("client.edit");
   const o = formToObject(fd);
-  const amount = Number(o.amountEUR);
-  if (!(amount > 0)) return { error: "Enter the amount in EUR.", fieldErrors: { amountEUR: ["More than 0."] } };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(o.date ?? "")) return { error: "Enter the date.", fieldErrors: { date: ["YYYY-MM-DD"] } };
-  const method = ["cash", "bank-transfer", "card", "crypto", "other"].includes(o.method) ? (o.method as "cash") : "bank-transfer";
+  // The same validation as the transaction import (src/lib/transactions/format.ts).
+  const currency = String(o.currency ?? "EUR").trim().toUpperCase() || "EUR";
+  const v = validateRow({
+    date: o.date, client_code: o.customerId ?? "", amount: String(o.amountEUR ?? o.amount ?? "").trim(), currency, fx_rate: String(o.fxRate ?? ""),
+    method: o.method || "bank-transfer", direction: String(o.direction ?? ""), counterparty_name: String(o.counterpartyName ?? ""),
+    from_country: normalizeCountry(o.fromCountry) ?? "", third_party_payer: o.thirdPartyPayer === "on" ? "yes" : "no", occasional: o.occasional === "on" ? "yes" : "no",
+    description: String(o.description ?? ""), external_id: String(o.externalId ?? ""),
+  });
+  if (!v.ok) return { error: `Check the transaction: ${v.error}.` };
+  if (currency !== "EUR" && !v.row.fxRate) return { error: `Enter the exchange rate (euros per 1 ${currency}).`, fieldErrors: { fxRate: ["Required for other currencies."] } };
+  const amount = currency === "EUR" ? v.row.originalAmount : toEur(v.row.originalAmount, v.row.fxRate!);
+  const method = v.row.method as "cash";
   const methodStored = o.method === "other" && String(o.methodOther ?? "").trim() ? `other: ${String(o.methodOther).trim().slice(0, 100)}` : method;
   if (!o.customerId || !/^[0-9a-f-]{36}$/i.test(o.customerId)) return { error: "Choose who pays." };
 
@@ -127,7 +137,9 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
     const t = await tx.transaction.create({
       data: {
         firmId: s.firm.id, matterId, customerId: o.customerId, date: new Date(o.date), amountEUR: amount, method: methodStored, occasional: o.occasional === "on",
-        description: String(o.description ?? "").trim().slice(0, 500) || null, thirdPartyPayer: o.thirdPartyPayer === "on", fromCountry: normalizeCountry(o.fromCountry),
+        description: v.row.description, thirdPartyPayer: v.row.thirdPartyPayer, fromCountry: v.row.fromCountry,
+        originalAmount: v.row.originalAmount, originalCurrency: currency, fxRate: currency === "EUR" ? null : v.row.fxRate,
+        direction: v.row.direction, counterpartyName: v.row.counterpartyName, externalId: v.row.externalId,
       },
     });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Transaction", objectId: t.id, fields: ["amountEUR", "method"] });
@@ -167,7 +179,7 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
       }
     }
     const flags = await applyTransactionFlags(tx, { firmId: s.firm.id, userId: s.user.id }, t.id);
-    if (flags.length) messages.push(`Flagged for review in Transaction Monitoring: ${flags.map((f) => f.text).join("; ")}.`);
+    if (flags.length) messages.push(`Flagged for review in Transaction Monitoring: ${flags.map((f) => f.message).join(" ")}`);
     revalidatePath(`/app/matters/${matterId}`);
     revalidatePath("/app/transactions");
     return { message: messages.length ? messages.join(" ") : "Transaction recorded. No CDD trigger, report or red flag." };

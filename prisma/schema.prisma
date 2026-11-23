@@ -209,6 +209,9 @@ model Firm {
   responsibilities Json @default("{}") // AML duty → user ids (Team → Responsibilities)
   txCashThresholdEUR      Int @default(3000) // transaction monitoring: cash at or above this is flagged
   txHighValueThresholdEUR Int @default(50000) // any payment at or above this is flagged
+  txCashLegalLimitEUR     Int @default(5000) // legal cash payment limit (LT: €5,000 since 1 Nov 2022); cash above it is flagged (R2, R3)
+  txCashLimitCheckedAt    DateTime? // when the firm last checked the legal limit
+  txRulesOff              String[] @default([]) // monitoring rules switched off by the firm, e.g. ["R8", "R10"]
   screenLimitMinute Int  @default(5)
   screenLimitDay    Int  @default(30)
   screenLimitMonth  Int  @default(100)
@@ -480,9 +483,15 @@ model Transaction {
   reviewedById String?  @db.Uuid
   reviewedAt  DateTime?
   caseId      String?  @db.Uuid
+  direction   String? // in | out
+  counterpartyName String?
+  externalId  String? // the firm's own reference (invoice no., bank ref): duplicate check on import
+  importBatchId String? @db.Uuid
   createdAt   DateTime @default(now())
 
   @@index([firmId, customerId, date])
+  @@index([firmId, externalId])
+  @@index([importBatchId])
   @@index([firmId, monitorStatus])
 }
 
@@ -1570,4 +1579,31 @@ model FxRate {
   date      String   @id // YYYY-MM-DD, the ECB reference date
   usdPerEur Decimal  @db.Decimal(10, 4)
   fetchedAt DateTime @default(now())
+}
+
+/// A transaction file upload: previewed first, imported on confirmation, undoable for 24 hours.
+model TxImportBatch {
+  id          String    @id @default(uuid()) @db.Uuid
+  firmId      String    @db.Uuid
+  fileName    String
+  status      String    @default("preview") // preview | imported | cancelled | undone
+  rows        Json      // the checked rows: [{ line, raw, ok, error?, flags?, data? }]
+  imported    Int       @default(0)
+  duplicates  Int       @default(0)
+  rejected    Int       @default(0)
+  flagged     Int       @default(0)
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  importedAt  DateTime?
+  undoneAt    DateTime?
+
+  @@index([firmId, createdAt])
+}
+
+/// High-risk countries used by transaction monitoring (R7): the EU list (Art. 29), kept up to date by AMLSync App admins.
+model HighRiskCountry {
+  code      String   @id @db.Char(2)
+  list      String   @default("EU high-risk third country")
+  note      String?
+  updatedAt DateTime @default(now())
 }

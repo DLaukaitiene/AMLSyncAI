@@ -1,4 +1,5 @@
 import "server-only";
+import { NEEDS_REVIEW_WHERE } from "@/lib/monitoring/rules";
 import type { Tx } from "./db";
 import { currentProfile } from "./country-profile";
 import { isOnePersonFirm } from "./governance";
@@ -61,7 +62,7 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
     highRiskOrPepAwaitingApproval: awaiting,
     highRiskTotal: high.length,
     openMatters: await tx.matter.count({ where: { status: { in: ["OPEN", "ON_HOLD"] } } }),
-    flaggedTransactions: await tx.transaction.count({ where: { monitorStatus: "flagged" } }),
+    flaggedTransactions: await tx.transaction.count({ where: NEEDS_REVIEW_WHERE }),
     overdueReviews: accepted.filter((f) => f.nextRefreshOn && f.nextRefreshOn < now).length,
     reviewsDue30: accepted.filter((f) => f.nextRefreshOn && f.nextRefreshOn >= now && f.nextRefreshOn <= in30).length,
     internalReportsOpen: opts.seeCases ? await tx.case.count({ where: { type: "INTERNAL_SUSPICION", status: "open" } }) : 0,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NEEDS_REVIEW_WHERE } from "@/lib/monitoring/rules";
 import { BellRing, Building2, CalendarClock, FilePlus2, ShieldCheck, UserPlus } from "lucide-react";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
@@ -72,7 +73,7 @@ export default async function Dashboard() {
     for (const f of live) if (f.riskAssessments[0]) risk[f.riskAssessments[0].final]++;
     const pendingHits = await tx.screeningResult.findMany({ where: { decision: "PENDING" }, orderBy: { screenedAt: "desc" }, take: 5, include: { party: { select: { displayName: true } } } });
     const openAlerts = await tx.screeningResult.count({ where: { decision: "PENDING" } });
-    const flaggedTx = await tx.transaction.count({ where: { monitorStatus: "flagged" } });
+    const flaggedTx = await tx.transaction.count({ where: NEEDS_REVIEW_WHERE });
     const staffOpen = seeStaff ? await tx.staffScreening.findMany({ where: { status: "possible-match" }, take: 5 }) : [];
     const checklist = setupChecklist(profile);
     const cpMissing = checklist.filter((c) => c.status === "required-missing").length;
