@@ -108,6 +108,13 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   await submit(p, "Request more screenings", "We'll raise your limit within 1 business day");
   if (!sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject LIKE '%asks for more screenings%'`).match(/^[1-9]/)) throw new Error("✘ no request email to operations");
   log("limit reached: dashboard shows usage; 'Request more screenings' emails operations");
+  await submit(p, "Buy 30 more screenings (€10.00)", "30 more screenings added for this month (€10.00 on your next invoice)");
+  await p.goto(BASE + "/app/billing");
+  await p.getByTestId("screening-usage").getByText(/30 of 60 today/).waitFor();
+  if (sql(`SELECT "amountCents" || '|' || "clientRef" FROM "CreditEntry" WHERE "firmId" = '${firmId}' AND "clientRef" = 'Extra screenings'`) !== "-1000|Extra screenings") throw new Error("✘ pack not charged");
+  await p.goto(overLimitUrl);
+  await submit(p, "Screen again now (EU/UN lists, free)", /screened against|No possible matches|possible match/);
+  log("bought 30 more screenings for €10: today's limit 60, charged on the invoice, screening runs again at once");
   const alerts = sql(`SELECT count(*) FROM "DevEmail" WHERE "to" = 'deimena@amlsync.com' AND subject LIKE '%daily screening limit%'`);
   if (alerts !== "1") throw new Error("expected one alert email to AMLSync App, got " + alerts);
   log("30-per-day limit: party left unscreened, acceptance blocked, client told to contact us, one alert to AMLSync App");

@@ -15,6 +15,15 @@ export const PLAN_LIMITS: Record<string, Limits> = {
   starter: { perMinute: 10, perDay: 200, perMonth: 500 },
   custom: { perMinute: 10, perDay: 200, perMonth: 500 },
 };
+/** Extra screenings a firm can buy itself [decided 23 Nov 2026]: 30 for €10, added to this month (and to today's limit). */
+export const SCREEN_PACK = { screenings: 30, cents: 1000 } as const;
+export const SCREEN_PACK_REF = "Extra screenings";
+
+/** Limits plus the packs bought: each pack adds to this month, and to today's limit if bought today. */
+export function withPacks(l: Limits, packsThisMonth: number, packsToday: number): Limits {
+  return { perMinute: l.perMinute, perDay: l.perDay + SCREEN_PACK.screenings * packsToday, perMonth: l.perMonth + SCREEN_PACK.screenings * packsThisMonth };
+}
+
 export function effectiveLimits(plan: string, firm: Limits): Limits {
   const p = PLAN_LIMITS[plan] ?? PLAN_LIMITS.starter;
   return { perMinute: Math.max(p.perMinute, firm.perMinute), perDay: Math.max(p.perDay, firm.perDay), perMonth: Math.max(p.perMonth, firm.perMonth) };
@@ -35,7 +44,7 @@ export function allowedNow(limits: Limits, used: Used, requested: number): { all
 }
 
 export const LIMIT_MESSAGE =
-  "For your security there is a limit on screenings. To get more, press \"Request more screenings\" (Settings → Billing) or write to contact@amlsync.com: we adjust your limit within 1 business day.";
+  "For your security there is a limit on screenings. To continue now, buy 30 more screenings for €10.00 on the Dashboard or under Billing; for a higher limit, press \"Request more screenings\" or write to contact@amlsync.com.";
 
 export function limitMessage(kind: LimitKind, limits: Limits): string {
   const which = kind === "minute" ? `${limits.perMinute} per minute` : kind === "day" ? `${limits.perDay} per day` : `${limits.perMonth} per month`;

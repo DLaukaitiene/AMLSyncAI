@@ -56,8 +56,7 @@ export default async function Pricing() {
           <li>Not charged if a check expires or fails. Each check has a statement with your client reference, so you can re-bill it.</li>
         </ul>
         <p className="text-sm text-muted">
-          For your security, screenings are limited to {DEFAULT_LIMITS.perMinute} per minute, {DEFAULT_LIMITS.perDay} per day and {DEFAULT_LIMITS.perMonth} per month.
-          Need more? Write to {CONTACT_EMAIL} and we adjust it within 1 business day.
+          For your security, screenings are limited to {DEFAULT_LIMITS.perMinute} per minute, {DEFAULT_LIMITS.perDay} per day and {DEFAULT_LIMITS.perMonth} per month on Solo (Starter: 10, 200 and 500). Need more? Buy 30 extra screenings for €10.00 at any time, or write to {CONTACT_EMAIL} for a permanently higher limit.
         </p>
       </section>
     </div>

@@ -3,7 +3,7 @@ import type { Tx } from "./db";
 import { securityEvent } from "./audit";
 import { sendEmail, appUrl } from "./email";
 import { hit } from "./rate-limit";
-import { allowedNow, effectiveLimits, limitMessage, unusualVolume, type LimitKind } from "@/lib/security/screening-caps";
+import { allowedNow, effectiveLimits, limitMessage, SCREEN_PACK_REF, unusualVolume, withPacks, type LimitKind } from "@/lib/security/screening-caps";
 import { OPS_ALERT_EMAIL } from "@/lib/billing/plans";
 import { serviceBlock } from "./invoicing";
 
@@ -36,15 +36,23 @@ async function limitReached(firmId: string, firmName: string, kind: LimitKind, l
   await sendEmail(
     OPS_ALERT_EMAIL,
     `AMLSync App: ${firmName} reached its ${kind === "day" ? "daily" : "monthly"} screening limit`,
-    `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm was told to contact contact@amlsync.com and that the limit is adjusted within 1 business day.\nAdjust it in ${appUrl("/adminpage1&/billing")} (firm id ${firmId}).`,
+    `${firmName} reached its screening limit.\n\nUsed today: ${used.today} of ${limits.perDay}\nUsed this month: ${used.thisMonth} of ${limits.perMonth}\nPer minute: ${limits.perMinute}\n\nThe firm can buy 30 more screenings for €10 itself, or ask for a higher limit.\nAdjust it in ${appUrl("/adminpage1&/billing")} (firm id ${firmId}).`,
   );
 }
 
 /** The firm's effective limits (plan or raised by AMLSync App) and what it used. */
 export async function screeningUsage(tx: Tx, firmId: string) {
   const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { plan: true, screenLimitMinute: true, screenLimitDay: true, screenLimitMonth: true } });
-  const limits = effectiveLimits(firm.plan, { perMinute: firm.screenLimitMinute, perDay: firm.screenLimitDay, perMonth: firm.screenLimitMonth });
   const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const packs = await tx.creditEntry.findMany({ where: { kind: "charge", clientRef: SCREEN_PACK_REF, createdAt: { gte: monthStart } }, select: { id: true, createdAt: true } });
+  const refunded = new Set((await tx.creditEntry.findMany({ where: { kind: "refund", reference: { in: packs.map((p) => p.id) } }, select: { reference: true } })).map((r) => r.reference));
+  const live = packs.filter((p) => !refunded.has(p.id));
+  const limits = withPacks(
+    effectiveLimits(firm.plan, { perMinute: firm.screenLimitMinute, perDay: firm.screenLimitDay, perMonth: firm.screenLimitMonth }),
+    live.length, live.filter((p) => p.createdAt >= dayStart).length,
+  );
   const count = (since: Date) => tx.screeningEvent.count({ where: { createdAt: { gte: since } } });
   const used = {
     lastMinute: await count(new Date(now.getTime() - 60_000)),
