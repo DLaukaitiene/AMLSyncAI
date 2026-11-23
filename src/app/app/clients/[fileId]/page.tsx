@@ -34,7 +34,7 @@ import { currentPricesOrNull } from "@/lib/server/prices";
 import { KybSearch } from "./kyb-panel";
 import { kybSearchStatus, searchLimitMessage } from "@/lib/server/kyb";
 import { Chip, RiskChip, StatusChip } from "@/components/chips";
-import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { SCOPE_REASONS, scopeReasonsFor } from "@/lib/rules/cdd-scope";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
@@ -590,7 +590,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                   </Field>
                 </div>
                 <Field label="Note to the other firm" name="note" hint="Optional, e.g. why you are sending it." />
-                <label className="flex items-start gap-2"><input type="checkbox" name="confirm" className="mt-1" /> <span>I confirm we may share this file on the basis above, and the client is not the subject of a suspicion report.</span></label>
+                <label className="flex items-start gap-2"><input type="checkbox" name="confirm" className="mt-1" /> <span>I confirm we may share this file on the basis above (for reliance: we have a written reliance agreement with this firm), and the client is not the subject of a suspicion report.</span></label>
                 <Submit variant="secondary">Send the file</Submit>
               </ActionForm>
             </div>
@@ -908,10 +908,11 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <Field label="Why the service is outside AMLR scope" name="scopeReason" required>
                 <select name="scopeReason" defaultValue="" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" aria-label="Reason">
                   <option value="" disabled>Choose…</option>
-                  {Object.entries(SCOPE_REASONS).filter(([k]) => k !== "firm-default").map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {scopeReasonsFor(s.firm.sectors ?? []).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </Field>
               <Field label="Details" name="scopeNote" hint="Required for “Other”. Recorded in the file." />
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="oneOff" className="mt-1" /> <span>For the one-off transaction reason: this is a single occasional transaction, and we have no ongoing relationship with this client.</span></label>
               <Submit variant="secondary">Record as identification only</Submit>
             </ActionForm>
           </details>

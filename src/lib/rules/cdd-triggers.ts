@@ -154,7 +154,9 @@ export interface CashCheck {
 /** Checks a cash payment against the firm's cap and national cash-report rules. */
 export function checkCashPayment(amountEUR: number, profile: CountryProfile): CashCheck {
   const cap = Math.min(profile.cashCapEUR, EU_CORE.cash.capEUR);
-  const blocked = amountEUR >= cap;
+  // EU cap: €10,000 or more (Art. 80). A lower national cap is "above the limit" (e.g. LT: more than €5,000).
+  const national = profile.cashCapEUR < EU_CORE.cash.capEUR;
+  const blocked = national ? amountEUR > cap || amountEUR >= EU_CORE.cash.capEUR : amountEUR >= cap;
   const nationalReportRequired =
     profile.nationalCashReport.enabled &&
     profile.nationalCashReport.thresholdEUR !== undefined &&
@@ -163,7 +165,7 @@ export function checkCashPayment(amountEUR: number, profile: CountryProfile): Ca
     blocked,
     capEUR: cap,
     message: blocked
-      ? `Cash payments of €${fmt(cap)} or more are not allowed (AMLR Art. 80${cap < EU_CORE.cash.capEUR ? " and your Country Profile" : ""}). Ask for a bank transfer.`
+      ? national ? `Cash payments above €${fmt(cap)} are not allowed (national cash limit in your Country Profile; AMLR Art. 80). Ask for a bank transfer.` : `Cash payments of €${fmt(cap)} or more are not allowed (AMLR Art. 80). Ask for a bank transfer.`
       : undefined,
     nationalReportRequired,
   };

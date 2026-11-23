@@ -50,7 +50,7 @@ export function buildReviewPack(i: ReviewPackInput): GeneratedDoc {
       id: "thresholds", heading: "2. Thresholds and deadlines (EU rules, built in)",
       blocks: [{ table: { head: ["Rule", "Value", "Legal basis"], rows: [
         ["Client checks for an occasional transaction (including linked ones)", `${eur(c.cdd.occasionalTransactionEUR)} or more`, "Art. 19(1)(b)"],
-        ["Window in which smaller transactions count as linked", `${c.cdd.linkedTransactionWindowDays} days${CHECK}`, "Art. 19(9), AMLA standards"],
+        ["Window in which smaller transactions count as linked", `${c.cdd.linkedTransactionWindowDays} days${CHECK}`, "Art. 19(9); AMLA final draft RTS of 1 Oct 2026, pending adoption by the Commission"],
         ["Dealers: identify buyers paying cash", `${eur(c.cdd.cashIdentificationEUR)} or more`, "Art. 19(4)"],
         ["Letting agents in scope when monthly rent is", `${eur(c.cdd.lettingMonthlyRentEUR)} or more`, "Art. 3(3)(d)"],
         ["Cash payments not allowed", `${eur(p.cashCapEUR)} or more${p.cashCapEUR < c.cash.capEUR ? " (your national limit)" : ""}`, "Art. 80"],
@@ -63,7 +63,7 @@ export function buildReviewPack(i: ReviewPackInput): GeneratedDoc {
         ["Reported transaction held for", `${c.reporting.transactionHoldWorkingDays} working days`, "Art. 71"],
         ["Report beneficial-owner register discrepancies within", `${c.reporting.discrepancyCalendarDays} days${CHECK}`, "Art. 24"],
         ["Threshold reports: cars / aircraft and boats", `${eur(c.reporting.motorVehicleEUR)} / ${eur(c.reporting.aircraftWatercraftEUR)} or more`, "Art. 74"],
-        ["Keep records for", `${c.records.retentionYears} years after the relationship ends${CHECK}`, "Art. 77; national law until 10 July 2027"],
+        ["Keep AML records for", `${Math.max(p.retentionYears, c.records.retentionYears)} years after the relationship ends${p.retentionYears > c.records.retentionYears ? " (your national law until the AMLR applies)" : ""}${CHECK}`, "Art. 77 from 10 July 2027; national law until then (e.g. Lithuania: 8 years). Invoices and accounting records follow their own (usually longer) period and are never deleted with AML records"],
       ] } }],
     },
     {
@@ -117,7 +117,7 @@ export function buildReviewPack(i: ReviewPackInput): GeneratedDoc {
     },
     {
       id: "scope", heading: "7. When a client can be \"identification only\"" + CHECK,
-      blocks: [{ list: Object.entries(SCOPE_REASONS).map(([, v]) => `${v.label} (${v.article})`) }, { p: "Identification and sanctions screening still apply. The client is switched to full checks as soon as an AMLR service starts." }],
+      blocks: [{ list: Object.values(SCOPE_REASONS).filter((v) => !v.legacy).map((v) => `${v.label} (${v.article})${v.sectors ? ` — only for: ${v.sectors.join(", ").toLowerCase()}` : ""}${v.oneOffOnly ? " — never for an ongoing client" : ""}`) }, { p: "Identification and sanctions screening still apply. The client is switched to full checks as soon as an AMLR service starts." }],
     },
     {
       id: "flags", heading: "8. Payments flagged for review",

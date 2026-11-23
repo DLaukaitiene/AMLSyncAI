@@ -32,7 +32,7 @@ export async function invoicePdf(inv: Invoice): Promise<Buffer> {
         id: "lines", heading: "Items",
         blocks: [
           { table: { head: ["Description", "Qty", "Unit price", "Amount"], rows: lines.map((l) => [l.description, String(l.quantity), eur(l.unitCents), eur(l.netCents)]) } },
-          { kv: [["Total excl. VAT", formatEur(inv.netCents)], [`VAT ${(inv.vatRateBp / 100).toFixed(0)} %`, formatEur(inv.vatCents)], ["Total to pay (EUR)", formatEur(inv.totalCents)]] },
+          { kv: [["Total excl. VAT", formatEur(inv.netCents)], [inv.vatRateBp === 0 ? "VAT" : `VAT ${(inv.vatRateBp / 100).toFixed(0)} %`, inv.vatRateBp === 0 ? "not charged (see below)" : formatEur(inv.vatCents)], ["Total to pay (EUR)", formatEur(inv.totalCents)]] },
           ...(inv.vatNote ? [{ p: inv.vatNote }] : []),
         ],
       },

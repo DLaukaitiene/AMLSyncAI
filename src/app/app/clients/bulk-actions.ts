@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { audit } from "@/lib/server/audit";
 import { createPortalLink } from "@/lib/server/portal";
-import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { scopeReasonsFor } from "@/lib/rules/cdd-scope";
 
 const ids = (fd: FormData) => [...new Set(fd.getAll("id").map(String).filter((x) => /^[0-9a-f-]{36}$/i.test(x)))].slice(0, 100);
 const done = (q: Record<string, string | number>) => redirect(`/app/clients?${new URLSearchParams(Object.entries(q).map(([k, v]) => [k, String(v)]))}`);
@@ -36,7 +36,7 @@ export async function bulkIdOnlyAction(fd: FormData) {
   const list = ids(fd);
   const reason = String(fd.get("bulkScopeReason") ?? "");
   if (!list.length) done({ bulk: "none" });
-  if (!SCOPE_REASONS[reason] || reason === "other" || reason === "firm-default") done({ bulk: "noreason" });
+  if (!scopeReasonsFor(s.firm.sectors ?? []).some(([k, r]) => k === reason && k !== "other" && !r.oneOffOnly)) done({ bulk: "noreason" });
   let n = 0;
   await withTenant(s.firm.id, async (tx) => {
     const files = await tx.cddFile.findMany({ where: { id: { in: list }, role: "CLIENT", scope: "full", status: { notIn: ["REFUSED", "TERMINATED"] } } });

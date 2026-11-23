@@ -48,9 +48,9 @@ export function vatTreatment(c: Customer): { rateBp: number; note: string | null
   const country = c.country.toUpperCase();
   const vat = (c.vatId ?? "").replace(/\s/g, "").toUpperCase();
   if (country === SELLER.country) return { rateBp: LT_VAT_BP, note: null };
-  if (!EU.has(country)) return { rateBp: 0, note: "Not subject to Lithuanian VAT" };
+  if (!EU.has(country)) return { rateBp: 0, note: "VAT not charged – place of supply outside the EU (Directive 2006/112/EC Art. 44). Not subject to Lithuanian VAT." };
   if (c.viesValid && /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(vat) && !vat.startsWith("LT")) {
-    return { rateBp: 0, note: `Atvirkštinis apmokestinimas / Reverse charge. Customer VAT number: ${vat}` };
+    return { rateBp: 0, note: `VAT not charged – reverse charge. Atvirkštinis apmokestinimas / Reverse charge (Directive 2006/112/EC Art. 44 and 196). Customer VAT number: ${vat}` };
   }
   return { rateBp: LT_VAT_BP, note: null };
 }

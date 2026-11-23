@@ -13,7 +13,7 @@ import { loadClientFile, persistRiskIfChanged, runScreening, upsertTask } from "
 import { displayName, legalEntitySchema, naturalPersonSchema } from "@/lib/cdd/party";
 import { evaluateCddTriggers, checkCashPayment, thresholdReportRequired, type GoodsCategory, type Sector } from "@/lib/rules/cdd-triggers";
 import { canCompleteMatter, canTransferFundsOrProperty, type MatterState } from "@/lib/rules/gates";
-import { thresholdReportDue } from "@/lib/rules/deadlines";
+import { thresholdReportDue, cashReportDue } from "@/lib/rules/deadlines";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { toIsoDate } from "@/lib/rules/dates";
 import { encryptField } from "@/lib/server/crypto";
@@ -162,6 +162,11 @@ export async function addTransactionAction(matterId: string, _: ActionState, fd:
       await tx.report.create({
         data: { firmId: s.firm.id, matterId, type: "CASH", format: "draft", contentEnc: encryptField(s.firm.id, JSON.stringify({ transactionId: t.id, amount, date: o.date })), euCoreVersion: EU_CORE_VERSION, countryProfileVersion: version },
       });
+      const due = cashReportDue(o.date, profile);
+      if (due) {
+        await upsertTask(tx, { firmId: s.firm.id, kind: "cash-report", objectType: "Matter", objectId: matterId, dueOn: due.due, article: due.article });
+        messages.push(`Report it to your FIU by ${due.due} (${profile.nationalCashReport.deadlineWorkingDays} working days).`);
+      }
     }
 
     const category = (matter.details as { goodsCategory?: GoodsCategory }).goodsCategory;

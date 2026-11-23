@@ -24,7 +24,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("full due diligence: can't accept without verification and purpose");
 
   await p.getByText("Record as identification only (outside AMLR scope)").click();
-  await p.locator("select[name=scopeReason]").selectOption("legal-proceedings");
+  await p.locator("select[name=scopeReason]").selectOption("litigation-only");
   await p.locator("input[name=scopeNote]").fill("Defence in a civil court case");
   await p.getByRole("button", { name: "Record as identification only", exact: true }).click();
   await p.getByText("Identification only", { exact: true }).first().waitFor();

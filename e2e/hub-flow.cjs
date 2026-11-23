@@ -61,7 +61,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await p.getByTestId("bulk-result").getByText("Secure links sent: 1. Skipped: 1").waitFor();
   log("bulk: secure link sent to the client with an email, the other skipped");
   await p.getByRole("checkbox", { name: "Select Tomas Bulkus" }).check();
-  await p.locator("select[name=bulkScopeReason]").selectOption("legal-proceedings");
+  await p.locator("select[name=bulkScopeReason]").selectOption("service-not-listed");
   await p.getByRole("button", { name: "Mark identification only" }).click();
   await p.getByTestId("bulk-result").getByText("1 client(s) marked identification only.").waitFor();
   await p.getByTestId("client-row").filter({ hasText: "Tomas Bulkus" }).getByText("Identification only").waitFor();

@@ -8,7 +8,7 @@ import { loadClientFile } from "@/lib/server/cdd";
 import { openCddItems } from "@/lib/rules/gates";
 import { Chip, RiskChip, StatusChip, type Tone } from "@/components/chips";
 import { SelectAll } from "@/components/select-all";
-import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { scopeReasonsFor } from "@/lib/rules/cdd-scope";
 import { bulkIdOnlyAction, bulkSendLinksAction } from "./bulk-actions";
 
 /**
@@ -159,7 +159,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
               <>
                 <select name="bulkScopeReason" aria-label="Reason the service is outside AMLR scope" defaultValue="" className="max-w-[16rem] rounded-lg border border-border bg-background px-2 py-1.5">
                   <option value="">Outside AMLR scope because…</option>
-                  {Object.entries(SCOPE_REASONS).filter(([k]) => k !== "other" && k !== "firm-default").map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {scopeReasonsFor(s.firm.sectors ?? []).filter(([k, v]) => k !== "other" && !v.oneOffOnly).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
                 <button type="submit" formAction={bulkIdOnlyAction} formMethod="post" className="rounded-full border border-border bg-background px-3 py-1.5 hover:border-accent">Mark identification only</button>
               </>

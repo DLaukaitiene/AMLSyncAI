@@ -18,7 +18,7 @@ import type { Prisma } from "@prisma/client";
 import { createPortalLink, renewIfClean, revokePortalLink } from "@/lib/server/portal";
 import { ensureSanctionsNotice, openDiscrepancy } from "@/lib/server/cases";
 import { createIdvSession, DiditError, refreshDiditSession, screenWithDidit } from "@/lib/server/didit";
-import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
+import { SCOPE_REASONS, scopeReasonsFor } from "@/lib/rules/cdd-scope";
 import { formatEur } from "@/lib/didit/map";
 import { currentPricesOrNull } from "@/lib/server/prices";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
@@ -576,8 +576,9 @@ export async function setScopeAction(fileId: string, _: ActionState, fd: FormDat
   const reason = String(fd.get("scopeReason") ?? "");
   const note = String(fd.get("scopeNote") ?? "").trim().slice(0, 1000);
   if (scope === "identification-only") {
-    if (!SCOPE_REASONS[reason] || reason === "firm-default") return { error: "Choose why the service is outside AMLR scope.", fieldErrors: { scopeReason: ["Required."] } };
+    if (!scopeReasonsFor(s.firm.sectors ?? []).some(([k]) => k === reason)) return { error: "Choose why the service is outside AMLR scope.", fieldErrors: { scopeReason: ["Required."] } };
     if (reason === "other" && note.length < 10) return { error: "Describe why the service is outside AMLR scope.", fieldErrors: { scopeNote: ["Describe it."] } };
+    if (SCOPE_REASONS[reason].oneOffOnly && fd.get("oneOff") !== "on") return { error: "This reason is only for a one-off occasional transaction. Confirm there is no ongoing relationship with this client, or choose full due diligence.", fieldErrors: { scopeReason: ["Not for an ongoing client."] } };
   }
   let reopened = false;
   await withTenant(s.firm.id, async (tx) => {

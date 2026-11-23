@@ -87,8 +87,8 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   };
   const head = await cashTest("head");
   const pl = await cashTest("pl");
-  if (/not allowed/.test(head) || !/€3,000 or more are not allowed/.test(pl)) throw new Error(`cash: head=${head} pl=${pl}`);
-  log("€4,000 cash: allowed at head office (LT cap €10,000), blocked at the Warsaw branch (PL profile cap €3,000)");
+  if (/not allowed/.test(head) || !/above €3,000 are not allowed/.test(pl)) throw new Error(`cash: head=${head} pl=${pl}`);
+  log("€4,000 cash: allowed at head office (LT limit €5,000), blocked at the Warsaw branch (PL profile limit €3,000)");
 
   // Colleague resets two-factor
   await p.goto(BASE + "/app/team");

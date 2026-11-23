@@ -48,5 +48,5 @@ CREATE INDEX IF NOT EXISTS "Transaction_firmId_externalId_idx" ON "Transaction"(
 CREATE INDEX IF NOT EXISTS "Transaction_importBatchId_idx" ON "Transaction"("importBatchId");
 
 
--- Seed: EU high-risk third countries (list version 2026-11-01, src/lib/rules/high-risk-countries.ts)
-INSERT INTO "HighRiskCountry" ("code") VALUES ('AF'), ('DZ'), ('AO'), ('BO'), ('CM'), ('CD'), ('CI'), ('HT'), ('IR'), ('KE'), ('KP'), ('LA'), ('LB'), ('MC'), ('MM'), ('NA'), ('NP'), ('SS'), ('SY'), ('TT'), ('VE'), ('VN'), ('VU'), ('YE') ON CONFLICT ("code") DO NOTHING;
+-- Seed: EU high-risk third countries (list in force from 29 Jan 2026: Delegated Regulations (EU) 2026/46 and 2026/83, src/lib/rules/high-risk-countries.ts)
+INSERT INTO "HighRiskCountry" ("code") VALUES ('AF'), ('DZ'), ('AO'), ('BO'), ('CM'), ('CD'), ('CI'), ('HT'), ('IR'), ('KE'), ('KP'), ('LA'), ('LB'), ('MC'), ('MM'), ('NA'), ('NP'), ('SS'), ('SY'), ('TT'), ('RU'), ('VE'), ('VG'), ('VN'), ('VU'), ('YE') ON CONFLICT ("code") DO NOTHING;

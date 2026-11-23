@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
-import { setupChecklist } from "@/lib/rules/country-profile";
+import { setupChecklist, belowNationalDefaults } from "@/lib/rules/country-profile";
 import { EU_CORE } from "@/lib/rules/eu-core";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, CountryField, Field, Submit } from "@/components/form";
@@ -41,6 +41,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
   });
   const p = cur.profile;
   const checklist = setupChecklist(p);
+  const weaker = belowNationalDefaults(p);
 
   return (
     <div className="space-y-8">
@@ -56,6 +57,14 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           decisions keep the version that applied at the time. Current version: <strong>{cur.version}</strong>.
         </p>
       </div>
+
+      {weaker.length > 0 && (
+        <section className="space-y-1 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50" data-testid="below-national">
+          <p className="font-semibold">Check these against national law</p>
+          <ul className="list-disc pl-5">{weaker.map((w) => <li key={w}>{w}</li>)}</ul>
+          <p className="text-xs">Update them below if they apply to your firm, and ask your lawyer if unsure.</p>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Setup checklist</h2>
@@ -73,7 +82,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
       {!edit && <p className="text-sm text-muted">Only a Compliance Officer can change the Country Profile.</p>}
 
-      <ActionForm action={saveProfileAction} className="max-w-3xl space-y-6">
+      <ActionForm key={office?.id ?? "home"} action={saveProfileAction} className="max-w-3xl space-y-6">
         <input type="hidden" name="officeId" value={office?.id ?? ""} />
         <fieldset disabled={!edit} className="space-y-6">
           <Section title="Authorities" note="Required. Without them, reports can be drafted and exported but not marked as submitted.">

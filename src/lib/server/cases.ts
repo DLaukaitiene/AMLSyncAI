@@ -284,6 +284,7 @@ export async function markReportSubmitted(tx: Tx, ctx: Ctx, reportId: string, re
     }
   }
   if (r.matterId && r.type === "THRESHOLD") await closeTasks(tx, r.matterId, "threshold-report");
+  if (r.matterId && r.type === "CASH") await closeTasks(tx, r.matterId, "cash-report");
   await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "update", objectType: "Report", objectId: reportId, fields: ["status", "submissionRef"] });
   return { ok: true };
 }

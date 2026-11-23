@@ -49,6 +49,12 @@ describe("monitoring rules", () => {
     expect(statusFor(runRules(tx(), ctx()))).toBe("clear");
   });
 
+  it("R13 also watches €14,000–14,999 and cash €4,500–4,999", () => {
+    expect(fired(tx({ amountEUR: 14500 }), ctx({ history: [tx({ id: "a", date: "2026-11-10", amountEUR: 14900 })] }))).toContain("R13");
+    expect(fired(tx({ method: "cash", amountEUR: 4800 }), ctx({ history: [h("a", "2026-11-10", 4600)] }))).toContain("R13");
+    expect(fired(tx({ method: "card", amountEUR: 4800 }), ctx({ history: [h("a", "2026-11-10", 4600, "card")] }))).not.toContain("R13");
+  });
+
   it("thresholds come from the firm's settings", () => {
     expect(fired(tx({ method: "cash", amountEUR: 2500 }), ctx({}, { cashThresholdEUR: 2000 }))).toContain("R1");
   });

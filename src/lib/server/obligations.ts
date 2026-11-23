@@ -67,7 +67,7 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
     reviewsDue30: accepted.filter((f) => f.nextRefreshOn && f.nextRefreshOn >= now && f.nextRefreshOn <= in30).length,
     internalReportsOpen: opts.seeCases ? await tx.case.count({ where: { type: "INTERNAL_SUSPICION", status: "open" } }) : 0,
     reportDrafts: opts.seeCases ? await tx.report.count({ where: { status: "DRAFT", type: { in: ["STR", "THRESHOLD", "CASH", "SANCTIONS_NOTICE", "DISCREPANCY"] } } }) : 0,
-    reportingOverdue: opts.seeCases ? await openTaskOverdue(["fiu-request", "discrepancy-report", "threshold-report"]) : 0,
+    reportingOverdue: opts.seeCases ? await openTaskOverdue(["fiu-request", "discrepancy-report", "threshold-report", "cash-report"]) : 0,
     trainingOverdue: await tx.trainingAssignment.count({ where: { completedAt: null, dueOn: { lt: now } } }),
     staffWithoutTraining: staff.filter((u) => !trained.has(u.id)).length,
     integrityDue: onePerson ? 0 : staff.filter((u) => !declared.has(u.id)).length,

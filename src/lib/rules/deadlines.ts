@@ -14,6 +14,7 @@ export type DeadlineKind =
   | "sdd-verification"
   | "former-pep"
   | "threshold-report"
+  | "cash-report"
   | "retention-end";
 
 export interface Deadline {
@@ -87,6 +88,13 @@ export function thresholdReportDue(saleDate: IsoDate, profile: CountryProfile): 
     article: "Art. 74",
     explanation: "Deadline set by your FIU for threshold reports.",
   };
+}
+
+/** National cash report (e.g. LT: cash operations of €15,000 or more to the FNTT within 7 working days). */
+export function cashReportDue(paymentDate: IsoDate, profile: CountryProfile): Deadline | null {
+  const days = profile.nationalCashReport.deadlineWorkingDays;
+  if (!profile.nationalCashReport.enabled || !days) return null;
+  return { kind: "cash-report", due: addWorkingDays(paymentDate, days, workingCalendar(profile)), article: "National law", explanation: `Report the cash operation to your FIU within ${days} working days.` };
 }
 
 /** Records are deleted 5 years (or the longer national period) after the end event (Art. 77). */

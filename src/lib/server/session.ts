@@ -60,7 +60,7 @@ export interface CurrentSession {
   stage: SessionStage;
   mfaAt: Date | null;
   user: { id: string; firmId: string; email: string; name: string; roles: AppRole[]; external: boolean; mfaEnrolled: boolean };
-  firm: { id: string; name: string; homeState: string; status: string; archiveUntil: string | null };
+  firm: { id: string; name: string; homeState: string; status: string; archiveUntil: string | null; sectors: string[] };
 }
 
 /** Reads and validates the session; enforces idle and absolute timeouts. */
@@ -94,7 +94,7 @@ export async function getSession(): Promise<CurrentSession | null> {
       external: s.user.external,
       mfaEnrolled: !!s.user.mfaEnrolledAt,
     },
-    firm: { id: s.user.firm.id, name: s.user.firm.name, homeState: s.user.firm.homeState, status: s.user.firm.status, archiveUntil: s.user.firm.archiveUntil },
+    firm: { id: s.user.firm.id, name: s.user.firm.name, homeState: s.user.firm.homeState, status: s.user.firm.status, archiveUntil: s.user.firm.archiveUntil, sectors: s.user.firm.sectors },
   };
 }
 

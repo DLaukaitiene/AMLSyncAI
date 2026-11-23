@@ -63,6 +63,7 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
   const label = period.from.slice(0, 7);
   const firms = await adminDb.firm.findMany();
   let issued = 0, skipped = 0;
+  const issuedReverseCharge: string[] = [];
   for (const f0 of firms) {
     let f = f0;
     // Reverse charge only with a VAT number that passes VIES: check again before invoicing (keep the last result if VIES is down).
@@ -96,6 +97,7 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
     });
     if (!done) { skipped++; continue; }
     issued++;
+    if (done.vatRateBp === 0 && /reverse charge/i.test(done.vatNote ?? "")) issuedReverseCharge.push(`${done.number} · ${(done.buyer as { name: string; vatId?: string }).name} · ${(done.buyer as { vatId?: string }).vatId ?? ""} · ${formatEur(done.netCents)} net`);
     const to = f.billingEmail || (await adminDb.user.findFirst({ where: { firmId: f.id, roles: { has: "OWNER" }, deactivatedAt: null }, orderBy: { createdAt: "asc" } }))?.email;
     const pdf = await invoicePdf(done);
     const file = [{ filename: `${done.number}.pdf`, content: pdf, contentType: "application/pdf" }];
@@ -104,6 +106,9 @@ export async function issueMonthlyInvoices(today = new Date()): Promise<{ issued
     await sendEmail(INVOICE_COPY_EMAIL, copyName, `${copyName}\n\nInvoice ${done.number} to ${(done.buyer as { name: string }).name}: ${formatEur(done.totalCents)} incl. VAT (VAT ${done.vatRateBp / 100} %${done.vatNote ? `, ${done.vatNote}` : ""}), due on ${done.dueOn}.${to ? ` Sent to ${to}.` : " No invoice email on file: send it yourself."}`, [{ filename: `${copyName}.pdf`, content: pdf, contentType: "application/pdf" }]);
     await securityEvent({ firmId: f.id, kind: "invoice-issued", details: { number: done.number, total: done.totalCents } });
   }
+  // EC Sales List (recapitulative statement): reverse-charge invoices to EU businesses must be reported to the VMI.
+  const rc = issuedReverseCharge.filter(Boolean);
+  if (rc.length) await sendEmail(INVOICE_COPY_EMAIL, `EC Sales List: ${rc.length} reverse-charge invoice(s) for ${period.label}`, `These invoices were issued without VAT under the reverse charge. Report them in the EC Sales List (recapitulative statement) to the VMI:\n\n${rc.join("\n")}\n\nAsk your accountant for the form and deadline.`);
   return { issued, skipped };
 }
 

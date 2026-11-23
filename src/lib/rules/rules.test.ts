@@ -7,7 +7,7 @@ import {
   canCompleteMatter,
   canTransferFundsOrProperty,
   checkCashPayment,
-  defaultCountryProfile,
+  defaultCountryProfile, belowNationalDefaults,
   diffProfiles,
   evaluateCddTriggers,
   fiuRequestDue,
@@ -25,7 +25,8 @@ import {
   type TransactionRecord,
 } from "./index";
 
-const LT = defaultCountryProfile("LT");
+// EU Core defaults for a Lithuanian firm (without the national starting values, tested separately below).
+const LT = (() => { const r = parseCountryProfile({ memberState: "LT" }); if (!r.ok) throw new Error(); return r.profile; })();
 
 describe("working days and deadlines (§11.0, §11.10)", () => {
   it("skips weekends", () => {
@@ -140,9 +141,18 @@ describe("cash cap and threshold reports (§11.9, §11.10)", () => {
   it("blocks cash at or above the firm's cap", () => {
     const lt = parseCountryProfile({ memberState: "LT", cashCapEUR: 5_000, nationalCashReport: { enabled: true, thresholdEUR: 15_000 } });
     if (!lt.ok) throw new Error();
-    expect(checkCashPayment(4_999, lt.profile).blocked).toBe(false);
-    expect(checkCashPayment(5_000, lt.profile).blocked).toBe(true);
+    expect(checkCashPayment(5_000, lt.profile).blocked).toBe(false); // national cap: above €5,000
+    expect(checkCashPayment(5_000.01, lt.profile).blocked).toBe(true);
     expect(checkCashPayment(9_000, LT).blocked).toBe(false);
+    expect(checkCashPayment(10_000, LT).blocked).toBe(true); // EU cap: €10,000 or more
+  });
+
+  it("new Lithuanian firms start with the national values; weaker profiles are pointed out", () => {
+    const d = defaultCountryProfile("LT");
+    expect([d.cashCapEUR, d.retentionYears, d.nationalCashReport]).toEqual([5000, 8, { enabled: true, thresholdEUR: 15000, deadlineWorkingDays: 7 }]);
+    expect(defaultCountryProfile("LV").retentionYears).toBe(5);
+    expect(belowNationalDefaults(LT)).toHaveLength(3);
+    expect(belowNationalDefaults(d)).toEqual([]);
   });
 
   it("Art. 74 reports for cars ≥ €250,000 and aircraft/watercraft ≥ €7.5m", () => {

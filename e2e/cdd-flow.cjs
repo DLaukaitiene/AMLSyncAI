@@ -118,7 +118,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await submit(p, "Refuse client", /Refused · Risk/);
   await p.getByText(/tipping-off is prohibited/).waitFor();
   const rh = await p.locator("main p").nth(1).innerText();
-  if (!/Refused/.test(rh) || !/Delete after 2031/.test(rh)) throw new Error("refusal header: " + rh);
+  if (!/Refused/.test(rh) || !/Delete after 2034/.test(rh)) throw new Error("refusal header: " + rh);
   log("refused with internal suspicion report; retention clock:", rh);
 
   // Retention: backdate the refused file, then delete it from the Records page (needs DATABASE_URL).
@@ -179,8 +179,8 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await pay("2027-08-20", 4000, "bank-transfer"); await q.getByText(/CDD required: 3 linked occasional transactions total €12,000/).first().waitFor();
   log("linked-transaction test: third €4,000 payment triggers CDD");
   await q.reload();
-  await pay("2027-08-21", 12000, "cash"); await q.getByText(/Cash payments of €10,000 or more are not allowed/).first().waitFor();
-  log("cash €12,000 blocked by cash cap");
+  await pay("2027-08-21", 12000, "cash"); await q.getByText(/Cash payments above €5,000 are not allowed/).first().waitFor();
+  log("cash €12,000 blocked by the Lithuanian €5,000 cash limit");
   await q.reload();
   await pay("2027-08-21", 3000, "cash"); await q.getByText(/Cash payments of €3,000 reach the €3,000 identification threshold/).first().waitFor();
   log("cash €3,000 triggers identification (Art. 19(4))");

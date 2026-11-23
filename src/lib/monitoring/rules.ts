@@ -51,7 +51,7 @@ export const RULES = {
   R10: { label: "Repeated round cash amounts (90 days)", severity: "low" },
   R11: { label: "Paid in crypto-assets", severity: "medium" },
   R12: { label: "€10,000 or more from a PEP or high-risk client", severity: "medium" },
-  R13: { label: "Payments just below €10,000 within 30 days", severity: "medium" },
+  R13: { label: "Payments just below a threshold within 30 days (€9,000–9,999; €14,000–14,999; cash €4,500–4,999)", severity: "medium" },
 } as const satisfies Record<string, { label: string; severity: Severity }>;
 export type RuleId = keyof typeof RULES;
 export const RULE_IDS = Object.keys(RULES) as RuleId[];
@@ -100,10 +100,19 @@ const CHECKS: Record<RuleId, Check> = {
   R11: (t) => (t.method === "crypto" ? "Paid in crypto-assets: check the source of funds." : null),
   R12: (t, c) => ((c.clientHighRisk || c.clientIsPep) && t.amountEUR >= 10_000 ? `${eur(t.amountEUR)} from a ${c.clientIsPep ? "PEP" : "high-risk"} client: check it matches the source of funds on file.` : null),
   R13: (t, c) => {
-    const below = (x: RuleTx) => x.amountEUR >= 9_000 && x.amountEUR < 10_000;
-    if (!below(t)) return null;
-    const n = c.history.filter((h) => h.id !== t.id && below(h) && Math.abs(ago(t, h)) <= 30).length;
-    return n ? `${n + 1} payments just below €10,000 within 30 days (possible structuring around the CDD threshold).` : null;
+    // Bands just below the AMLR €10,000 CDD line, the Lithuanian €15,000 CDD/report line, and (cash) the €5,000 cash limit.
+    const bands: { from: number; to: number; cash: boolean; label: string }[] = [
+      { from: 9_000, to: 10_000, cash: false, label: "just below €10,000 (the CDD threshold)" },
+      { from: 14_000, to: 15_000, cash: false, label: "just below €15,000 (the national CDD and cash report threshold)" },
+      { from: 4_500, to: 5_000, cash: true, label: "in cash just below €5,000 (the legal cash limit)" },
+    ];
+    for (const b of bands) {
+      const inBand = (x: RuleTx) => x.amountEUR >= b.from && x.amountEUR < b.to && (!b.cash || isCash(x));
+      if (!inBand(t)) continue;
+      const n = c.history.filter((h) => h.id !== t.id && inBand(h) && Math.abs(ago(t, h)) <= 30).length;
+      if (n) return `${n + 1} payments ${b.label} within 30 days (possible structuring).`;
+    }
+    return null;
   },
 };
 

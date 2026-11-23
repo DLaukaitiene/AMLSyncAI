@@ -126,8 +126,29 @@ export function parseCountryProfile(input: CountryProfileInput): ParseResult {
   return relax.length ? { ok: false, violations: relax } : { ok: true, profile: parsed.data };
 }
 
+/**
+ * National starting values a new firm gets [legal pre-review, 23 Nov 2026; to be confirmed by the firm's lawyer]:
+ * Lithuania — cash payments above €5,000 not allowed (Law on Restriction of Cash Payments XIV-1165);
+ * AML records kept 8 years until the AMLR applies (Law VIII-275 Art. 19); cash operations of €15,000 or more
+ * reported to the FNTT within 7 working days (Art. 20).
+ */
+export const NATIONAL_DEFAULTS: Record<string, Partial<CountryProfileInput>> = {
+  LT: { cashCapEUR: 5000, retentionYears: 8, nationalCashReport: { enabled: true, thresholdEUR: 15000, deadlineWorkingDays: 7 } },
+};
+
 export function defaultCountryProfile(memberState: string): CountryProfile {
-  return countryProfileSchema.parse({ memberState });
+  return countryProfileSchema.parse({ ...(NATIONAL_DEFAULTS[memberState] ?? {}), memberState });
+}
+
+/** Where a firm's profile is less strict than the national starting values (shown on the Country Profile page). */
+export function belowNationalDefaults(p: CountryProfile): string[] {
+  const d = NATIONAL_DEFAULTS[p.memberState];
+  if (!d) return [];
+  const out: string[] = [];
+  if (d.cashCapEUR !== undefined && p.cashCapEUR > d.cashCapEUR) out.push(`Cash cap €${p.cashCapEUR.toLocaleString("en")}: the national limit is €${d.cashCapEUR.toLocaleString("en")}.`);
+  if (d.retentionYears !== undefined && p.retentionYears < d.retentionYears) out.push(`Record retention ${p.retentionYears} years: national law requires ${d.retentionYears} years until the AML Regulation applies (10 July 2027).`);
+  if (d.nationalCashReport?.enabled && !p.nationalCashReport.enabled) out.push(`National cash report is off: cash operations of €${d.nationalCashReport.thresholdEUR?.toLocaleString("en")} or more must be reported within ${d.nationalCashReport.deadlineWorkingDays} working days.`);
+  return out;
 }
 
 // ---------------------------------------------------------------------------

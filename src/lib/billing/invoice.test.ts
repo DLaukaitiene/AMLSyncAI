@@ -9,14 +9,14 @@ describe("VAT treatment", () => {
   it("reverse-charges other EU businesses whose VAT number passes VIES, with their number on the invoice", () => {
     const v = vatTreatment({ ...lt, country: "LV", vatId: "LV40003012345", viesValid: true });
     expect(v.rateBp).toBe(0);
-    expect(v.note).toBe("Atvirkštinis apmokestinimas / Reverse charge. Customer VAT number: LV40003012345");
+    expect(v.note).toBe("VAT not charged – reverse charge. Atvirkštinis apmokestinimas / Reverse charge (Directive 2006/112/EC Art. 44 and 196). Customer VAT number: LV40003012345");
   });
   it("charges 21 % when the EU VAT number fails VIES or is missing", () => {
     expect(vatTreatment({ ...lt, country: "LV", vatId: "LV40003012345", viesValid: false }).rateBp).toBe(2100);
     expect(vatTreatment({ ...lt, country: "EE", vatId: null }).rateBp).toBe(2100);
   });
   it("doesn't charge Lithuanian VAT outside the EU", () => {
-    expect(vatTreatment({ ...lt, country: "NO", vatId: null })).toEqual({ rateBp: 0, note: "Not subject to Lithuanian VAT" });
+    expect(vatTreatment({ ...lt, country: "NO", vatId: null }).note).toMatch(/^VAT not charged – place of supply outside the EU/);
   });
 });
 
