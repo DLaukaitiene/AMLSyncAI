@@ -60,18 +60,6 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
               <Field label="Phone" name={n("phone")} />
             </>
           )}
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" name={n("isPep")} /> Politically exposed person (now or in the last 12 months)
-          </label>
-          {!compact && (
-            <>
-              <Field label="Prominent public function" name={n("pepFunction")} />
-              <Field label="Left office on" name={n("pepLeftOfficeOn")} type="date" hint="Former PEPs stay in scope at least 12 months (Art. 46)." />
-            </>
-          )}
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" name={n("isPepFamilyOrAssociate")} /> Family member or close associate of a PEP
-          </label>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -95,21 +83,38 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
           )}
         </div>
       )}
-      {(!compact || kind === "LEGAL") && <RiskFlagsSection kind={kind} n={n} groups={compact ? ["ownership"] : undefined} />}
+      <RiskFlagsSection kind={kind} n={n} compact={compact} groups={compact ? ["ownership"] : undefined} />
     </div>
   );
 }
 
-/** Expandable "High-risk flags" section, grouped, each with a "?" explanation (lib/cdd/risk-flags). */
-function RiskFlagsSection({ kind, n, groups }: { kind: "NATURAL" | "LEGAL"; n: (k: string) => string; groups?: FlagGroup[] }) {
+/** Expandable "Risk questionnaire": PEP questions (people) and grouped high-risk flags, each with a "?" explanation (lib/cdd/risk-flags). */
+function RiskFlagsSection({ kind, n, compact, groups }: { kind: "NATURAL" | "LEGAL"; n: (k: string) => string; compact: boolean; groups?: FlagGroup[] }) {
   const applies = (f: RiskFlag) => f.appliesTo === "both" || f.appliesTo === kind;
   const shown = FLAG_GROUPS.filter((g) => !groups || groups.includes(g.id))
     .map((g) => ({ ...g, flags: RISK_FLAGS.filter((f) => f.group === g.id && applies(f)) }))
     .filter((g) => g.flags.length);
   return (
     <details className="rounded-xl border border-border p-3" data-testid="risk-flags">
-      <summary className="cursor-pointer text-sm font-semibold">High-risk flags <span className="font-normal text-muted">(optional — tick any that apply)</span></summary>
+      <summary className="cursor-pointer text-sm font-semibold">Risk questionnaire <span className="font-normal text-muted">(optional — tick any that apply)</span></summary>
       <div className="mt-3 space-y-4">
+        {kind === "NATURAL" && (
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-semibold">Politically exposed persons</legend>
+            <CheckWithHelp name={n("isPep")} label="Politically exposed person (now or in the last 12 months)" badge="Requires EDD">
+              Someone who holds, or held in the last 12 months, a prominent public function: for example a head of state or government, minister, member of parliament, judge of a supreme or constitutional court, central bank board member, ambassador, senior military officer, or board member of a state-owned company. Senior management approval and enhanced due diligence are required. <span className="whitespace-nowrap">(Art. 42, 46)</span>
+            </CheckWithHelp>
+            {!compact && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Prominent public function" name={n("pepFunction")} />
+                <Field label="Left office on" name={n("pepLeftOfficeOn")} type="date" hint="Former PEPs stay in scope at least 12 months (Art. 46)." />
+              </div>
+            )}
+            <CheckWithHelp name={n("isPepFamilyOrAssociate")} label="Family member or close associate of a PEP" badge="Requires EDD">
+              A PEP&apos;s spouse or partner, children and their spouses or partners, parents and, for the most senior functions, siblings; or a person known to have close business relations with a PEP, such as joint ownership of a company. <span className="whitespace-nowrap">(Art. 2, 44)</span>
+            </CheckWithHelp>
+          </fieldset>
+        )}
         {shown.map((g) => (
           <fieldset key={g.id} className="space-y-2">
             <legend className="mb-1 text-sm font-semibold">{g.label}</legend>
