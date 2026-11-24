@@ -17,7 +17,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.getByLabel("Legal name *").fill("Baltic Trade UAB");
   await p.getByLabel("Registration number").fill("304000000");
   await p.getByLabel("Registered office country").fill("LT");
-  await p.getByLabel("Purpose and intended nature of the relationship").fill("Annual accounts and tax returns");
+  await p.getByLabel("Nature of relationship").fill("Annual accounts and tax returns");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Baltic Trade UAB" }).waitFor();
   log("company client created");

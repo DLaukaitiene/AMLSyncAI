@@ -45,7 +45,7 @@ const LABELS: Record<string, string> = {
   pepLeftOfficeOn: "Left office", name: "Legal name", legalForm: "Legal form", registrationNumber: "Registration no.", lei: "LEI",
   registeredOffice: "Registered office address", countryOfCreation: "Registered office country",
   principalPlaceOfBusiness: "Principal place of business address", principalPlaceOfBusinessCountry: "Principal place of business country",
-  natureOfBusiness: "Nature of business", riskFlags: "High-risk flags", sourceOfFunds: "Source of funds (declared)", sourceOfWealth: "Source of wealth (declared)",
+  natureOfBusiness: "Nature of business", riskFlags: "High-risk flags", notes: "Notes", sourceOfFunds: "Source of funds (declared)", sourceOfWealth: "Source of wealth (declared)",
   taxResidence: "Tax residence", actingForWhom: "Acting for", signatoryRole: "Signatory role",
 };
 

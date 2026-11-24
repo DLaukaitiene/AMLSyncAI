@@ -1,10 +1,11 @@
 import { requireUser } from "@/lib/server/session";
-import { ActionForm, Field, Submit } from "@/components/form";
+import { ActionForm, Submit } from "@/components/form";
+import { can } from "@/lib/auth/permissions";
 import { PartyFields } from "@/components/party-fields";
 import { createClientAction } from "../actions";
 
 export default async function NewClientPage() {
-  await requireUser("client.edit");
+  const s = await requireUser("client.edit");
   return (
     <div className="max-w-3xl space-y-6">
       <h1 className="text-3xl">Add Client</h1>
@@ -13,11 +14,7 @@ export default async function NewClientPage() {
         <p className="text-muted">Create the client and we send them a secure link — they fill in the rest, upload documents and verify their identity. Everything else below is optional. The client is screened at once and the risk is calculated from the data.</p>
       </div>
       <ActionForm action={createClientAction}>
-        <PartyFields chooser />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tax ID" name="taxId" hint="Stored encrypted." autoComplete="off" />
-        </div>
-        <Field label="Purpose and intended nature of the relationship" name="purpose" hint="AMLR Art. 25, e.g. annual accounts and tax returns for a trading company." />
+        <PartyFields chooser canOverrideRisk={can(s.user.roles, "risk.override")} />
         <label className="flex items-start gap-2 rounded-xl border border-border bg-surface p-3 text-sm">
           <input type="checkbox" name="sendLink" defaultChecked className="mt-1" />
           <span><span className="font-semibold">Send the client their secure link now</span><span className="block text-xs text-muted">Sent to the address above, if given: the client fills in the rest, uploads documents and verifies their identity. Reminders go out on day 1, 3 and 7.</span></span>
