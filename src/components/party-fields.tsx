@@ -6,6 +6,23 @@ import { FLAG_GROUPS, RISK_FLAGS, type FlagGroup, type RiskFlag } from "@/lib/cd
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
 /** "What are you adding?" options on Add Client (ClearAML's wording). */
+/** Common legal forms (EU / Lithuania); users can type any other. */
+const LEGAL_FORMS = [
+  "Private limited company (UAB / Ltd / GmbH)",
+  "Public limited company (AB / plc / AG)",
+  "Small partnership (MB)",
+  "General partnership",
+  "Limited partnership",
+  "Sole proprietorship (IĮ)",
+  "Public institution (VšĮ)",
+  "Association",
+  "Foundation / charity",
+  "Cooperative",
+  "Trust",
+  "Branch of a foreign company",
+  "State or municipal enterprise",
+];
+
 const CLIENT_TYPES = [
   { id: "individual", label: "Individual or sole trader", hint: "A person, including someone trading under their own name", kind: "NATURAL" },
   { id: "company", label: "Company or other organisation", hint: "Company, partnership, trust, association, foundation or other legal entity", kind: "LEGAL" },
@@ -60,35 +77,25 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
           )}
           {chooser && <Field label="Purpose and intended nature of the relationship" name="purpose" hint="AMLR Art. 25, e.g. personal income tax returns." />}
           {!compact && <Field label="Occupation" name={n("occupation")} />}
-          <Field label="Other names" name={n("otherNames")} hint="Maiden or previous names, other spellings — up to 5, separated by commas. All are screened." />
-          {chooser && <Field label="Tax ID" name="taxId" hint="Stored encrypted." autoComplete="off" />}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Legal name" name={n("name")} required />
-          <Field label="Legal form" name={n("legalForm")} hint="E.g. private limited company, partnership, trust, association." />
           <Field label="Other names" name={n("otherNames")} hint="Trading or previous names — up to 5, separated by commas. All are screened." />
+          <Field label="Legal form" name={n("legalForm")} options={LEGAL_FORMS} hint="Pick from the list or type another legal form." />
           <Field label="Registration number" name={n("registrationNumber")} />
           {!compact && <Field label="Registered office address" name={n("registeredOffice")} hint="Official address in the business register." />}
-          <CountryField label="Registered office country" name={n("countryOfCreation")} hint="Country code, e.g. LT. Usually the country the company was set up in." />
+          <CountryField label="Registered office country" name={n("countryOfCreation")} hint="Type the country name, e.g. Lithuania. Usually the country the company was set up in." />
           {!compact && (
             <>
-              <Field label="Principal place of business address" name={n("principalPlaceOfBusiness")} hint="Where the company actually operates, if different." />
-              <CountryField label="Principal place of business country" name={n("principalPlaceOfBusinessCountry")} hint="Country code, e.g. LT." />
+              <Field label="Principal place of business address" name={n("principalPlaceOfBusiness")} hint="Where the company actually operates, if different from the registered office." />
+              <CountryField label="Principal place of business country" name={n("principalPlaceOfBusinessCountry")} hint="Type the country name, e.g. Lithuania." />
             </>
           )}
-          {!compact && (
-            <>
-              <Field label="LEI" name={n("lei")} hint="Legal Entity Identifier — 20 letters and digits, if the entity has one. Look it up at search.gleif.org." />
-              <Field label="Nature of business" name={n("natureOfBusiness")} />
-            </>
-          )}
-          {chooser && (
-            <>
-              <Field label="Purpose and intended nature of the relationship" name="purpose" hint="AMLR Art. 25, e.g. annual accounts and tax returns for a trading company." />
-              <Field label="Tax ID" name="taxId" hint="Stored encrypted." autoComplete="off" />
-            </>
-          )}
+          {chooser && <Field label="Tax ID" name="taxId" hint="Company tax or VAT number. Stored encrypted." autoComplete="off" />}
+          {!compact && <Field label="LEI" name={n("lei")} hint="Legal Entity Identifier — 20 letters and digits, if the entity has one. Look it up at search.gleif.org." />}
+          {!compact && <Field label="Nature of business" name={n("natureOfBusiness")} hint="What the company does, e.g. wholesale of building materials, software development, property rental." />}
+          {chooser && <Field label="Nature of relationship" name="purpose" hint="Purpose and intended nature of the relationship (AMLR Art. 25), e.g. annual accounts and tax returns for a trading company." />}
         </div>
       )}
       <RiskFlagsSection kind={kind} n={n} groups={compact ? ["ownership"] : undefined} />

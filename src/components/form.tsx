@@ -87,10 +87,13 @@ export function Field({
   required,
   autoComplete,
   inputMode,
+  options,
   children,
 }: {
   label: string;
   name: string;
+  /** Suggestions shown as you type; any other text is still accepted. */
+  options?: string[];
   type?: string;
   hint?: ReactNode;
   defaultValue?: string | number;
@@ -124,10 +127,16 @@ export function Field({
           required={required}
           autoComplete={autoComplete}
           inputMode={inputMode}
+          list={options ? `${id}-options` : undefined}
           aria-invalid={errors ? true : undefined}
           aria-describedby={describedBy}
           className="w-full rounded border border-border bg-transparent px-3 py-2 text-sm focus:outline-2 focus:outline-accent"
         />
+      )}
+      {options && (
+        <datalist id={`${id}-options`}>
+          {options.map((o) => <option key={o} value={o} />)}
+        </datalist>
       )}
       {hint && (
         <p id={`${id}-hint`} hidden={!hintOpen} className="text-xs text-muted">
@@ -169,7 +178,8 @@ export function Honeypot() {
   );
 }
 
-const label = (v: string) => (/^[A-Z]{2}$/.test(v) ? `${countryName(v)} (${v})` : v);
+/** Countries are shown by full name; the ISO code is what gets submitted. */
+const label = (v: string) => (/^[A-Z]{2}$/.test(v) ? countryName(v) : v);
 
 /**
  * Country picker for every country field: type to search all countries, or
@@ -218,7 +228,7 @@ export function CountryField({
         <HintButton open={hintOpen} onToggle={() => setHintOpen((o) => !o)} controls={`${id}-hint`} label={text} />
       </div>
       <datalist id={listId}>
-        {countryOptions(euFirst).map((c) => <option key={c.code} value={`${c.name} (${c.code})`} />)}
+        {countryOptions(euFirst).map((c) => <option key={c.code} value={c.name} />)}
       </datalist>
       {multiple ? (
         <>
@@ -310,13 +320,17 @@ export function SelectWithOther({
   const state = useContext(Ctx);
   const errors = [...(state?.fieldErrors?.[name] ?? []), ...(state?.fieldErrors?.[`${name}Other`] ?? [])];
   const [value, setValue] = useState(defaultValue ?? "");
+  const [hintOpen, setHintOpen] = useState(false);
   const cls = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {text}
-        {required && <span aria-hidden="true" className="text-muted"> *</span>}
-      </label>
+      <div className="flex items-center">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {text}
+          {required && <span aria-hidden="true" className="text-muted"> *</span>}
+        </label>
+        {hint && <HintButton open={hintOpen} onToggle={() => setHintOpen((o) => !o)} controls={`${id}-hint`} label={text} />}
+      </div>
       <select id={id} name={name} value={value} onChange={(e) => setValue(e.target.value)} required={required} className={cls} aria-invalid={errors.length ? true : undefined} aria-describedby={hint ? `${id}-hint` : undefined}>
         {placeholder !== undefined && <option value="" disabled={required}>{placeholder}</option>}
         {options.filter(([v]) => v !== otherValue).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -333,7 +347,7 @@ export function SelectWithOther({
           className="w-full rounded border border-border bg-transparent px-3 py-2 text-sm focus:outline-2 focus:outline-accent"
         />
       )}
-      {hint && <p id={`${id}-hint`} className="text-xs text-muted">{hint}</p>}
+      {hint && <p id={`${id}-hint`} hidden={!hintOpen} className="text-xs text-muted">{hint}</p>}
       {errors.map((e) => <p key={e} className="text-xs text-red-700 dark:text-red-300">{e}</p>)}
     </div>
   );
