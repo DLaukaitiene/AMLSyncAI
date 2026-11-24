@@ -27,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/clients/new", label: "Add Client", icon: "add", show: can(r, "client.edit") },
         { href: "/app/remediation", label: "Import Clients", icon: "upload", show: can(r, "client.edit") },
         { href: "/app/clients/shared", label: "Shared Files", icon: "upload" },
+        { href: "/app/tools/ownership-calculator", label: "Ownership Calculator", icon: "list" },
         { href: "/app/matters", label: "Cases", icon: "matters" },
       ],
     },

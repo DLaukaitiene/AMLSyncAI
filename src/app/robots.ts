@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 export default function robots(): MetadataRoute.Robots {
   const base = process.env.APP_URL ?? "https://app.amlsync.com";
   return {
-    rules: [{ userAgent: "*", allow: ["/", "/pricing", "/tools/ownership-calculator", "/security", "/subprocessors"], disallow: ["/app", "/p/", "/api/", "/adminpage1&", "/dev/", "/reauth"] }],
+    rules: [{ userAgent: "*", allow: ["/", "/pricing", "/security", "/subprocessors"], disallow: ["/app", "/p/", "/api/", "/adminpage1&", "/dev/", "/reauth"] }],
     sitemap: `${base}/sitemap.xml`,
   };
 }

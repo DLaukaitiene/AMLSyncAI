@@ -25,7 +25,6 @@ export function PublicHeader({ variant = "site" }: { variant?: "site" | "auth" }
       <nav aria-label="Main" className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm sm:px-6">
         <Logo href="/" />
         <Link href="/pricing" className="text-white/80 hover:text-white">Pricing</Link>
-        <Link href="/tools/ownership-calculator" className="text-white/80 hover:text-white">Ownership calculator</Link>
         <span className="ml-auto flex items-center gap-4">
           <Link href="/login" className="text-white/80 hover:text-white">Sign in</Link>
           <Link href="/signup" className="rounded-full bg-brand px-4 py-2 font-semibold text-brand-ink hover:brightness-105">Start free trial</Link>

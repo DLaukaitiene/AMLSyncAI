@@ -68,7 +68,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   // Accessibility: WCAG 2.1 A/AA on the main screens (victim firm has data)
   const pages = [
-    "/", "/login", "/signup", "/forgot", "/recover", "/security", "/tools/ownership-calculator",
+    "/", "/login", "/signup", "/forgot", "/recover", "/security", "/subprocessors", "/pricing",
     "/app", "/app/clients", "/app/clients/new", `/app/clients/${ids.file}`, "/app/matters", "/app/matters/new", `/app/matters/${ids.matter}`,
     "/app/remediation", "/app/calendar", `/app/cases`, `/app/cases/${ids.case}`, "/app/reports", "/app/firm", "/app/firm/risk-assessment", "/app/firm/policies",
     "/app/firm/governance", "/app/firm/training", "/app/firm/privacy", "/app/settings/country-profile", "/app/settings/screening-lists", "/app/team",
