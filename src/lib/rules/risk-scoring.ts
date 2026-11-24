@@ -36,6 +36,8 @@ export interface RiskInput {
   /** IDs of firm-added "additional EDD cases" (Country Profile) that apply. */
   additionalEddCaseIds?: string[];
   adverseMediaConfirmed?: boolean;
+  /** High-risk flags ticked by the user (lib/cdd/risk-flags), already filtered to those that add points. */
+  flags?: { id: string; label: string; points: number; forcesHigh?: boolean; article: string }[];
 }
 
 export interface RiskFactor {
@@ -100,6 +102,11 @@ export function scoreClientRisk(input: RiskInput, profile?: CountryProfile, coun
 
   if (input.unusualTransaction) f.push({ id: "unusual-transaction", label: "Complex, unusually large or no apparent purpose transaction", points: 5, forcesHigh: true, article: "Art. 34(2)" });
   if (input.adverseMediaConfirmed) f.push({ id: "adverse-media", label: "Confirmed adverse media", points: 4 });
+
+  for (const x of input.flags ?? []) {
+    if (x.id === "unusual-transaction" && input.unusualTransaction) continue; // already counted above
+    f.push({ id: `flag:${x.id}`, label: x.label, points: x.points, forcesHigh: x.forcesHigh, article: x.article });
+  }
 
   for (const id of input.additionalEddCaseIds ?? []) {
     const c = profile?.additionalEddCases.find((x) => x.id === id);

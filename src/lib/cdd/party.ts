@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
+import { RISK_FLAG_IDS } from "./risk-flags";
 
 /** Any country: ISO code where recognised, otherwise the name as typed ("Other"). */
 const country = z.string().transform((v, ctx) => {
@@ -17,6 +18,8 @@ const country = z.string().transform((v, ctx) => {
 const otherNames = z.union([z.string(), z.array(z.string())]).transform((v) => (Array.isArray(v) ? v : v.split(/[,;\n]+/)).map((x) => x.trim()).filter(Boolean).slice(0, 5));
 const countries = z.union([z.string(), z.array(z.string())]).transform((v) => normalizeCountries(v));
 const optDate = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD").optional().or(z.literal("").transform(() => undefined));
+/** Ticked high-risk flags (lib/cdd/risk-flags); unknown ids are dropped. */
+const riskFlags = z.union([z.string(), z.array(z.string())]).transform((v) => [...new Set((Array.isArray(v) ? v : [v]).filter((x) => RISK_FLAG_IDS.includes(x)))]);
 const optText = z.string().trim().max(500).optional().or(z.literal("").transform(() => undefined));
 
 export const naturalPersonSchema = z.object({
@@ -35,6 +38,7 @@ export const naturalPersonSchema = z.object({
   pepFunction: optText,
   pepLeftOfficeOn: optDate,
   isPepFamilyOrAssociate: z.boolean().default(false),
+  riskFlags: riskFlags.default([]),
 });
 
 export const legalEntitySchema = z.object({
@@ -45,10 +49,13 @@ export const legalEntitySchema = z.object({
   lei: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{20}$/, "An LEI has 20 characters").optional().or(z.literal("").transform(() => undefined)),
   registeredOffice: optText,
   principalPlaceOfBusiness: optText,
+  /** Registered office country. Kept under this key: the registered office is in the country of creation. */
   countryOfCreation: z.literal("").transform(() => undefined).or(country.optional()),
+  principalPlaceOfBusinessCountry: z.literal("").transform(() => undefined).or(country.optional()),
   natureOfBusiness: optText,
   bearerShares: z.boolean().default(false),
   nomineeArrangements: z.boolean().default(false),
+  riskFlags: riskFlags.default([]),
 });
 
 export type NaturalPerson = z.infer<typeof naturalPersonSchema>;
@@ -62,7 +69,7 @@ export function displayName(kind: "NATURAL" | "LEGAL" | "ARRANGEMENT", d: Record
 export function partyCountries(kind: string, d: Record<string, unknown>): string[] {
   const c = kind === "NATURAL"
     ? [...((d.nationalities as string[]) ?? []), d.residenceCountry as string | undefined]
-    : [d.countryOfCreation as string | undefined];
+    : [d.countryOfCreation as string | undefined, d.principalPlaceOfBusinessCountry as string | undefined];
   return [...new Set(c.filter((x): x is string => !!x))];
 }
 

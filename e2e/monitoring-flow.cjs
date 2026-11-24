@@ -60,9 +60,9 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
 
   // Russia: services to a Russian-established company are blocked, even with an override
   await p.goto(BASE + "/app/clients/new");
-  await p.getByLabel("Company", { exact: true }).check();
+  await p.getByRole("radio", { name: "Company or other organisation" }).check();
   await p.getByLabel("Legal name *").fill("Moskva Trading OOO");
-  await p.getByLabel("Country of creation").fill("RU");
+  await p.getByLabel("Registered office country").fill("RU");
   await p.getByLabel("Purpose and intended nature of the relationship").fill("Bookkeeping");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Moskva Trading OOO" }).waitFor();

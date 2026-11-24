@@ -15,7 +15,7 @@ const HEAD = "date,client_code,client_name,matter_ref,amount,currency,fx_rate,me
   for (const x of [p, other]) x.on("pageerror", (e) => errors.push(e.message));
   const company = async (page, name, code) => {
     await page.goto(BASE + "/app/clients/new");
-    await page.getByLabel("Company", { exact: true }).check();
+    await page.getByRole("radio", { name: "Company or other organisation" }).check();
     await page.getByLabel("Legal name *").fill(name);
     await page.getByLabel("Registration number").fill(code);
     await page.getByRole("button", { name: "Create client" }).click();

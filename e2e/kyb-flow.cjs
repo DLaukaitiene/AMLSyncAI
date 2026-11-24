@@ -11,9 +11,9 @@ const sql = (q) => execSync(`psql -At "${process.env.DATABASE_URL}"`, { input: q
   const { p } = await signupFirm(b, { code: process.env.CODE, company: "Registro Testas UAB", email: "owner@kyb-test.lt", sector: "ACCOUNTANT" });
   p.on("pageerror", (e) => errors.push(e.message));
   await p.goto(BASE + "/app/clients/new");
-  await p.getByLabel("Company", { exact: true }).check();
+  await p.getByRole("radio", { name: "Company or other organisation" }).check();
   await p.getByLabel("Legal name *").fill("Sandbox Holdings Ltd");
-  await p.getByLabel("Country of creation").fill("United Kingdom");
+  await p.getByLabel("Registered office country").fill("United Kingdom");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Sandbox Holdings Ltd" }).waitFor();
   const kyb = p.getByTestId("kyb-search");

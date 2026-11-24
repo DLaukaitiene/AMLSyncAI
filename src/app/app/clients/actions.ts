@@ -41,6 +41,7 @@ function readParty(fd: FormData, prefix = "") {
         nationalities: get("nationalities"), residenceCountry: get("residenceCountry"), address: get("address"),
         occupation: get("occupation"), email: get("email"), phone: get("phone"), isPep: o[prefix + "isPep"] === "on",
         pepFunction: get("pepFunction"), pepLeftOfficeOn: get("pepLeftOfficeOn"), isPepFamilyOrAssociate: o[prefix + "isPepFamilyOrAssociate"] === "on",
+        riskFlags: fd.getAll(prefix + "riskFlags").map(String),
       }),
     } as const;
   }
@@ -49,7 +50,9 @@ function readParty(fd: FormData, prefix = "") {
     parsed: legalEntitySchema.safeParse({
       name: get("name"), legalForm: get("legalForm"), otherNames: get("otherNames"), registrationNumber: get("registrationNumber"), lei: get("lei"),
       registeredOffice: get("registeredOffice"), principalPlaceOfBusiness: get("principalPlaceOfBusiness"), countryOfCreation: get("countryOfCreation"),
+      principalPlaceOfBusinessCountry: get("principalPlaceOfBusinessCountry"),
       natureOfBusiness: get("natureOfBusiness"), bearerShares: o[prefix + "bearerShares"] === "on", nomineeArrangements: o[prefix + "nomineeArrangements"] === "on",
+      riskFlags: fd.getAll(prefix + "riskFlags").map(String),
     }),
   } as const;
 }
@@ -84,6 +87,11 @@ export async function createClientAction(_: ActionState, fd: FormData): Promise<
     });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Party", objectId: party.id, fields: Object.keys(parsed.data) });
     await runScreening(tx, s.firm.id, [party.id]);
+    // Register mismatch ticked: open the Art. 24 discrepancy case now so the 14-day deadline starts.
+    if (parsed.data.riskFlags.includes("bo-register-mismatch")) {
+      const { profile } = await currentProfile(tx, s.firm.id);
+      await openDiscrepancy(tx, { firmId: s.firm.id, userId: s.user.id }, party.id, profile.boRegister?.name ?? "Central BO register", "Flagged when the client was added: what was found doesn't match the beneficial-owner register. Add the details.");
+    }
     await refresh(tx, s.firm.id, file.id);
     // Quickest path (market practice): send the client their secure link straight away.
     const email = (parsed.data as { email?: string }).email;

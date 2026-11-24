@@ -176,10 +176,12 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Legal name" name="name" required defaultValue={v("name")} />
               <Field label="Registration number" name="registrationNumber" required defaultValue={v("registrationNumber")} />
-              <CountryField label="Country of registration" name="countryOfCreation" required defaultValue={v("countryOfCreation")} />
               <Field label="Your role in the company" name="signatoryRole" required defaultValue={v("signatoryRole")} />
             </div>
-            <Field label="Registered office" name="registeredOffice" required defaultValue={v("registeredOffice")} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Registered office address" name="registeredOffice" required defaultValue={v("registeredOffice")} />
+              <CountryField label="Registered office country" name="countryOfCreation" required defaultValue={v("countryOfCreation")} />
+            </div>
             <Field label="What the company does" name="natureOfBusiness" required defaultValue={v("natureOfBusiness")} />
             <YesNo name="sanctions" label="Is the company, or anyone listed below, subject to EU or UN sanctions, or owned or controlled by someone who is? *" value={yn("sanctions")} />
             <Field label="If yes, give details" name="sanctionsDetails" defaultValue={v("sanctionsDetails")} />
