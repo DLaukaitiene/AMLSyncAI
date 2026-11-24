@@ -7,6 +7,8 @@ export interface ObligationInput {
   responsibleManager: string | null; // name
   unassignedDuties: number;
   riskAssessmentInForce: boolean;
+  riskAssessmentDraft?: boolean; // a draft waits for approval
+  policyDraft?: boolean;
   riskAssessmentReviewOverdue: boolean;
   policyInForce: boolean;
   policyReviewOverdue: boolean;
@@ -33,7 +35,7 @@ export interface ObligationInput {
   retentionDue: number; // files past their retention date
 }
 
-export type ObligationState = "done" | "todo" | "overdue" | "na";
+export type ObligationState = "done" | "todo" | "pending" | "overdue" | "na";
 export interface ObligationStatus { id: ObligationId; state: ObligationState; detail: string }
 
 const n = (k: number, one: string, many = one + "s") => `${k} ${k === 1 ? one : many}`;
@@ -46,10 +48,10 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
       : i.unassignedDuties
         ? s("compliance-officer", "todo", `Compliance Officer: ${i.complianceOfficer} · responsible manager: ${i.responsibleManager}. ${n(i.unassignedDuties, "AML duty", "AML duties")} still without a named person.`)
         : s("compliance-officer", "done", `Compliance Officer: ${i.complianceOfficer} · responsible manager: ${i.responsibleManager}.`),
-    "risk-assessment": !i.riskAssessmentInForce ? s("risk-assessment", "todo", "Not approved yet. It takes about 15 minutes.")
+    "risk-assessment": !i.riskAssessmentInForce ? (i.riskAssessmentDraft ? s("risk-assessment", "pending", "Pending approval by management: a draft is ready.") : s("risk-assessment", "todo", "Not approved yet. It takes about 15 minutes."))
       : i.riskAssessmentReviewOverdue ? s("risk-assessment", "overdue", "The yearly review is overdue.")
       : s("risk-assessment", "done", "Approved and in force."),
-    policies: !i.policyInForce ? s("policies", "todo", i.riskAssessmentInForce ? "Generate it from your risk assessment and approve it." : "Do the risk assessment first; the AML Program is written from it.")
+    policies: !i.policyInForce ? (i.policyDraft ? s("policies", "pending", "Pending approval by management: a draft is ready.") : s("policies", "todo", i.riskAssessmentInForce ? "Generate it from your risk assessment and approve it." : "Do the risk assessment first; the AML Program is written from it."))
       : i.policyReviewOverdue ? s("policies", "overdue", "The yearly review is overdue.")
       : s("policies", "done", "Approved and in force."),
     "national-rules": i.countryProfileMissing ? s("national-rules", "todo", `${n(i.countryProfileMissing, "required item")} missing, e.g. your FIU's reporting channel.`) : s("national-rules", "done", "Your supervisor and FIU are recorded."),
@@ -86,7 +88,7 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
 /** Totals for the dashboard headline. */
 export function obligationSummary(st: ObligationStatus[]) {
   const live = st.filter((x) => x.state !== "na");
-  return { total: live.length, done: live.filter((x) => x.state === "done").length, overdue: live.filter((x) => x.state === "overdue").length, todo: live.filter((x) => x.state === "todo").length };
+  return { total: live.length, done: live.filter((x) => x.state === "done").length, overdue: live.filter((x) => x.state === "overdue").length, todo: live.filter((x) => x.state === "todo" || x.state === "pending").length };
 }
 
 /** Sector note for a firm (first sector that has one). */

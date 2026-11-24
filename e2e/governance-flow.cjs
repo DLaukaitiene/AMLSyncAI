@@ -85,7 +85,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   // Appoint Bob as compliance officer → removal notice for the previous officer
   await p.goto(BASE + "/app/firm/governance");
-  const co = p.locator("section", { hasText: "Compliance officer" }).last();
+  const co = p.getByTestId("appointment-compliance-officer");
   await co.locator("select[name=userId]").selectOption({ label: "Viktor Malenko" });
   await co.getByLabel("Reason for the change").fill("Workload: owner hands over the function");
   await co.getByRole("button", { name: "Appoint" }).click();

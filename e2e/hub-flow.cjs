@@ -21,8 +21,9 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   if ((await p.getByTestId("firm-folder").count()) !== 4) throw new Error("✘ the Owner should see all 4 folders");
   log("My Firm Compliance: file uploaded to Approvals & Sign-offs; 4 folders");
 
-  // Responsibilities
+  // Responsibilities: now on "Roles and duties" (the old address redirects)
   await p.goto(BASE + "/app/team/responsibilities");
+  await p.waitForURL(/\/app\/firm\/governance/);
   await p.getByText(/14 duties have nobody assigned/).waitFor();
   await p.getByRole("checkbox", { name: /Compliance Officer \(Art\. 11\(2\)\)/ }).check();
   await submit(p, "Save responsibilities", "Responsibilities saved.");
@@ -82,7 +83,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   log("Review Pack: rules shown in plain words and downloadable as PDF");
 
   // Section tabs
-  await p.goto(BASE + "/app/team/responsibilities");
+  await p.goto(BASE + "/app/team");
   await p.getByRole("navigation", { name: "Team sections" }).getByRole("link", { name: "Training Register" }).waitFor();
   console.log("page errors:", errors);
   await b.close();

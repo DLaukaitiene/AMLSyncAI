@@ -10,9 +10,9 @@ import { TASK_KIND, taskHref } from "@/lib/tasks/labels";
 import { RiskChip, StatusChip } from "@/components/chips";
 import { adminDb } from "@/lib/server/db";
 import { firmObligations } from "@/lib/server/obligations";
-import { OBLIGATIONS } from "@/lib/obligations/catalog";
+import { OBLIGATION_BOXES, OBLIGATIONS } from "@/lib/obligations/catalog";
 import { obligationSummary } from "@/lib/obligations/evaluate";
-import { ObligationRow } from "@/components/obligations";
+import { ObligationBox, ObligationItem } from "@/components/obligations";
 import { AppointInline } from "@/components/appoint-inline";
 import { appointAction } from "@/app/app/firm/records-actions";
 import { newsConsentAction } from "./settings/email/actions";
@@ -85,8 +85,6 @@ export default async function Dashboard() {
   const ob = data.obligations;
   const sum = obligationSummary(ob.statuses);
   const statusOf = new Map(ob.statuses.map((x) => [x.id, x]));
-  const open = OBLIGATIONS.filter((o) => ["overdue", "todo"].includes(statusOf.get(o.id)!.state)).sort((a, b) => Number(statusOf.get(b.id)!.state === "overdue") - Number(statusOf.get(a.id)!.state === "overdue"));
-  const settled = OBLIGATIONS.filter((o) => !["overdue", "todo"].includes(statusOf.get(o.id)!.state));
   const canAppoint = can(r, "approve.management");
   // Everything that needs a person now, in one list.
   const attention: { key: string; text: React.ReactNode; href: string; tone: "red" | "amber" }[] = [
@@ -173,35 +171,39 @@ export default async function Dashboard() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="obligations" className="text-2xl">Your obligations</h2>
-            <p className="text-sm text-muted"><strong className="text-foreground">{sum.done} of {sum.total}</strong> in order{sum.overdue ? <> · <strong className="text-red-800 dark:text-red-300">{sum.overdue} need action now</strong></> : null}{sum.todo ? ` · ${sum.todo} to do` : ""}. Each row is a duty the AML rules give your firm; the button takes you where to do it.</p>
+            <p className="text-sm text-muted"><strong className="text-foreground">{sum.done} of {sum.total}</strong> in order{sum.overdue ? <> · <strong className="text-red-800 dark:text-red-300">{sum.overdue} need action now</strong></> : null}{sum.todo ? ` · ${sum.todo} to do` : ""}. Each line is a duty the AML rules give your firm: press <span aria-hidden>(?)</span> for what it means, and the link below it to do it.</p>
           </div>
           <Link href="/app/obligations" className="text-sm text-accent underline">All obligations explained</Link>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuemin={0} aria-valuemax={sum.total} aria-valuenow={sum.done} aria-label="Obligations in order">
           <div className="h-full rounded-full bg-green-600" style={{ width: `${sum.total ? (sum.done / sum.total) * 100 : 0}%` }} />
         </div>
-        {open.length > 0 && (
-          <ul className="divide-y divide-border rounded-2xl border border-border bg-background">
-            {open.map((o) => (
-              <ObligationRow key={o.id} o={o} status={statusOf.get(o.id)!}>
-                {o.id === "compliance-officer" && canAppoint && (!ob.input.complianceOfficer || !ob.input.responsibleManager) && (
-                  <div className="mt-2 space-y-2">
-                    {!ob.input.complianceOfficer && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-officer")} label="Compliance Officer" current={ob.input.complianceOfficer} />}
-                    {!ob.input.responsibleManager && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-manager")} label="Responsible manager (management body)" current={ob.input.responsibleManager} />}
-                  </div>
-                )}
-              </ObligationRow>
-            ))}
-          </ul>
-        )}
-        {settled.length > 0 && (
-          <details className="rounded-2xl border border-border bg-background" data-testid="obligations-settled">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">{settled.length} in order or not needed</summary>
-            <ul className="divide-y divide-border border-t border-border">
-              {settled.map((o) => <ObligationRow key={o.id} o={o} status={statusOf.get(o.id)!} />)}
-            </ul>
-          </details>
-        )}
+        {(() => {
+          const box = (b: (typeof OBLIGATION_BOXES)[number]) => (
+            <ObligationBox key={b.id} title={b.title} open={b.ids.filter((id) => ["todo", "overdue", "pending"].includes(statusOf.get(id)!.state)).length}>
+              {b.ids.map((id) => {
+                const o = OBLIGATIONS.find((x) => x.id === id)!;
+                return (
+                  <ObligationItem key={id} o={o} status={statusOf.get(id)!}>
+                    {id === "compliance-officer" && canAppoint && (!ob.input.complianceOfficer || !ob.input.responsibleManager) && (
+                      <div className="mt-2 space-y-2">
+                        {!ob.input.complianceOfficer && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-officer")} label="Compliance Officer" current={ob.input.complianceOfficer} />}
+                        {!ob.input.responsibleManager && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-manager")} label="Responsible manager (management body)" current={ob.input.responsibleManager} />}
+                      </div>
+                    )}
+                  </ObligationItem>
+                );
+              })}
+            </ObligationBox>
+          );
+          const [company, team, clients, deals, reporting] = OBLIGATION_BOXES;
+          return (
+            <div className="grid items-start gap-5 lg:grid-cols-2">
+              <div className="space-y-5">{box(company)}{box(team)}</div>
+              <div className="space-y-5">{box(clients)}{box(deals)}{box(reporting)}</div>
+            </div>
+          );
+        })()}
         <p className="text-sm"><strong>In doubt about a client or a payment?</strong> Don&apos;t go ahead: report it to your Compliance Officer from the client or payment, and never tell the client. <Link href="/app/obligations#reporting" className="text-accent underline">How reporting works</Link></p>
       </section>
 

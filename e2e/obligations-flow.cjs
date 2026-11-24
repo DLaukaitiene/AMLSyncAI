@@ -14,10 +14,12 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const obl = p.getByTestId("obligations");
   for (const t of ["Appoint a Compliance Officer", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
   await p.getByTestId("attention").waitFor();
-  await p.getByTestId("obligations-settled").locator("summary").click();
+  for (const box of ["Your company", "Your team", "Clients", "Deals and transactions", "Reporting"]) await p.getByTestId(`box-${box}`).waitFor();
   await p.getByTestId("obligation-staff-integrity").getByText("Not needed for a one-person firm.").waitFor();
-  await p.getByTestId("obligation-reporting").waitFor();
-  log("dashboard: one row per duty with its status and button; settled duties folded; one-person specifics");
+  if ((await p.getByTestId("obligation-staff-integrity").getAttribute("data-state")) !== "na") throw new Error("✘ staff integrity should be 'not needed'");
+  await p.getByTestId("obligation-risk-assessment").locator("summary").click();
+  await p.getByTestId("obligation-risk-assessment").getByText(/Once at the start, then review at least every year/).waitFor();
+  log("dashboard: 5 boxes (company, team, clients, deals, reporting); (?) opens the explanation; status per duty");
 
   // Appoint the Compliance Officer from the box (fresh sign-in, so no step-up needed)
   const co = p.getByTestId("obligation-compliance-officer");
@@ -27,15 +29,15 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.reload();
   await p.getByTestId("obligation-compliance-officer").getByText(/Responsible manager: Owner of Pareigos UAB|Compliance Officer: Owner of Pareigos UAB/).waitFor();
   log("Compliance Officer appointed from the dashboard box; the name shows");
-  await p.getByTestId("obligation-compliance-officer").getByRole("link", { name: "Roles and duties" }).click();
-  await p.getByRole("heading", { name: "Responsibilities" }).waitFor();
+  await p.getByTestId("obligation-compliance-officer").getByRole("link", { name: /Roles and duties/ }).click();
+  await p.getByRole("heading", { name: "Roles and duties" }).waitFor();
   await p.getByTestId("duty-note").getByText(/must have a named Compliance Officer/).waitFor();
   log("button leads to Roles and duties, with the duty explained on the page");
 
   // Explainer page
   await p.goto(BASE + "/app");
-  await p.getByTestId("obligations-settled").locator("summary").click();
-  await p.getByTestId("obligation-reporting").getByRole("link", { name: "What does this mean?" }).click();
+  await p.getByTestId("obligation-reporting").locator("summary").click();
+  await p.getByTestId("obligation-reporting").getByRole("link", { name: "How to do it, step by step" }).click();
   await p.waitForURL(/\/app\/obligations#reporting/);
   await p.getByTestId("reporting-guide").getByText(/Never tell the client/).waitFor();
   await p.getByTestId("reporting-guide").getByText(/not recorded yet/).waitFor();

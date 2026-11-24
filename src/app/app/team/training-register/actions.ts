@@ -18,7 +18,7 @@ export async function saveResponsibilitiesAction(_: ActionState, fd: FormData): 
     await tx.firm.update({ where: { id: s.firm.id }, data: { responsibilities: map as Prisma.InputJsonValue } });
     await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["responsibilities"] });
   });
-  revalidatePath("/app/team/responsibilities");
+  revalidatePath("/app/firm/governance");
   return { message: "Responsibilities saved." };
 }
 

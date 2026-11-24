@@ -51,6 +51,8 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
     responsibleManager: appointed("compliance-manager"),
     unassignedDuties: RESPONSIBILITIES.filter((d) => !(resp[d.key] ?? []).some((id) => name.has(id))).length,
     riskAssessmentInForce: (await tx.firmRiskAssessment.count({ where: { status: "IN_FORCE" } })) > 0,
+    riskAssessmentDraft: (await tx.firmRiskAssessment.count({ where: { status: "DRAFT" } })) > 0,
+    policyDraft: (await tx.policyDocument.count({ where: { kind: "policy", status: "DRAFT" } })) > 0,
     riskAssessmentReviewOverdue: (await openTaskOverdue(["risk-assessment-review"])) > 0,
     policyInForce: (await tx.policyDocument.count({ where: { kind: "policy", status: "IN_FORCE" } })) > 0,
     policyReviewOverdue: (await openTaskOverdue(["policy-review"])) > 0,

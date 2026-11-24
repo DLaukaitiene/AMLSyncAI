@@ -26,7 +26,7 @@ const GROUPS: { label: string; tabs: { href: string; label: string }[] }[] = [
       { href: "/app/calendar", label: "Calendar" },
       { href: "/app/firm/risk-assessment", label: "Business Risk Assessment" },
       { href: "/app/firm/policies", label: "AML Program" },
-      { href: "/app/firm/governance", label: "Governance" },
+      { href: "/app/firm/governance", label: "Roles and Duties" },
       { href: "/app/firm/outsourcing", label: "Outsourcing" },
       { href: "/app/firm/whistleblowing", label: "Whistleblowing" },
       { href: "/app/firm/privacy", label: "Data Protection" },
@@ -35,7 +35,7 @@ const GROUPS: { label: string; tabs: { href: string; label: string }[] }[] = [
       { href: "/app/audit-trail", label: "Audit Trail" },
     ],
   },
-  { label: "Team", tabs: [{ href: "/app/team", label: "Members" }, { href: "/app/firm/training", label: "My Training" }, { href: "/app/team/training-register", label: "Training Register" }, { href: "/app/team/responsibilities", label: "Responsibilities" }, { href: "/app/firm/integrity", label: "Staff Checks" }] },
+  { label: "Team", tabs: [{ href: "/app/team", label: "Members" }, { href: "/app/firm/training", label: "My Training" }, { href: "/app/team/training-register", label: "Training Register" }, { href: "/app/firm/integrity", label: "Staff Checks" }] },
   {
     label: "Settings",
     tabs: [

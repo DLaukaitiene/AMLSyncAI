@@ -72,7 +72,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
     "/app", "/app/clients", "/app/clients/new", `/app/clients/${ids.file}`, "/app/matters", "/app/matters/new", `/app/matters/${ids.matter}`,
     "/app/remediation", "/app/calendar", `/app/cases`, `/app/cases/${ids.case}`, "/app/reports", "/app/firm", "/app/firm/risk-assessment", "/app/firm/policies",
     "/app/firm/governance", "/app/firm/training", "/app/firm/privacy", "/app/settings/country-profile", "/app/settings/screening-lists", "/app/team",
-    "/app/records", "/app/security", "/app/identity-verification", "/app/risk-assessments", "/app/monitoring-alerts", "/app/audit-trail", "/app/registers", "/app/transactions", "/app/firm/documents", "/app/team/responsibilities", "/app/team/training-register", "/app/support", "/app/help/first-steps", "/app/feature-requests", "/app/feature-requests/new",
+    "/app/records", "/app/security", "/app/identity-verification", "/app/risk-assessments", "/app/monitoring-alerts", "/app/audit-trail", "/app/registers", "/app/transactions", "/app/firm/documents", "/app/team/training-register", "/app/support", "/app/help/first-steps", "/app/feature-requests", "/app/feature-requests/new",
   ];
   const summary = {};
   let critical = 0;

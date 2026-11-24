@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { BookOpen, CircleCheck, CircleAlert, CircleDot, CircleMinus } from "lucide-react";
+import { BookOpen, CircleCheck, CircleAlert, CircleDot, CircleHelp, CircleMinus, Clock3 } from "lucide-react";
 import { obligation, type Obligation, type ObligationId } from "@/lib/obligations/catalog";
 import type { ObligationState, ObligationStatus } from "@/lib/obligations/evaluate";
 
 const STATE: Record<ObligationState, { label: string; cls: string; icon: typeof CircleCheck }> = {
   done: { label: "In order", cls: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200", icon: CircleCheck },
-  todo: { label: "To do", cls: "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200", icon: CircleDot },
+  todo: { label: "To do", cls: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200", icon: CircleDot },
+  pending: { label: "Pending", cls: "bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200", icon: Clock3 },
   overdue: { label: "Act now", cls: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200", icon: CircleAlert },
   na: { label: "Not needed", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300", icon: CircleMinus },
 };
@@ -52,6 +53,58 @@ export function ObligationRow({ o, status, children }: { o: Obligation; status: 
         <Link href={`/app/obligations#${o.id}`} className="text-xs text-accent underline">What does this mean?</Link>
       </span>
     </li>
+  );
+}
+
+const MARK: Record<ObligationState, { label: string; cls: string; icon: typeof CircleCheck }> = {
+  done: { label: "Done", cls: "text-green-700 dark:text-green-400", icon: CircleCheck },
+  todo: { label: "To do", cls: "text-yellow-700 dark:text-yellow-300", icon: CircleDot },
+  pending: { label: "Pending", cls: "text-orange-700 dark:text-orange-300", icon: Clock3 },
+  overdue: { label: "Act now", cls: "text-red-700 dark:text-red-300", icon: CircleAlert },
+  na: { label: "Not needed", cls: "text-slate-500 dark:text-slate-400", icon: CircleMinus },
+};
+
+/** One duty inside a dashboard box: title with a (?) for the explanation, status on the right, the link to do it below. */
+export function ObligationItem({ o, status, children }: { o: Obligation; status: ObligationStatus; children?: React.ReactNode }) {
+  const m = MARK[status.state];
+  return (
+    <li className="py-3" data-testid={`obligation-${o.id}`} data-state={status.state}>
+      <div className="flex items-start justify-between gap-3">
+        <details className="group min-w-0">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 font-semibold marker:hidden">
+            {o.title}
+            <CircleHelp aria-label="What does this mean?" className="h-4 w-4 shrink-0 text-accent" />
+          </summary>
+          <div className="mt-1 space-y-1 rounded-lg bg-surface p-3 text-sm text-muted">
+            <p>{o.what}</p>
+            <p><span className="font-medium text-foreground">When: </span>{o.when}</p>
+            <Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <span>· {o.article}</span>
+          </div>
+        </details>
+        <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
+      </div>
+      <p className={`mt-1 text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</p>
+      {children}
+      {status.state !== "na" && (
+        <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <Link href={o.action.href} className="font-semibold text-accent hover:underline">{o.action.label} →</Link>
+          {o.secondary && <Link href={o.secondary.href} className="text-accent hover:underline">{o.secondary.label} →</Link>}
+        </p>
+      )}
+    </li>
+  );
+}
+
+/** A dashboard box: one category of duties, with a count of what is open. */
+export function ObligationBox({ title, open, children }: { title: string; open: number; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]" aria-label={title} data-testid={`box-${title}`}>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-lg font-semibold">{title}</h3>
+        {open ? <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200">{open} open</span> : <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400"><CircleCheck aria-hidden className="h-4 w-4" />All in order</span>}
+      </div>
+      <ul className="divide-y divide-border">{children}</ul>
+    </section>
   );
 }
 

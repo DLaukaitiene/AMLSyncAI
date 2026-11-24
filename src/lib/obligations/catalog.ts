@@ -42,8 +42,7 @@ export const OBLIGATIONS: Obligation[] = [
     how: ["Team → Members: invite colleagues if needed.", "Compliance Hub → Governance: appoint the Compliance Officer and the responsible manager.", "Team → Responsibilities: tick who does each AML duty."],
     article: "AMLR Art. 11",
     duty: "Your firm must have a named Compliance Officer and a responsible manager, and every AML duty must have someone accountable for it.",
-    action: { href: "/app/team/responsibilities", label: "Roles and duties" },
-    secondary: { href: "/app/firm/governance", label: "Appointments" },
+    action: { href: "/app/firm/governance", label: "Roles and duties" },
   },
   {
     id: "risk-assessment", group: "Set up your firm",
@@ -202,3 +201,12 @@ export const OBLIGATIONS: Obligation[] = [
 ];
 
 export const obligation = (id: ObligationId) => OBLIGATIONS.find((o) => o.id === id)!;
+
+/** Dashboard boxes [24 Nov 2026]: the duties grouped the way a firm thinks about them. */
+export const OBLIGATION_BOXES: { id: string; title: string; ids: ObligationId[] }[] = [
+  { id: "company", title: "Your company", ids: ["compliance-officer", "risk-assessment", "policies", "national-rules", "records"] },
+  { id: "team", title: "Your team", ids: ["training", "staff-integrity", "whistleblowing"] },
+  { id: "clients", title: "Clients", ids: ["client-checks", "screening", "high-risk", "reviews"] },
+  { id: "deals", title: "Deals and transactions", ids: ["deals"] },
+  { id: "reporting", title: "Reporting", ids: ["reporting"] },
+];

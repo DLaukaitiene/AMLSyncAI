@@ -31,7 +31,7 @@ export default async function FirmPage() {
         {[
           { href: "/app/firm/risk-assessment", icon: Scale, title: "Business-wide risk assessment", note: "Art. 10", status: ra ? `v${ra.version} in force` : "Not approved yet", done: !!ra },
           { href: "/app/firm/policies", icon: BookOpen, title: "Policies and procedures", note: "Art. 9", status: policy && procedure ? `Policy v${policy.version}, procedures v${procedure.version}` : policy ? "Procedures not approved yet" : "Not approved yet", done: !!policy && !!procedure },
-          { href: "/app/firm/governance", icon: Building2, title: "Governance and annual report", note: "Art. 11" },
+          { href: "/app/firm/governance", icon: Building2, title: "Roles and duties", note: "Art. 11" },
           { href: "/app/firm/training", icon: GraduationCap, title: "Training", note: "Art. 12" },
           { href: "/app/firm/integrity", icon: BadgeCheck, title: "Integrity and conflicts", note: "Art. 13" },
           { href: "/app/firm/whistleblowing", icon: Megaphone, title: "Whistleblowing channel", note: "Art. 14" },
