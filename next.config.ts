@@ -17,7 +17,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: { "/**": ["./node_modules/dejavu-fonts-ttf/ttf/DejaVuSans*.ttf"] },
   experimental: { serverActions: { bodySizeLimit: "10mb" } }, // screening-list uploads
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    // Test sites (SITE_NOINDEX=1, e.g. testapp2.amlsync.com) are never indexed by search engines.
+    const noindex = process.env.SITE_NOINDEX === "1" ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : [];
+    return [{ source: "/:path*", headers: [...securityHeaders, ...noindex] }];
   },
 };
 
