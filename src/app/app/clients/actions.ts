@@ -1,5 +1,6 @@
 "use server";
 
+import { can } from "@/lib/auth/permissions";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
@@ -41,7 +42,7 @@ function readParty(fd: FormData, prefix = "") {
         nationalities: get("nationalities"), residenceCountry: get("residenceCountry"), address: get("address"),
         occupation: get("occupation"), email: get("email"), phone: get("phone"), isPep: o[prefix + "isPep"] === "on",
         pepFunction: get("pepFunction"), pepLeftOfficeOn: get("pepLeftOfficeOn"), isPepFamilyOrAssociate: o[prefix + "isPepFamilyOrAssociate"] === "on",
-        riskFlags: fd.getAll(prefix + "riskFlags").map(String),
+        riskFlags: fd.getAll(prefix + "riskFlags").map(String), notes: get("notes"),
       }),
     } as const;
   }
@@ -52,7 +53,7 @@ function readParty(fd: FormData, prefix = "") {
       registeredOffice: get("registeredOffice"), principalPlaceOfBusiness: get("principalPlaceOfBusiness"), countryOfCreation: get("countryOfCreation"),
       principalPlaceOfBusinessCountry: get("principalPlaceOfBusinessCountry"),
       natureOfBusiness: get("natureOfBusiness"), bearerShares: o[prefix + "bearerShares"] === "on", nomineeArrangements: o[prefix + "nomineeArrangements"] === "on",
-      riskFlags: fd.getAll(prefix + "riskFlags").map(String),
+      riskFlags: fd.getAll(prefix + "riskFlags").map(String), notes: get("notes"),
     }),
   } as const;
 }
@@ -71,8 +72,15 @@ export async function createClientAction(_: ActionState, fd: FormData): Promise<
   const purpose = String(fd.get("purpose") ?? "").trim();
   const nationalId = String(fd.get("nationalId") ?? "").trim();
   const taxId = String(fd.get("taxId") ?? "").trim();
+  const manualLevel = String(fd.get("manualRiskLevel") ?? "");
+  const manualReason = String(fd.get("manualRiskReason") ?? "").trim();
+  const manual = ["LOW", "MEDIUM", "HIGH"].includes(manualLevel) ? (manualLevel as RiskLevelDb) : null;
+  if (manual && !can(s.user.roles, "risk.override")) return { error: "Only a Compliance Officer can set the risk rating by hand." };
+  if (manual && manualReason.length < 10) return { error: "Give a written reason for the manual risk rating.", fieldErrors: { manualRiskReason: ["At least 10 characters."] } };
 
-  const fileId = await withTenant(s.firm.id, async (tx) => {
+  let fileId: string;
+  try {
+  fileId = await withTenant(s.firm.id, async (tx) => {
     const party = await tx.party.create({
       data: {
         firmId: s.firm.id, kind, displayName: displayName(kind, parsed.data), details: parsed.data as Prisma.InputJsonValue,
@@ -93,12 +101,36 @@ export async function createClientAction(_: ActionState, fd: FormData): Promise<
       await openDiscrepancy(tx, { firmId: s.firm.id, userId: s.user.id }, party.id, profile.boRegister?.name ?? "Central BO register", "Flagged when the client was added: what was found doesn't match the beneficial-owner register. Add the details.");
     }
     await refresh(tx, s.firm.id, file.id);
+    if (manual) await recordRiskOverride(tx, s, file.id, manual, manualReason); // throws ManualRiskError → nothing is saved
     // Quickest path (market practice): send the client their secure link straight away.
     const email = (parsed.data as { email?: string }).email;
     if (fd.get("sendLink") === "on" && email) await createPortalLink(tx, { firmId: s.firm.id, userId: s.user.id }, file.id, email);
     return file.id;
   });
+  } catch (e) {
+    if (e instanceof ManualRiskError) return { error: e.message, fieldErrors: { manualRiskReason: [e.message] } };
+    throw e;
+  }
   redirect(`/app/clients/${fileId}`);
+}
+
+type RiskLevelDb = "LOW" | "MEDIUM" | "HIGH";
+class ManualRiskError extends Error {}
+
+/** Records a manual risk level next to the calculated one (spec §11.7). Both are kept. */
+async function recordRiskOverride(tx: Parameters<Parameters<typeof withTenant>[1]>[0], s: Awaited<ReturnType<typeof requireUser>>, fileId: string, level: RiskLevelDb, reason: string) {
+  const cf = await loadClientFile(tx, s.firm.id, fileId);
+  if (cf.risk.factors.some((f) => f.forcesHigh) && level !== "HIGH") {
+    throw new ManualRiskError("This client has a factor that legally requires EDD; the level can't be lowered below High.");
+  }
+  const last = await persistRiskIfChanged(tx, s.firm.id, cf);
+  await tx.clientRiskAssessment.create({
+    data: {
+      firmId: s.firm.id, cddFileId: fileId, calculated: last.calculated, final: level, score: last.score, factors: last.factors as Prisma.InputJsonValue,
+      overrideReason: reason, overrideById: s.user.id, rulesetVersion: last.rulesetVersion, euCoreVersion: EU_CORE_VERSION, countryProfileVersion: cf.profileVersion,
+    },
+  });
+  await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "ClientRiskAssessment", objectId: fileId, fields: ["final", "overrideReason"] });
 }
 
 export async function updatePurposeAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
@@ -311,20 +343,14 @@ export async function riskOverrideAction(fileId: string, _: ActionState, fd: For
   const reason = String(fd.get("reason") ?? "").trim();
   if (!["LOW", "MEDIUM", "HIGH"].includes(level)) return { error: "Choose a level." };
   if (reason.length < 10) return { error: "Give a written reason for the override.", fieldErrors: { reason: ["At least 10 characters."] } };
-  return withTenant(s.firm.id, async (tx) => {
-    const cf = await loadClientFile(tx, s.firm.id, fileId);
-    if (cf.risk.factors.some((f) => f.forcesHigh) && level !== "HIGH") return { error: "This client has a factor that legally requires EDD; the level can't be lowered below High." };
-    const last = await persistRiskIfChanged(tx, s.firm.id, cf);
-    await tx.clientRiskAssessment.create({
-      data: {
-        firmId: s.firm.id, cddFileId: fileId, calculated: last.calculated, final: level as "LOW" | "MEDIUM" | "HIGH", score: last.score, factors: last.factors as Prisma.InputJsonValue,
-        overrideReason: reason, overrideById: s.user.id, rulesetVersion: last.rulesetVersion, euCoreVersion: EU_CORE_VERSION, countryProfileVersion: cf.profileVersion,
-      },
-    });
-    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "ClientRiskAssessment", objectId: fileId, fields: ["final", "overrideReason"] });
-    revalidatePath(`/app/clients/${fileId}`);
-    return { message: "Override recorded. Both the calculated and the final level are kept." };
-  });
+  try {
+    await withTenant(s.firm.id, (tx) => recordRiskOverride(tx, s, fileId, level as RiskLevelDb, reason));
+  } catch (e) {
+    if (e instanceof ManualRiskError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath(`/app/clients/${fileId}`);
+  return { message: "Override recorded. Both the calculated and the final level are kept." };
 }
 
 export async function acceptAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {

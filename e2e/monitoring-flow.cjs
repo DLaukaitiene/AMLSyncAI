@@ -63,7 +63,7 @@ const sql = (q) => execSync(`psql "${process.env.DATABASE_URL}" -tAc ${JSON.stri
   await p.getByRole("radio", { name: "Company or other organisation" }).check();
   await p.getByLabel("Legal name *").fill("Moskva Trading OOO");
   await p.getByLabel("Registered office country").fill("RU");
-  await p.getByLabel("Purpose and intended nature of the relationship").fill("Bookkeeping");
+  await p.getByLabel("Nature of relationship").fill("Bookkeeping");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Moskva Trading OOO" }).waitFor();
   await p.getByText(/entities established in Russia are prohibited/).first().waitFor();
