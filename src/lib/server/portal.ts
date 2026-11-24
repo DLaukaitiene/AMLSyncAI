@@ -195,7 +195,7 @@ const ownerLine = /^(.+?);\s*(\d{4}-\d{2}-\d{2})?;\s*([^;]{0,60});\s*(\d+(?:\.\d
 export const portalLegalSchema = z.object({
   name: z.string().trim().min(1, "Required").max(300),
   registrationNumber: z.string().trim().min(1, "Required").max(100),
-  countryOfCreation: oneCountry("Enter the country where the company was created"),
+  countryOfCreation: oneCountry("Enter the registered office country"),
   registeredOffice: z.string().trim().min(5, "Required").max(500),
   natureOfBusiness: z.string().trim().min(3, "Required").max(500),
   purpose: z.string().trim().min(5, "Describe what you need the service for").max(1000),

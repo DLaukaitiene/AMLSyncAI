@@ -49,6 +49,7 @@ function readParty(fd: FormData, prefix = "") {
     parsed: legalEntitySchema.safeParse({
       name: get("name"), legalForm: get("legalForm"), otherNames: get("otherNames"), registrationNumber: get("registrationNumber"), lei: get("lei"),
       registeredOffice: get("registeredOffice"), principalPlaceOfBusiness: get("principalPlaceOfBusiness"), countryOfCreation: get("countryOfCreation"),
+      principalPlaceOfBusinessCountry: get("principalPlaceOfBusinessCountry"),
       natureOfBusiness: get("natureOfBusiness"), bearerShares: o[prefix + "bearerShares"] === "on", nomineeArrangements: o[prefix + "nomineeArrangements"] === "on",
     }),
   } as const;

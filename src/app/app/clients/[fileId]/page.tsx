@@ -42,7 +42,8 @@ const LABELS: Record<string, string> = {
   firstNames: "First names", lastName: "Surname", birthDate: "Date of birth", placeOfBirth: "Place of birth", otherNames: "Other names", nationalities: "Nationalities",
   residenceCountry: "Residence", address: "Address", occupation: "Occupation", email: "Email", phone: "Phone", pepFunction: "Public function",
   pepLeftOfficeOn: "Left office", name: "Legal name", legalForm: "Legal form", registrationNumber: "Registration no.", lei: "LEI",
-  registeredOffice: "Registered office", principalPlaceOfBusiness: "Principal place of business", countryOfCreation: "Country of creation",
+  registeredOffice: "Registered office address", countryOfCreation: "Registered office country",
+  principalPlaceOfBusiness: "Principal place of business address", principalPlaceOfBusinessCountry: "Principal place of business country",
   natureOfBusiness: "Nature of business", sourceOfFunds: "Source of funds (declared)", sourceOfWealth: "Source of wealth (declared)",
   taxResidence: "Tax residence", actingForWhom: "Acting for", signatoryRole: "Signatory role",
 };

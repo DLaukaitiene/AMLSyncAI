@@ -100,7 +100,7 @@ export function gapsFor(r: Pick<BackBookRow, "kind" | "birthDate" | "nationaliti
     if (!r.documents.includes("id")) g.push({ id: "id-verification", label: "Identity verification (eID or ID document)" });
   } else {
     if (!r.registrationNumber) g.push({ id: "registration", label: "Registration number" });
-    if (!r.countryOfCreation) g.push({ id: "country", label: "Country of creation" });
+    if (!r.countryOfCreation) g.push({ id: "country", label: "Registered office country" });
     if (!r.documents.includes("extract")) g.push({ id: "register-extract", label: "Company / BO register extract" });
     if (!r.documents.includes("bo")) g.push({ id: "beneficial-owners", label: "Beneficial owners identified and verified" });
   }

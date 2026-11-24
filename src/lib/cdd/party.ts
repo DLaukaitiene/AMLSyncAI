@@ -45,7 +45,9 @@ export const legalEntitySchema = z.object({
   lei: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{20}$/, "An LEI has 20 characters").optional().or(z.literal("").transform(() => undefined)),
   registeredOffice: optText,
   principalPlaceOfBusiness: optText,
+  /** Registered office country. Kept under this key: the registered office is in the country of creation. */
   countryOfCreation: z.literal("").transform(() => undefined).or(country.optional()),
+  principalPlaceOfBusinessCountry: z.literal("").transform(() => undefined).or(country.optional()),
   natureOfBusiness: optText,
   bearerShares: z.boolean().default(false),
   nomineeArrangements: z.boolean().default(false),
@@ -62,7 +64,7 @@ export function displayName(kind: "NATURAL" | "LEGAL" | "ARRANGEMENT", d: Record
 export function partyCountries(kind: string, d: Record<string, unknown>): string[] {
   const c = kind === "NATURAL"
     ? [...((d.nationalities as string[]) ?? []), d.residenceCountry as string | undefined]
-    : [d.countryOfCreation as string | undefined];
+    : [d.countryOfCreation as string | undefined, d.principalPlaceOfBusinessCountry as string | undefined];
   return [...new Set(c.filter((x): x is string => !!x))];
 }
 

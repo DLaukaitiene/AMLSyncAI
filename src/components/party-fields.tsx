@@ -78,12 +78,17 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
           <Field label="Legal form" name={n("legalForm")} hint="E.g. private limited company, partnership, trust, association." />
           <Field label="Other names" name={n("otherNames")} hint="Trading or previous names — up to 5, separated by commas. All are screened." />
           <Field label="Registration number" name={n("registrationNumber")} />
-          <CountryField label="Country of creation" name={n("countryOfCreation")} />
+          {!compact && <Field label="Registered office address" name={n("registeredOffice")} hint="Official address in the business register." />}
+          <CountryField label="Registered office country" name={n("countryOfCreation")} hint="Country code, e.g. LT. Usually the country the company was set up in." />
+          {!compact && (
+            <>
+              <Field label="Principal place of business address" name={n("principalPlaceOfBusiness")} hint="Where the company actually operates, if different." />
+              <CountryField label="Principal place of business country" name={n("principalPlaceOfBusinessCountry")} hint="Country code, e.g. LT." />
+            </>
+          )}
           {!compact && (
             <>
               <Field label="LEI" name={n("lei")} hint="Legal Entity Identifier — 20 letters and digits, if the entity has one. Look it up at search.gleif.org." />
-              <Field label="Registered office" name={n("registeredOffice")} />
-              <Field label="Principal place of business" name={n("principalPlaceOfBusiness")} />
               <Field label="Nature of business" name={n("natureOfBusiness")} />
             </>
           )}
