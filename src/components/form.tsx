@@ -56,6 +56,24 @@ export function ActionForm({
   );
 }
 
+/** "?" button that shows or hides a field's grey hint. The hint stays in the page for screen readers. */
+function HintButton({ open, onToggle, controls, label }: { open: boolean; onToggle: () => void; controls: string; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      // Generic name on purpose: a name containing the field label would also match getByLabel(label).
+      aria-label="Show help"
+      title={`Help: ${label}`}
+      className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-border align-middle text-[10px] font-normal text-muted hover:border-accent hover:text-accent"
+    >
+      ?
+    </button>
+  );
+}
+
 export function useActionResult() {
   return useContext(Ctx);
 }
@@ -83,14 +101,18 @@ export function Field({
 }) {
   const id = useId();
   const state = useContext(Ctx);
+  const [hintOpen, setHintOpen] = useState(false);
   const errors = state?.fieldErrors?.[name];
   const describedBy = [hint ? `${id}-hint` : null, errors ? `${id}-err` : null].filter(Boolean).join(" ") || undefined;
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {label}
-        {required && <span aria-hidden="true" className="text-muted"> *</span>}
-      </label>
+      <div className="flex items-center">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {label}
+          {required && <span aria-hidden="true" className="text-muted"> *</span>}
+        </label>
+        {hint && <HintButton open={hintOpen} onToggle={() => setHintOpen((o) => !o)} controls={`${id}-hint`} label={label} />}
+      </div>
       {children ? (
         <div id={id}>{children}</div>
       ) : (
@@ -108,7 +130,7 @@ export function Field({
         />
       )}
       {hint && (
-        <p id={`${id}-hint`} className="text-xs text-muted">
+        <p id={`${id}-hint`} hidden={!hintOpen} className="text-xs text-muted">
           {hint}
         </p>
       )}
@@ -178,6 +200,7 @@ export function CountryField({
   const initial = normalizeCountries(defaultValue ?? []);
   const [values, setValues] = useState<string[]>(initial);
   const [draft, setDraft] = useState(multiple ? "" : initial[0] ? label(initial[0]) : "");
+  const [hintOpen, setHintOpen] = useState(false);
   const describedBy = [`${id}-hint`, errors ? `${id}-err` : null].filter(Boolean).join(" ");
   const add = () => {
     const v = normalizeCountry(draft);
@@ -187,10 +210,13 @@ export function CountryField({
   const cls = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm focus:outline-2 focus:outline-accent";
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {text}
-        {required && <span aria-hidden="true" className="text-muted"> *</span>}
-      </label>
+      <div className="flex items-center">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {text}
+          {required && <span aria-hidden="true" className="text-muted"> *</span>}
+        </label>
+        <HintButton open={hintOpen} onToggle={() => setHintOpen((o) => !o)} controls={`${id}-hint`} label={text} />
+      </div>
       <datalist id={listId}>
         {countryOptions(euFirst).map((c) => <option key={c.code} value={`${c.name} (${c.code})`} />)}
       </datalist>
@@ -241,7 +267,7 @@ export function CountryField({
           <input type="hidden" name={name} value={normalizeCountry(draft) ?? ""} />
         </>
       )}
-      <p id={`${id}-hint`} className="text-xs text-muted">
+      <p id={`${id}-hint`} hidden={!hintOpen} className="text-xs text-muted">
         {hint ?? "Pick from the list, or type the name if it isn't listed."}
       </p>
       {errors?.map((e) => (

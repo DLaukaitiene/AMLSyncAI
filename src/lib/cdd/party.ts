@@ -20,6 +20,7 @@ const countries = z.union([z.string(), z.array(z.string())]).transform((v) => no
 const optDate = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD").optional().or(z.literal("").transform(() => undefined));
 /** Ticked high-risk flags (lib/cdd/risk-flags); unknown ids are dropped. */
 const riskFlags = z.union([z.string(), z.array(z.string())]).transform((v) => [...new Set((Array.isArray(v) ? v : [v]).filter((x) => RISK_FLAG_IDS.includes(x)))]);
+const notes = z.string().trim().max(2000).optional().or(z.literal("").transform(() => undefined));
 const optText = z.string().trim().max(500).optional().or(z.literal("").transform(() => undefined));
 
 export const naturalPersonSchema = z.object({
@@ -39,6 +40,7 @@ export const naturalPersonSchema = z.object({
   pepLeftOfficeOn: optDate,
   isPepFamilyOrAssociate: z.boolean().default(false),
   riskFlags: riskFlags.default([]),
+  notes,
 });
 
 export const legalEntitySchema = z.object({
@@ -56,6 +58,7 @@ export const legalEntitySchema = z.object({
   bearerShares: z.boolean().default(false),
   nomineeArrangements: z.boolean().default(false),
   riskFlags: riskFlags.default([]),
+  notes,
 });
 
 export type NaturalPerson = z.infer<typeof naturalPersonSchema>;

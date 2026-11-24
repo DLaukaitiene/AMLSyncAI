@@ -6,7 +6,7 @@
  * bearer shares and nominees keep their older boolean keys so existing data keeps working.
  */
 
-export type FlagGroup = "client" | "ownership" | "country" | "product";
+export type FlagGroup = "client" | "ownership" | "product";
 export type FlagAppliesTo = "NATURAL" | "LEGAL" | "both";
 
 export interface RiskFlag {
@@ -29,7 +29,6 @@ export interface RiskFlag {
 export const FLAG_GROUPS: { id: FlagGroup; label: string }[] = [
   { id: "client", label: "Client risk factors" },
   { id: "ownership", label: "Ownership and register" },
-  { id: "country", label: "Country risk" },
   { id: "product", label: "Products and transactions" },
 ];
 
@@ -108,33 +107,6 @@ export const RISK_FLAGS: RiskFlag[] = [
     id: "no-bo-identified", group: "ownership", appliesTo: "LEGAL", points: 4, article: "Art. 22(2)",
     label: "No beneficial owner identified, or doubts remain",
     help: "You couldn't identify a beneficial owner, or you doubt the one given. Record this, then identify and verify the senior managing officials.",
-  },
-
-  // --- Country (Annex III, point 3) --------------------------------------------------------------
-  {
-    id: "fatf-grey-list", group: "country", appliesTo: "both", points: 3, article: "Annex III(3)",
-    label: "Link to an FATF grey-list country",
-    help: "The client is linked to a country under increased monitoring by the FATF (the \"grey list\"). This is a separate list from the EU high-risk third countries, which the app already checks.",
-  },
-  {
-    id: "country-sanctions", group: "country", appliesTo: "both", points: 4, article: "Annex III(3)(d)",
-    label: "Link to a country under sanctions or embargo",
-    help: "The client is linked to a country subject to sanctions, embargoes or similar measures (EU or UN). This is about the country, separate from a name match on a sanctions list.",
-  },
-  {
-    id: "corruption-crime", group: "country", appliesTo: "both", points: 3, article: "Annex III(3)",
-    label: "Link to a country with high corruption or crime",
-    help: "The client is linked to a country with significant corruption or other criminal activity, for example a low Transparency International Corruption Perceptions Index score.",
-  },
-  {
-    id: "terrorism-country", group: "country", appliesTo: "both", points: 4, article: "Annex III(3)",
-    label: "Link to a country supporting terrorism",
-    help: "The client is linked to a country that funds or supports terrorism, or where designated terrorist organisations operate.",
-  },
-  {
-    id: "secrecy-jurisdiction", group: "country", appliesTo: "both", points: 3, article: "Annex III(3)",
-    label: "Link to a secrecy jurisdiction",
-    help: "The client is linked to a country with strict secrecy laws, weak controls on setting up companies or trusts, or no central register of beneficial owners.",
   },
 
   // --- Products and transactions (Annex III, point 2; Art. 34, 39, 80) ---------------------------
