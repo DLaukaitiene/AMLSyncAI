@@ -18,7 +18,7 @@ export default async function IdentityVerificationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Identity Verification</h1>
+        <h1 className="text-3xl">Identity Checks</h1>
         <p className="text-sm text-muted">Every identity check across your clients and the people behind them. Start a new check from the client&apos;s file.</p>
       </div>
       <section className="space-y-2">

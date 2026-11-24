@@ -20,7 +20,7 @@ export default async function IntegrityPage() {
   if (data.onePerson) {
     return (
       <div className="max-w-3xl space-y-2">
-        <h1 className="text-2xl font-semibold">Personnel Due Diligence</h1>
+        <h1 className="text-2xl font-semibold">Staff Checks</h1>
         <p className="text-sm">Not required: AMLR Art. 13 employee checks don&apos;t apply to a one-person firm. This page becomes available when you invite colleagues.</p>
       </div>
     );

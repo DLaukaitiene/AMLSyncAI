@@ -60,7 +60,7 @@ const log=(...a)=>console.log('✔',...a);
   log('MFA on,', recovery.length, 'recovery codes');
   await p.getByRole('link',{name:/continue/}).click();
   await p.getByRole('heading',{name:'Dashboard'}).waitFor();
-  await p.getByText('Finish setting up your Country Profile').first().waitFor();
+  await p.getByTestId('obligation-national-rules').getByText(/required items? missing/).waitFor();
   log('dashboard shows country-profile checklist');
   
 

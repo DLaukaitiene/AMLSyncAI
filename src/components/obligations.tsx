@@ -37,6 +37,24 @@ export function ObligationCard({ o, status, note, children }: { o: Obligation; s
   );
 }
 
+/** One obligation as a single row on the dashboard: status, title, where you stand, and the button that does it. */
+export function ObligationRow({ o, status, children }: { o: Obligation; status: ObligationStatus; children?: React.ReactNode }) {
+  return (
+    <li className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4" data-testid={`obligation-${o.id}`}>
+      <span className="sm:w-24"><StateBadge state={status.state} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{o.title}</span>
+        <span className={`block text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</span>
+        {children}
+      </span>
+      <span className="flex flex-wrap items-center gap-2">
+        {status.state !== "na" && <Link href={o.action.href} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${status.state === "done" ? "border border-border hover:border-accent" : "bg-brand text-brand-ink hover:brightness-105"}`}>{o.action.label}</Link>}
+        <Link href={`/app/obligations#${o.id}`} className="text-xs text-accent underline">What does this mean?</Link>
+      </span>
+    </li>
+  );
+}
+
 /** "Your duty" callout at the top of a page: the obligation behind it, in one or two sentences. */
 export function DutyNote({ id, extra }: { id: ObligationId; extra?: React.ReactNode }) {
   const o = obligation(id);

@@ -10,13 +10,14 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   p.on("pageerror", (e) => errors.push(e.message));
   await p.goto(BASE + "/app");
 
-  // Guide and obligations on the dashboard
-  await p.getByTestId("dashboard-guide").getByText("1. Each box is a legal duty").waitFor();
+  // Obligations on the dashboard: open duties first, settled ones folded away
   const obl = p.getByTestId("obligations");
-  for (const t of ["Appoint a Compliance Officer", "Assess your firm's risks", "Check every client before you start", "Report suspicions to the FIU", "Train your staff every year"]) await obl.getByRole("heading", { name: t }).waitFor();
+  for (const t of ["Appoint a Compliance Officer", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
+  await p.getByTestId("attention").waitFor();
+  await p.getByTestId("obligations-settled").locator("summary").click();
   await p.getByTestId("obligation-staff-integrity").getByText("Not needed for a one-person firm.").waitFor();
-  await p.getByTestId("obligation-client-checks").getByText(/check both the buyer and the seller/).waitFor();
-  log("dashboard: guide, obligation boxes with status, one-person and estate-agent specifics");
+  await p.getByTestId("obligation-reporting").waitFor();
+  log("dashboard: one row per duty with its status and button; settled duties folded; one-person specifics");
 
   // Appoint the Compliance Officer from the box (fresh sign-in, so no step-up needed)
   const co = p.getByTestId("obligation-compliance-officer");
@@ -33,12 +34,14 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Explainer page
   await p.goto(BASE + "/app");
+  await p.getByTestId("obligations-settled").locator("summary").click();
   await p.getByTestId("obligation-reporting").getByRole("link", { name: "What does this mean?" }).click();
   await p.waitForURL(/\/app\/obligations#reporting/);
   await p.getByTestId("reporting-guide").getByText(/Never tell the client/).waitFor();
   await p.getByTestId("reporting-guide").getByText(/not recorded yet/).waitFor();
   if ((await p.getByTestId("obligation-explained").count()) !== 14) throw new Error("✘ expected 14 obligations explained");
-  log("My Obligations: every duty explained; reporting shows warning signs, deadlines and the missing FIU details");
+  await p.getByText(/check both the buyer and the seller/).first().waitFor();
+  log("My Obligations: every duty explained, with sector notes; reporting shows warning signs, deadlines and the missing FIU details");
 
   // Duty notes on working pages
   for (const [path, re] of [["/app/clients", /No client is taken on/], ["/app/transactions", /cash of €10,000 or more is not allowed/], ["/app/cases", /Tell the Compliance Officer now/], ["/app/monitoring-alerts", /stop, freeze, notify/]]) {
@@ -46,16 +49,6 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
     await p.getByTestId("duty-note").getByText(re).waitFor();
   }
   log("'Your duty' notes on Clients, Transaction Monitoring, FIU Reporting and Monitoring Alerts");
-
-  // Hide and show the guide
-  await p.goto(BASE + "/app");
-  await p.getByRole("button", { name: "Hide the guide" }).click();
-  await p.getByRole("button", { name: "Show the dashboard guide" }).waitFor();
-  await p.reload();
-  if (await p.getByTestId("dashboard-guide").count()) throw new Error("✘ guide should stay hidden");
-  await p.getByRole("button", { name: "Show the dashboard guide" }).click();
-  await p.getByTestId("dashboard-guide").waitFor();
-  log("dashboard guide can be hidden (remembered) and shown again");
 
   // News consent, email settings, summary email
   await p.goto(BASE + "/app");
@@ -83,9 +76,8 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.getByTestId("sample-data").getByText("Sample data is loaded.").waitFor();
   execSync(`psql -q "${process.env.DATABASE_URL}"`, { input: `UPDATE "CddFile" SET status = 'EDD', "nextRefreshOn" = now() - interval '3 days' WHERE id = (SELECT f.id FROM "CddFile" f JOIN "Party" p ON p.id = f."partyId" WHERE p."displayName" LIKE 'Jonas Ministras%' LIMIT 1)` });
   await p.reload();
-  await p.getByTestId("reviews-overdue").getByText("1 client review is overdue").waitFor();
-  await p.getByTestId("reviews-overdue").getByText(/Jonas Ministras.*high risk, yearly review/).waitFor();
-  log("overdue client review shown at the top of the dashboard, with the yearly / 5-year rule");
+  await p.getByTestId("attention").getByText(/Jonas Ministras.*client review overdue since .* \(high risk: yearly\)/).waitFor();
+  log("overdue client review listed under 'Needs your attention', with the yearly / 5-year rule");
   await submit(p, "Remove sample data", "Sample data removed (4 people and companies)");
   await p.goto(BASE + "/app/clients");
   if (await p.getByTestId("client-row").count()) throw new Error("✘ sample clients not removed");

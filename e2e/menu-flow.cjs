@@ -10,12 +10,20 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   p.on("pageerror", (e) => errors.push(e.message));
 
   const nav = p.getByRole("navigation", { name: "Main" });
-  for (const label of ["Dashboard", "Clients", "Identity Verification", "Risk Assessments", "Monitoring Alerts", "FIU Reporting", "Reports", "Audit Trail", "Compliance Hub", "My Compliance", "Team", "Settings", "Help Centre"]) {
+  const top = await nav.locator(":scope > ul > li").allInnerTexts().catch(() => []);
+  for (const label of ["Dashboard", "Clients", "Alerts", "Cases & Payments", "Reporting", "Compliance Hub", "Team", "Settings", "Help Centre"]) {
     await nav.getByText(label, { exact: true }).first().waitFor();
   }
-  log("menu shows the ClearAML-style sections");
-  for (const card of ["Total Clients", "Pending Reviews", "Portfolio Health", "High Risk Cases", "Program Status", "Risk Distribution", "Review Queue", "Upcoming Timeline", "Recent Clients", "Quick Actions", "Activity Feed"]) await p.getByText(card, { exact: true }).waitFor();
-  log("dashboard metric cards");
+  for (const gone of ["Identity Verification", "Risk Assessments", "Monitoring Alerts", "FIU Reporting", "My Compliance", "Feature Requests"]) {
+    if (await nav.getByText(gone, { exact: true }).count()) throw new Error("✘ old top-level item still in the menu: " + gone);
+  }
+  void top;
+  log("menu: 9 sections, daily work first (Clients, Alerts, Cases & Payments)");
+  for (const card of ["Not yet decided", "Up to date", "Your obligations", "Upcoming deadlines", "Recent clients"]) await p.getByText(card, { exact: true }).first().waitFor();
+  await p.getByTestId("metrics").getByText("High risk", { exact: true }).waitFor();
+  await p.getByTestId("attention").getByText(/Needs your attention/).waitFor();
+  for (const gone of ["Program Status", "Quick Actions", "Activity Feed"]) if (await p.getByText(gone, { exact: true }).count()) throw new Error("✘ dashboard still shows " + gone);
+  log("dashboard: key numbers, one attention list, obligations, deadlines, recent clients");
 
   // A client whose name is on the TEST list → an open alert
   await p.goto(BASE + "/app/clients/new");
@@ -61,10 +69,16 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   await p.getByRole("navigation", { name: "Compliance Hub sections" }).getByRole("link", { name: "Business Risk Assessment" }).waitFor();
   await p.goto(BASE + "/app/billing");
   await p.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Screening Lists" }).waitFor();
-  log("section tabs on Compliance Hub and Settings pages");
+  await p.goto(BASE + "/app/identity-verification");
+  await p.getByRole("navigation", { name: "Clients sections" }).getByRole("link", { name: "Risk Ratings" }).waitFor();
+  await p.goto(BASE + "/app/firm/whistleblowing");
+  await p.getByRole("navigation", { name: "Compliance Hub sections" }).getByRole("link", { name: "Audit Trail" }).waitFor();
+  await p.goto(BASE + "/app/support");
+  await p.getByRole("navigation", { name: "Help sections" }).getByRole("link", { name: "Feature Requests" }).waitFor();
+  log("section tabs on Clients, Compliance Hub, Settings and Help pages, including pages only reached by tabs");
 
   await p.goto(BASE + "/app/monitoring-alerts");
-  await p.getByRole("heading", { name: "Monitoring Alerts" }).waitFor();
+  await p.getByRole("heading", { name: "Alerts", exact: true }).waitFor();
   const alert = p.getByTestId("alert").first();
   await alert.getByText("Viktor Malenko · client").waitFor();
   await alert.getByRole("link", { name: "Review" }).click();
@@ -72,12 +86,12 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   log("Monitoring Alerts lists the possible match and links to the client's screening");
 
   await p.goto(BASE + "/app/risk-assessments");
-  await p.getByRole("heading", { name: "Risk Assessments" }).waitFor();
+  await p.getByRole("heading", { name: "Risk Ratings" }).waitFor();
   await p.getByRole("link", { name: "Viktor Malenko" }).waitFor();
   log("Risk Assessments lists the client with its rating");
 
   await p.goto(BASE + "/app/identity-verification");
-  await p.getByRole("heading", { name: "Identity Verification" }).waitFor();
+  await p.getByRole("heading", { name: "Identity Checks" }).waitFor();
   await p.getByText("No verified identities yet").waitFor();
   log("Identity Verification page (empty state)");
 
@@ -90,7 +104,7 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   log("Audit Trail shows events and filters by action");
 
   await p.goto(BASE + "/app/registers");
-  await p.getByRole("heading", { name: "Reports" }).waitFor();
+  await p.getByRole("heading", { name: "Registers & Exports" }).waitFor();
   const res = await ctx.request.get(BASE + "/api/registers/clients", { maxRedirects: 0 });
   const csv = await res.text();
   if (res.status() !== 200 || !csv.includes("Viktor Malenko") || !csv.includes("Client,Type,Status,Risk")) throw new Error("✘ client register CSV: " + res.status() + " " + csv.slice(0, 200));
@@ -100,7 +114,7 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   if (bad.status() !== 404) throw new Error("✘ unknown register should 404");
   log("Reports: Client Register and Audit Trail CSV download; unknown register 404");
 
-  for (const [path, h] of [["/app/cases", "Investigations"], ["/app/reports", "Report Queue"], ["/app/firm", "Compliance Hub"], ["/app/firm/policies", "AML Program"], ["/app/firm/training", "My Compliance"], ["/app/firm/integrity", "Personnel Due Diligence"], ["/app/support", "Help Centre"], ["/app/security", "Security"]]) {
+  for (const [path, h] of [["/app/cases", "Investigations"], ["/app/reports", "Report Queue"], ["/app/firm", "Compliance Hub"], ["/app/firm/policies", "AML Program"], ["/app/firm/training", "My Training"], ["/app/firm/integrity", "Staff Checks"], ["/app/support", "Help Centre"], ["/app/security", "Security"]]) {
     await p.goto(BASE + path);
     await p.getByRole("heading", { name: h, exact: true }).first().waitFor();
   }

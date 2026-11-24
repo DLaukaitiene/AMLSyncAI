@@ -23,7 +23,7 @@ export default async function RiskAssessmentsPage({ searchParams }: { searchPara
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Risk Assessments</h1>
+        <h1 className="text-3xl">Risk Ratings</h1>
         <p className="text-sm text-muted">The current risk rating of every client, calculated from the file data. A change of rating needs a reason and is kept with the assessment.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">

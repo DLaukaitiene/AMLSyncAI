@@ -12,7 +12,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   // My Firm Compliance
   await p.goto(BASE + "/app/firm/documents");
-  await p.getByRole("heading", { name: "My Firm Compliance" }).waitFor();
+  await p.getByRole("heading", { name: "Firm Documents" }).waitFor();
   await p.locator("select[name=kind]").selectOption("firm:approvals");
   await p.locator("input[type=file][name=file]").setInputFiles([{ name: "board-approval.png", mimeType: "image/png", buffer: PNG }]);
   await submit(p, "Upload", "board-approval.png: uploaded");

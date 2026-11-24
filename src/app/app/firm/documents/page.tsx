@@ -18,7 +18,7 @@ export default async function FirmDocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">My Firm Compliance</h1>
+        <h1 className="text-3xl">Firm Documents</h1>
         <p className="text-sm text-muted">Your firm&apos;s own compliance evidence in one place. Supervisors usually ask for these first: keep them filed and current before an inspection notice arrives.</p>
       </div>
       {manage && (

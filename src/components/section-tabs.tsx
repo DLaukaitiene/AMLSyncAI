@@ -6,34 +6,49 @@ import { usePathname } from "next/navigation";
 /** Tabs across the top of grouped pages (as in ClearAML's Compliance Hub, Team and Settings). */
 const GROUPS: { label: string; tabs: { href: string; label: string }[] }[] = [
   {
+    label: "Clients",
+    tabs: [
+      { href: "/app/clients", label: "All Clients" },
+      { href: "/app/identity-verification", label: "Identity Checks" },
+      { href: "/app/risk-assessments", label: "Risk Ratings" },
+      { href: "/app/remediation", label: "Import Clients" },
+      { href: "/app/clients/shared", label: "Shared Files" },
+      { href: "/app/tools/ownership-calculator", label: "Ownership Calculator" },
+    ],
+  },
+  { label: "Cases & Payments", tabs: [{ href: "/app/matters", label: "Cases" }, { href: "/app/transactions", label: "Transactions" }, { href: "/app/transactions/import", label: "Import Transactions" }] },
+  { label: "Reporting", tabs: [{ href: "/app/cases", label: "Investigations" }, { href: "/app/reports", label: "Report Queue" }, { href: "/app/registers", label: "Registers & Exports" }] },
+  {
     label: "Compliance Hub",
     tabs: [
       { href: "/app/firm", label: "Overview" },
-      { href: "/app/calendar", label: "Compliance Calendar" },
+      { href: "/app/obligations", label: "My Obligations" },
+      { href: "/app/calendar", label: "Calendar" },
       { href: "/app/firm/risk-assessment", label: "Business Risk Assessment" },
       { href: "/app/firm/policies", label: "AML Program" },
       { href: "/app/firm/governance", label: "Governance" },
       { href: "/app/firm/outsourcing", label: "Outsourcing" },
       { href: "/app/firm/whistleblowing", label: "Whistleblowing" },
       { href: "/app/firm/privacy", label: "Data Protection" },
-      { href: "/app/firm/documents", label: "My Firm Compliance" },
+      { href: "/app/firm/documents", label: "Firm Documents" },
       { href: "/app/firm/review-pack", label: "Review Pack" },
+      { href: "/app/audit-trail", label: "Audit Trail" },
     ],
   },
-  { label: "Team", tabs: [{ href: "/app/team", label: "Members" }, { href: "/app/team/responsibilities", label: "Responsibilities" }, { href: "/app/firm/integrity", label: "Personnel Due Diligence" }, { href: "/app/firm/training", label: "Training" }, { href: "/app/team/training-register", label: "Training Register" }] },
+  { label: "Team", tabs: [{ href: "/app/team", label: "Members" }, { href: "/app/firm/training", label: "My Training" }, { href: "/app/team/training-register", label: "Training Register" }, { href: "/app/team/responsibilities", label: "Responsibilities" }, { href: "/app/firm/integrity", label: "Staff Checks" }] },
   {
     label: "Settings",
     tabs: [
       { href: "/app/settings/country-profile", label: "Country Profile" },
+      { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring" },
       { href: "/app/settings/screening-lists", label: "Screening Lists" },
       { href: "/app/billing", label: "Billing" },
       { href: "/app/security", label: "Security" },
-      { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring" },
       { href: "/app/settings/email", label: "Email Settings" },
       { href: "/app/records", label: "Records & Retention" },
     ],
   },
-  { label: "FIU Reporting", tabs: [{ href: "/app/cases", label: "Investigations" }, { href: "/app/reports", label: "Report Queue" }] },
+  { label: "Help", tabs: [{ href: "/app/support", label: "Help Centre" }, { href: "/app/feature-requests", label: "Feature Requests" }] },
 ];
 
 export function SectionTabs({ allowed }: { allowed: string[] }) {

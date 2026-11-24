@@ -101,7 +101,7 @@ export const OBLIGATIONS: Obligation[] = [
     how: ["Monitoring Alerts: open each possible match.", "Compare the details and record 'not the same person' or 'confirmed match' with a reason."],
     article: "AMLR Art. 20, 42–46; EU sanctions regulations",
     duty: "Every possible sanctions or PEP match needs your decision. A confirmed sanctions match means: stop, freeze, notify.",
-    action: { href: "/app/monitoring-alerts", label: "Monitoring Alerts" },
+    action: { href: "/app/monitoring-alerts", label: "Alerts" },
   },
   {
     id: "high-risk", group: "Every client",
@@ -122,7 +122,7 @@ export const OBLIGATIONS: Obligation[] = [
     article: "AMLR Art. 19, 26, 80",
     duty: "Record each deal and payment. €10,000 or more needs full client checks; cash of €10,000 or more is not allowed.",
     action: { href: "/app/matters", label: "Cases" },
-    secondary: { href: "/app/transactions", label: "Transaction Monitoring" },
+    secondary: { href: "/app/transactions", label: "Transactions" },
     sectorNotes: {
       HVG_TRADER: "Sales of cars of €250,000 or more, and of aircraft or boats of €7.5 million or more, must also be reported to the FIU.",
     },
@@ -149,7 +149,7 @@ export const OBLIGATIONS: Obligation[] = [
     ],
     article: "AMLR Art. 69–73",
     duty: "Suspicious? Tell the Compliance Officer now, through the app. The Compliance Officer reports to the FIU promptly. Never tell the client (tipping-off is an offence).",
-    action: { href: "/app/cases", label: "FIU Reporting" },
+    action: { href: "/app/cases", label: "Investigations" },
     secondary: { href: "/app/reports", label: "Report Queue" },
     sectorNotes: {
       LEGAL: "Lawyers don't report information received while defending a client or advising on their legal position (legal privilege), unless the client seeks advice for money laundering.",
@@ -174,7 +174,7 @@ export const OBLIGATIONS: Obligation[] = [
     how: ["Team → Personnel Due Diligence: each person makes the declaration.", "Screen all staff and review any match."],
     article: "AMLR Art. 13",
     duty: "Staff declare their integrity and conflicts on joining and every year, and are screened.",
-    action: { href: "/app/firm/integrity", label: "Personnel Due Diligence" },
+    action: { href: "/app/firm/integrity", label: "Staff Checks" },
     teamOnly: true,
   },
   {
@@ -196,7 +196,7 @@ export const OBLIGATIONS: Obligation[] = [
     how: ["Nothing to do day to day: every action is recorded.", "Reports: download the registers for an inspection.", "Settings → Records & Retention: delete files when their period ends."],
     article: "AMLR Art. 77",
     duty: "Records are kept 5 years after the relationship ends, then deleted.",
-    action: { href: "/app/registers", label: "Reports" },
+    action: { href: "/app/registers", label: "Registers & Exports" },
     secondary: { href: "/app/records", label: "Records & Retention" },
   },
 ];

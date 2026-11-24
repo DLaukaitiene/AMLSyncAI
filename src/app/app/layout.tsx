@@ -13,76 +13,80 @@ type Child = { href: string; label: string; icon: string; show?: boolean };
 type Entry = Child & { children?: Child[] };
 const strip = ({ href, label, icon }: Child): NavItem => ({ href, label, icon });
 
+/** Pages reached through the tabs of their section rather than the menu (each page checks its own permission). */
+const TAB_ONLY = ["/app/firm/outsourcing", "/app/firm/whistleblowing", "/app/firm/privacy", "/app/firm/documents", "/app/firm/review-pack", "/app/feature-requests"];
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await requireUser();
   const r = s.user.roles;
-  // Menu follows ClearAML's structure and names (familiar to users of AML tools); "FIU" replaces "AUSTRAC".
+  // Menu [restructured 24 Nov 2026]: daily work first (clients, alerts, cases), then reporting, then the firm's
+  // programme, team, settings and help. Pages that belong together share one entry and tabs across the page.
   const entries: Entry[] = [
     { href: "/app", label: "Dashboard", icon: "dashboard" },
-    { href: "/app/obligations", label: "My Obligations", icon: "obligations" },
     {
       href: "/app/clients", label: "Clients", icon: "clients", show: can(r, "client.view"),
       children: [
         { href: "/app/clients", label: "All Clients", icon: "list" },
         { href: "/app/clients/new", label: "Add Client", icon: "add", show: can(r, "client.edit") },
+        { href: "/app/identity-verification", label: "Identity Checks", icon: "idv" },
+        { href: "/app/risk-assessments", label: "Risk Ratings", icon: "risk" },
         { href: "/app/remediation", label: "Import Clients", icon: "upload", show: can(r, "client.edit") },
         { href: "/app/clients/shared", label: "Shared Files", icon: "upload" },
         { href: "/app/tools/ownership-calculator", label: "Ownership Calculator", icon: "list" },
-        { href: "/app/matters", label: "Cases", icon: "matters" },
       ],
     },
-    { href: "/app/identity-verification", label: "Identity Verification", icon: "idv", show: can(r, "client.view") },
-    { href: "/app/risk-assessments", label: "Risk Assessments", icon: "risk", show: can(r, "client.view") },
-    { href: "/app/monitoring-alerts", label: "Monitoring Alerts", icon: "alerts", show: can(r, "client.view") },
-    { href: "/app/transactions", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
+    { href: "/app/monitoring-alerts", label: "Alerts", icon: "alerts", show: can(r, "client.view") },
     {
-      href: "/app/cases", label: "FIU Reporting", icon: "cases", show: can(r, "case.view"),
+      href: "/app/matters", label: "Cases & Payments", icon: "matters", show: can(r, "client.view"),
       children: [
-        { href: "/app/cases", label: "Investigations", icon: "cases" },
-        { href: "/app/reports", label: "Report Queue", icon: "report" },
+        { href: "/app/matters", label: "Cases", icon: "matters" },
+        { href: "/app/transactions", label: "Transactions", icon: "transactions" },
+        { href: "/app/transactions/import", label: "Import Transactions", icon: "upload", show: can(r, "client.edit") },
       ],
     },
-    { href: "/app/registers", label: "Reports", icon: "registers", show: can(r, "approve.compliance") },
-    { href: "/app/audit-trail", label: "Audit Trail", icon: "audit", show: can(r, "securityLog.view") },
+    {
+      href: can(r, "case.view") ? "/app/cases" : "/app/registers", label: "Reporting", icon: "cases",
+      children: [
+        { href: "/app/cases", label: "Investigations", icon: "cases", show: can(r, "case.view") },
+        { href: "/app/reports", label: "Report Queue", icon: "report", show: can(r, "case.view") },
+        { href: "/app/registers", label: "Registers & Exports", icon: "registers", show: can(r, "approve.compliance") },
+      ],
+    },
     {
       href: "/app/firm", label: "Compliance Hub", icon: "firm",
       children: [
         { href: "/app/firm", label: "Overview", icon: "list" },
+        { href: "/app/obligations", label: "My Obligations", icon: "obligations" },
         { href: "/app/calendar", label: "Compliance Calendar", icon: "calendar" },
         { href: "/app/firm/risk-assessment", label: "Business Risk Assessment", icon: "risk" },
         { href: "/app/firm/policies", label: "AML Program", icon: "policies" },
         { href: "/app/firm/governance", label: "Governance", icon: "firm" },
-        { href: "/app/firm/outsourcing", label: "Outsourcing", icon: "outsourcing" },
-        { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
-        { href: "/app/firm/privacy", label: "Data Protection", icon: "privacy" },
-        { href: "/app/firm/documents", label: "My Firm Compliance", icon: "folder" },
-        { href: "/app/firm/review-pack", label: "Review Pack", icon: "report" },
+        { href: "/app/audit-trail", label: "Audit Trail", icon: "audit", show: can(r, "securityLog.view") },
       ],
     },
-    { href: "/app/firm/training", label: "My Compliance", icon: "training" },
     {
       href: "/app/team", label: "Team", icon: "team",
       children: [
         { href: "/app/team", label: "Members", icon: "team" },
-        { href: "/app/team/responsibilities", label: "Responsibilities", icon: "list" },
-        { href: "/app/firm/integrity", label: "Personnel Due Diligence", icon: "integrity" },
+        { href: "/app/firm/training", label: "My Training", icon: "training" },
         { href: "/app/team/training-register", label: "Training Register", icon: "training" },
+        { href: "/app/team/responsibilities", label: "Responsibilities", icon: "list" },
+        { href: "/app/firm/integrity", label: "Staff Checks", icon: "integrity" },
       ],
     },
     {
       href: "/app/settings", label: "Settings", icon: "settings",
       children: [
         { href: "/app/settings/country-profile", label: "Country Profile", icon: "country", show: can(r, "countryProfile.view") },
+        { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
         { href: "/app/settings/screening-lists", label: "Screening Lists", icon: "screening", show: can(r, "countryProfile.view") },
         { href: "/app/billing", label: "Billing", icon: "billing", show: can(r, "approve.compliance") },
         { href: "/app/security", label: "Security", icon: "security", show: can(r, "securityLog.view") },
-        { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
         { href: "/app/settings/email", label: "Email Settings", icon: "mail" },
         { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },
       ],
     },
     { href: "/app/support", label: "Help Centre", icon: "help" },
-    { href: "/app/feature-requests", label: "Feature Requests", icon: "ideas" },
     ...(isPlatformAdmin(s.user.email)
       ? [{
           href: "/adminpage1&", label: "Backoffice", icon: "settings",
@@ -113,7 +117,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
     >
       <Announcements firmId={s.firm.id} userId={s.user.id} />
-      <SectionTabs allowed={nav.flatMap((n) => [n.href, ...(n.children ?? []).map((c) => c.href)])} />
+      <SectionTabs allowed={[...nav.flatMap((n) => [n.href, ...(n.children ?? []).map((c) => c.href)]), ...TAB_ONLY]} />
       <PageDuty />
       {children}
     </AppShell>

@@ -8,7 +8,7 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Reports</h1>
+        <h1 className="text-3xl">Registers &amp; Exports</h1>
         <p className="text-sm text-muted">Audit-ready registers from live data, as CSV (opens in Excel). Run them before a supervisor inspection or your annual review. Each export is logged and the Owner is told.</p>
       </div>
       {pillars.map((p) => (
