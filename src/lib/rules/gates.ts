@@ -35,6 +35,8 @@ export interface CddFileState {
   /** Natural persons only: are bearer shares / anonymity flags present (Art. 79)? */
   anonymous?: boolean;
   hasBearerShares?: boolean;
+  /** Ticked high-risk flags that are hard blocks (lib/cdd/risk-flags), other than bearer shares. */
+  blockingFlags?: { id: string; message: string; article: string }[];
   /** Legal entities: BO identified, or SMO fallback recorded. */
   boResolved?: boolean;
   purposeRecorded: boolean;
@@ -72,7 +74,8 @@ export interface GateItem {
 export function openCddItems(f: CddFileState): GateItem[] {
   const items: GateItem[] = [];
   if (f.anonymous) items.push({ id: "anonymous", message: "Anonymous customers cannot be accepted.", article: "Art. 79", absolute: true });
-  if (f.hasBearerShares) items.push({ id: "bearer-shares", message: "Entities with bearer shares cannot be accepted.", article: "Art. 79", absolute: true });
+  if (f.hasBearerShares) items.push({ id: "bearer-shares", message: "Entities with bearer shares that are not converted, immobilised or deposited cannot be accepted.", article: "Art. 79", absolute: true });
+  for (const b of f.blockingFlags ?? []) items.push({ id: `flag:${b.id}`, message: b.message, article: b.article, absolute: true });
   for (const b of f.sectoralBans ?? []) items.push({ id: `sectoral:${b.regulation}`, message: b.explanation, article: b.regulation, absolute: true });
   if (f.trueSanctionsMatch) items.push({ id: "sanctions", message: "True sanctions match: freeze and notify the sanctions authority.", article: "Art. 20(1)(d); Reg. 269/2014", absolute: true });
   if (!f.identityVerified && !f.sddDelayedVerification) items.push({ id: "identity", message: "Verify the identity of this party.", article: "Art. 22–23" });

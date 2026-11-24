@@ -15,7 +15,6 @@ export default async function NewClientPage() {
       <ActionForm action={createClientAction}>
         <PartyFields chooser />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="National ID number" name="nationalId" hint="Stored encrypted." autoComplete="off" />
           <Field label="Tax ID" name="taxId" hint="Stored encrypted." autoComplete="off" />
         </div>
         <Field label="Purpose and intended nature of the relationship" name="purpose" hint="AMLR Art. 25, e.g. annual accounts and tax returns for a trading company." />

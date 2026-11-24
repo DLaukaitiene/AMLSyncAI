@@ -77,7 +77,7 @@ export async function addPartyAction(matterId: string, _: ActionState, fd: FormD
       const kind = o.kind === "LEGAL" ? "LEGAL" : "NATURAL";
       const parsed = kind === "NATURAL"
         ? naturalPersonSchema.safeParse({ firstNames: o.firstNames, lastName: o.lastName, birthDate: o.birthDate, nationalities: o.nationalities ?? "", residenceCountry: o.residenceCountry, isPep: o.isPep === "on", isPepFamilyOrAssociate: o.isPepFamilyOrAssociate === "on" })
-        : legalEntitySchema.safeParse({ name: o.name, legalForm: o.legalForm, registrationNumber: o.registrationNumber, countryOfCreation: o.countryOfCreation, bearerShares: o.bearerShares === "on", nomineeArrangements: o.nomineeArrangements === "on" });
+        : legalEntitySchema.safeParse({ name: o.name, legalForm: o.legalForm, registrationNumber: o.registrationNumber, countryOfCreation: o.countryOfCreation, bearerShares: o.bearerShares === "on", nomineeArrangements: o.nomineeArrangements === "on", riskFlags: fd.getAll("riskFlags").map(String) });
       if (!parsed.success) return zodErrors(parsed.error);
       const p = await tx.party.create({ data: { firmId: s.firm.id, kind, displayName: displayName(kind, parsed.data), details: parsed.data as Prisma.InputJsonValue } });
       await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "create", objectType: "Party", objectId: p.id, fields: Object.keys(parsed.data) });

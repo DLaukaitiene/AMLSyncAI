@@ -55,7 +55,7 @@ The Review Queue lists clients whose periodic review is overdue. The Upcoming Ti
     slug: "add-client", topic: "Clients and due diligence", title: "Adding a client",
     summary: "Individuals, companies, trusts, partnerships and other organisations.",
     body: `1. Go to Clients → Add Client.
-2. Choose what you are adding: Individual or sole trader, Company, Trust, Partnership or Other (association, club…).
+2. Choose what you are adding: Individual or sole trader, or Company or other organisation (this also covers partnerships, trusts, associations and foundations).
 3. Enter at least the name. Add an email to send the client their secure link.
 4. Leave "Send the client their secure link now" ticked: the client fills in their details, uploads documents and verifies their identity. Reminders go out on day 1, 3 and 7.
 5. Click Create client. The client is screened at once and a risk rating is calculated.

@@ -46,8 +46,8 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
 
   await p.goto(BASE + "/app/clients/new");
   await p.getByText("What are you adding?").waitFor();
-  await p.getByRole("radio", { name: "Trust" }).check();
-  if (await p.getByLabel("Legal form").inputValue() !== "Trust") throw new Error("✘ Trust should preset the legal form");
+  await p.getByRole("radio", { name: "Company or other organisation" }).check();
+  await p.getByLabel("Legal form").fill("Trust");
   await p.getByLabel("Legal name *").fill("Šeimos fondas");
   await p.getByRole("button", { name: "Create client" }).click();
   await p.getByRole("heading", { name: "Šeimos fondas" }).waitFor();

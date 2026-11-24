@@ -23,7 +23,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   // Firm A: company client with an owner and a document
   await a.goto(BASE + "/app/clients/new");
-  await a.getByLabel("Company", { exact: true }).check();
+  await a.getByRole("radio", { name: "Company or other organisation" }).check();
   await a.getByLabel("Legal name *").fill("Perkeliama UAB");
   await a.getByRole("button", { name: "Create client" }).click();
   await a.getByRole("heading", { name: "Perkeliama UAB" }).waitFor();

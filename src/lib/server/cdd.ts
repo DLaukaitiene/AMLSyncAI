@@ -1,4 +1,5 @@
 import "server-only";
+import { tickedFlags } from "@/lib/cdd/risk-flags";
 import type { CddFile, OwnershipLink, Party, Prisma } from "@prisma/client";
 import type { Tx } from "./db";
 import { audit } from "./audit";
@@ -241,6 +242,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
       ownershipLayers: tree.layers,
       nomineeArrangements: !!d.nomineeArrangements,
       productRisk: SECTOR_PRODUCT_RISK[firm.sectors[0] ?? "OTHER"] ?? "medium",
+      flags: tickedFlags(d).filter((x) => !x.legacyKey && x.points).map((x) => ({ id: x.id, label: x.label, points: x.points!, forcesHigh: x.forcesHigh, article: x.article })),
       additionalEddCaseIds: ((d.additionalEddCaseIds as string[]) ?? []).filter((id) => profile.additionalEddCases.some((c) => c.id === id)),
     },
     profile,
@@ -300,6 +302,7 @@ export async function loadClientFile(tx: Tx, firmId: string, cddFileId: string, 
     role: f.role.toLowerCase() as CddFileState["role"],
     identityVerified: party.kind === "NATURAL" ? verifications.length > 0 : extracts.length > 0,
     hasBearerShares: party.bearerShares || !!d.bearerShares,
+    blockingFlags: tickedFlags(d).filter((x) => x.block && !x.legacyKey).map((x) => ({ id: x.id, message: x.block!, article: x.article })),
     boResolved: bo ? (bo.beneficialOwners.length > 0 && (branches?.openCount ?? 0) === 0) || smoFallbackOk : undefined,
     purposeRecorded: !!f.purpose?.trim(),
     riskAssessed: true,

@@ -15,7 +15,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   p.on("pageerror", (e) => errors.push(e.message));
 
   await p.goto(BASE + "/app/clients/new");
-  await p.getByLabel("Company", { exact: true }).check();
+  await p.getByRole("radio", { name: "Company or other organisation" }).check();
   await p.getByLabel("Legal name *").fill("Prašymo UAB");
   await p.getByLabel("Registration number").fill("300111222");
   await p.getByRole("button", { name: "Create client" }).click();
@@ -49,9 +49,9 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   await c.getByLabel("Legal name *").fill("Prašymo UAB");
   await c.getByLabel("Registration number *").fill("300111999");
-  await c.getByLabel("Country of registration *").fill("LT");
+  await c.getByLabel("Registered office country *").fill("LT");
   await c.getByLabel("Your role in the company *").fill("Director");
-  await c.getByLabel("Registered office *").fill("Gedimino pr. 5, Vilnius");
+  await c.getByLabel("Registered office address *").fill("Gedimino pr. 5, Vilnius");
   await c.getByLabel("What the company does *").fill("Wholesale of building materials");
   await c.locator("input[name=sanctions][value=no]").check();
   const row = (i) => c.getByTestId(`person-${i}`);
