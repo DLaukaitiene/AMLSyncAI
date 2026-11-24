@@ -52,4 +52,10 @@ async function submit(p, buttonName, expect) {
   }
 }
 
-module.exports = { BASE, totp, lastMail, log, signupFirm, submit };
+/** Opens a <details> section by its summary text. Clicking the summary would close a section that is already open. */
+async function openSection(p, summaryText) {
+  const d = p.locator("details", { has: p.getByText(summaryText, { exact: true }) });
+  if (await d.count()) await d.first().evaluate((el) => { el.open = true; });
+}
+
+module.exports = { BASE, totp, lastMail, log, openSection, signupFirm, submit };
