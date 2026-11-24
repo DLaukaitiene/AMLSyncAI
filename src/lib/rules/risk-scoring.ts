@@ -6,9 +6,13 @@
  */
 import { EU_CORE_VERSION } from "./eu-core";
 import type { CountryProfile } from "./country-profile";
-import { isKnownCountry } from "@/lib/geo/countries";
+import { countryName, isKnownCountry } from "@/lib/geo/countries";
+import {
+  COUNTRY_RISK_LISTS, COUNTRY_RISK_LISTS_VERSION, CPI_EDITION, CPI_SCORES, DEFAULT_CPI_THRESHOLD, type CountryRiskList,
+} from "./country-risk-lists";
 
-export const RISK_RULESET_VERSION = `${EU_CORE_VERSION}+risk.1`;
+/** Includes the country list versions (country-risk-lists), so each stored assessment records which lists it used. */
+export const RISK_RULESET_VERSION = `${EU_CORE_VERSION}+risk.2+${COUNTRY_RISK_LISTS_VERSION}`;
 
 export type RiskLevel = "Low" | "Medium" | "High";
 export type DeliveryChannel = "face-to-face" | "remote-eid" | "remote-document" | "intermediary";
@@ -21,6 +25,10 @@ export interface RiskInput {
   highRiskThirdCountries: ReadonlySet<string>;
   /** Countries subject to EU countermeasures (Art. 35). */
   countermeasureCountries?: ReadonlySet<string>;
+  /** Annex III(3) country lists matched on country code. Default: the built-in versioned lists. */
+  countryLists?: readonly CountryRiskList[];
+  /** CPI scores by country. Default: the built-in edition. */
+  cpiScores?: Readonly<Record<string, number>>;
   isPep: boolean;
   isFormerPepWithin12Months?: boolean;
   isPepFamilyOrAssociate?: boolean;
@@ -47,6 +55,10 @@ export interface RiskFactor {
   /** Forces at least High / EDD regardless of total. */
   forcesHigh?: boolean;
   article?: string;
+  /** Country factors: the countries that matched (ISO codes). */
+  countries?: string[];
+  /** Country factors: the list that matched, its publisher and the date of the version used. */
+  list?: { id: string; name: string; source: string; asOf: string };
 }
 
 export interface RiskResult {
@@ -77,10 +89,12 @@ export function scoreClientRisk(input: RiskInput, profile?: CountryProfile, coun
     f.push({ id: "countermeasure-country", label: `Link to country under EU countermeasures: ${cm.join(", ")}`, points: 5, forcesHigh: true, article: "Art. 35" });
   }
 
-  // A country typed by hand ("Other") can't be checked against the EU lists: a person must assess it.
+  f.push(...countryListFactors(input, new Set([...hr, ...cm]), profile?.corruptionCpiThreshold ?? DEFAULT_CPI_THRESHOLD));
+
+  // A country typed by hand ("Other") can't be checked against the lists: a person must assess it.
   const unknown = input.countries.filter((c) => !isKnownCountry(c));
   if (unknown.length) {
-    f.push({ id: "unrecognised-country", label: `Country not on the standard list: ${unknown.join(", ")}. Check it against the EU high-risk and countermeasure lists`, points: 3, article: "Art. 29, 35" });
+    f.push({ id: "unrecognised-country", label: `Country not on the standard list: ${unknown.join(", ")}. Check it against the EU high-risk and countermeasure lists, the FATF grey list, sanctions, terrorism, corruption and tax-secrecy lists`, points: 3, article: "Art. 29, 35; Annex III(3)" });
   }
 
   if (input.isPep) f.push({ id: "pep", label: "Politically exposed person", points: 5, forcesHigh: true, article: "Art. 42" });
@@ -127,6 +141,38 @@ export function scoreClientRisk(input: RiskInput, profile?: CountryProfile, coun
     rulesetVersion: RISK_RULESET_VERSION,
     countryProfileVersion,
   };
+}
+
+const fmtDate = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const named = (codes: string[]) => codes.map((c) => `${countryName(c)} (${c})`).join(", ");
+
+/**
+ * Annex III(3) country factors, one per matched list, applied automatically to every linked country.
+ * None forces High on its own: the law requires EDD only for the EU high-risk and countermeasure lists.
+ * The FATF grey list is skipped for countries already on the EU high-risk list (same FATF assessment).
+ */
+function countryListFactors(input: RiskInput, euListed: ReadonlySet<string>, cpiThreshold: number): RiskFactor[] {
+  const out: RiskFactor[] = [];
+  const countries = [...new Set(input.countries.filter(isKnownCountry))];
+  for (const l of input.countryLists ?? COUNTRY_RISK_LISTS) {
+    const hit = countries.filter((c) => l.codes.has(c) && !(l.id === "fatf-grey-list" && euListed.has(c)));
+    if (!hit.length) continue;
+    out.push({
+      id: `country-list:${l.id}`, label: `Link to a country on the ${l.name} (${l.source}, ${fmtDate(l.asOf)}): ${named(hit)}`,
+      points: l.points, article: l.article, countries: hit, list: { id: l.id, name: l.name, source: l.source, asOf: l.asOf },
+    });
+  }
+  const scores = input.cpiScores ?? CPI_SCORES;
+  const corrupt = countries.filter((c) => scores[c] !== undefined && scores[c] < cpiThreshold);
+  if (corrupt.length) {
+    out.push({
+      id: "country-list:corruption-cpi",
+      label: `Link to a country with significant corruption, ${CPI_EDITION.name} score below ${cpiThreshold} (${CPI_EDITION.source}, ${fmtDate(CPI_EDITION.asOf)}): ${corrupt.map((c) => `${countryName(c)} (${c}, score ${scores[c]})`).join(", ")}`,
+      points: CPI_EDITION.points, article: CPI_EDITION.article, countries: corrupt,
+      list: { id: "corruption-cpi", name: `${CPI_EDITION.name}, score below ${cpiThreshold}`, source: CPI_EDITION.source, asOf: CPI_EDITION.asOf },
+    });
+  }
+  return out;
 }
 
 export interface RiskOverride {

@@ -7,6 +7,7 @@
  */
 import { z } from "zod";
 import { EU_CORE } from "./eu-core";
+import { DEFAULT_CPI_THRESHOLD, MAX_CPI_THRESHOLD } from "./country-risk-lists";
 import type { IsoDate, WorkingCalendar } from "./dates";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -47,6 +48,8 @@ export const countryProfileSchema = z.object({
 
   additionalEddCases: z.array(z.object({ id: z.string().min(1), description: z.string().min(1) })).default([]),
   nationalRiskAssessmentReviewed: z.boolean().default(false),
+  /** A country with a Transparency International CPI score below this counts as significant corruption (Annex III(3)). */
+  corruptionCpiThreshold: z.number().int().max(MAX_CPI_THRESHOLD).default(DEFAULT_CPI_THRESHOLD),
   riskAssessmentWaiver: z.boolean().default(false),
 
   higherRiskEntityCategories: z
@@ -102,6 +105,12 @@ export function findEuCoreRelaxations(p: CountryProfile): ProfileViolation[] {
         message: `A beneficial-ownership threshold for "${cat.legalForm}" cannot be above ${EU_CORE.beneficialOwnership.thresholdPct}% (AMLR Art. 52).`,
       });
     }
+  }
+  if (p.corruptionCpiThreshold < DEFAULT_CPI_THRESHOLD) {
+    v.push({
+      field: "corruptionCpiThreshold",
+      message: `The corruption threshold cannot be below CPI ${DEFAULT_CPI_THRESHOLD}, the AMLSync baseline. You may raise it (up to ${MAX_CPI_THRESHOLD}) to treat more countries as higher risk.`,
+    });
   }
   if (p.nationalCashReport.enabled && p.nationalCashReport.thresholdEUR === undefined) {
     v.push({ field: "nationalCashReport.thresholdEUR", message: "Enter the threshold for national cash reports." });

@@ -3,6 +3,7 @@ import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
 import { setupChecklist, belowNationalDefaults } from "@/lib/rules/country-profile";
 import { EU_CORE } from "@/lib/rules/eu-core";
+import { CPI_EDITION, DEFAULT_CPI_THRESHOLD, MAX_CPI_THRESHOLD } from "@/lib/rules/country-risk-lists";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
@@ -144,6 +145,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="raWaiver" defaultChecked={p.riskAssessmentWaiver} /> Our supervisor waived an individual documented business-wide risk assessment
             </label>
+            <Field label="Corruption threshold (CPI score)" name="corruptionCpiThreshold" type="number" defaultValue={p.corruptionCpiThreshold} hint={`A client linked to a country scoring below this on the ${CPI_EDITION.name} gets +${CPI_EDITION.points} risk points. ${DEFAULT_CPI_THRESHOLD} by default; you can raise it up to ${MAX_CPI_THRESHOLD}.`} />
           </Section>
 
           <Section title="Records, calendar and identity">

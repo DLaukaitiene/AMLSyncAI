@@ -6,6 +6,7 @@ import { EDD_CHECKLIST, HIGH_FROM, MEDIUM_FROM, RISK_RULESET_VERSION } from "@/l
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
 import { SCOPE_REASONS } from "@/lib/rules/cdd-scope";
 import { HIGH_RISK_LIST_VERSION } from "@/lib/rules/high-risk-countries";
+import { COUNTRY_RISK_LISTS, CPI_EDITION } from "@/lib/rules/country-risk-lists";
 import { OBLIGATIONS } from "@/lib/obligations/catalog";
 import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
 
@@ -99,6 +100,8 @@ export function buildReviewPack(i: ReviewPackInput): GeneratedDoc {
           ["Politically exposed person, former PEP (12 months), or family member / close associate", "5, always high risk"],
           ["Complex, unusually large or no apparent purpose transaction", "5, always high risk"],
           ["National extra EDD case (Country Profile)", "5, always high risk"],
+          ...COUNTRY_RISK_LISTS.map((l) => [`Link to a country on the ${l.name} (${l.source}, version of ${l.asOf}; checked automatically)`, String(l.points)]),
+          [`Link to a country scoring below ${i.profile.corruptionCpiThreshold} on the ${CPI_EDITION.name} (version of ${CPI_EDITION.asOf}; checked automatically)`, String(CPI_EDITION.points)],
           ["Confirmed adverse media", "4"],
           ["Trust or legal arrangement", "3"],
           ["Complex ownership (3 or more layers) / nominee arrangements", "3 each"],

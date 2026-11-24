@@ -48,6 +48,7 @@ function readForm(fd: FormData, memberState: string): CountryProfileInput {
     }),
     nationalRiskAssessmentReviewed: fd.get("nraReviewed") === "on",
     riskAssessmentWaiver: fd.get("raWaiver") === "on",
+    corruptionCpiThreshold: num(fd, "corruptionCpiThreshold"),
     retentionYears: num(fd, "retentionYears"),
     workingWeekdays: [1, 2, 3, 4, 5, 6, 7].filter((d) => fd.get(`wd.${d}`) === "on"),
     holidays: lines(fd, "holidays"),
