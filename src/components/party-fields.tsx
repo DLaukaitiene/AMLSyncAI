@@ -46,6 +46,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
           <Field label="First names (all)" name={n("firstNames")} required />
           <Field label="Surname" name={n("lastName")} required />
           <Field label="Date of birth" name={n("birthDate")} type="date" />
+          {chooser && <Field label="National ID number" name={n("nationalId")} hint="Personal code from the ID card or passport. Stored encrypted." autoComplete="off" />}
           <Field label="Other names" name={n("otherNames")} hint="Maiden or previous names, other spellings — up to 5, separated by commas. All are screened." />
           {!compact && <Field label="Place of birth" name={n("placeOfBirth")} />}
           <CountryField label="Nationalities" name={n("nationalities")} multiple hint="Add all of them. Not listed? Type the name and press Add country." />
