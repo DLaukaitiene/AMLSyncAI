@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { CountryField, Field } from "./form";
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
@@ -86,14 +86,40 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
               <Field label="Nature of business" name={n("natureOfBusiness")} />
             </>
           )}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name={n("bearerShares")} /> Has bearer shares
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name={n("nomineeArrangements")} /> Nominee shareholders or directors
-          </label>
+          <CheckWithHelp name={n("bearerShares")} label="Has bearer shares">
+            Shares owned by whoever physically holds the certificate, with no name in a share register. Ownership can change hands without any record, so the real owner can&apos;t be verified. Entities with bearer shares can&apos;t be accepted.
+          </CheckWithHelp>
+          <CheckWithHelp name={n("nomineeArrangements")} label="Nominee shareholders or directors">
+            People named on the register or board who hold the shares or role on behalf of someone else, often through a corporate service provider. You must identify the person behind them. This raises the client&apos;s risk score.
+          </CheckWithHelp>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Checkbox with a "(?)" button that shows a short explanation underneath. */
+function CheckWithHelp({ name, label, children }: { name: string; label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const helpId = useId();
+  return (
+    <div className="text-sm">
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" name={name} /> {label}
+        </label>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls={helpId}
+          aria-label={`What is "${label}"?`}
+          className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border text-xs text-muted hover:border-accent hover:text-accent"
+        >
+          ?
+        </button>
+      </div>
+      {open && <p id={helpId} className="mt-1 text-xs text-muted">{children}</p>}
     </div>
   );
 }
