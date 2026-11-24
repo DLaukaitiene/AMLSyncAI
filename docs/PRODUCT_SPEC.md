@@ -559,7 +559,7 @@ AMLSyncAI does **not** manually check the firms that sign up. A firm is verified
 - **Multi-factor authentication — mandatory for every user:** passkeys (FIDO2/WebAuthn) preferred; authenticator app (TOTP) allowed; **SMS and email codes not allowed** as a second factor.
 - **Step-up re-authentication** (fresh MFA within the last 5 minutes) for: approvals, filing or exporting an STR, supervisor-file and bulk exports, Country Profile changes, user and role changes, MFA changes, deletion and legal-hold changes, API key creation.
 - **Passwords:** minimum 12 characters; checked against known breached passwords; no forced periodic changes; stored with a modern memory-hard hash (e.g. Argon2id).
-- **Sessions:** idle timeout 15 minutes, absolute timeout 12 hours; secure, HttpOnly, SameSite cookies; session list with "sign out everywhere"; sessions revoked immediately when a user is removed or their role is reduced.
+- **Sessions:** idle timeout 45 minutes (changed from 15 on 24 Nov 2026), absolute timeout 12 hours; secure, HttpOnly, SameSite cookies; session list with "sign out everywhere"; sessions revoked immediately when a user is removed or their role is reduced.
 - **New device / new location alerts** to the user, and to the Owner for Owner and Compliance Officer accounts.
 - **Account recovery** uses one-time recovery codes issued when MFA is set up, or approval by another Owner / Compliance Officer of the firm. Recovery is never possible by email alone. A single-user firm that has lost both its MFA device and recovery codes must re-confirm the company email and wait 72 hours, during which the Owner's email is notified and can cancel.
 - **Leavers:** removing a user revokes all sessions, API keys and portal-review rights at once; their records and approvals stay attributed to them.
@@ -791,7 +791,7 @@ A V1 module is **done** only when every criterion below passes in an automated o
 - [ ] Every user must set up MFA (passkey or TOTP) before first use; SMS/email codes are not offered as a second factor.
 - [ ] Approvals, STR filing/export, bulk and supervisor-file exports, Country Profile changes, role/user changes, MFA changes, deletion/legal-hold and API key creation require re-authentication if the last MFA was > 5 minutes ago.
 - [ ] A password found in a breached-password list is rejected.
-- [ ] Sessions end after 15 minutes idle and 12 hours absolute; removing a user ends all their sessions within 60 seconds.
+- [ ] Sessions end after 45 minutes idle and 12 hours absolute; removing a user ends all their sessions within 60 seconds.
 - [ ] Login from a new device sends an alert to the user (and to the Owner for Owner/Compliance Officer accounts).
 - [ ] Account recovery cannot be completed by email alone.
 

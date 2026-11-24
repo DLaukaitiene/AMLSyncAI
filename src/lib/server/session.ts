@@ -7,7 +7,7 @@ import { randomToken, sha256 } from "./crypto";
 import { can, type Action, type AppRole } from "@/lib/auth/permissions";
 
 /** Session rules (spec §8C.3). */
-export const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
+export const IDLE_TIMEOUT_MS = 45 * 60 * 1000; // 45 minutes without activity [decided 24 Nov 2026]
 export const ABSOLUTE_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 export const STEP_UP_MS = 5 * 60 * 1000;
 const PRE_AUTH_TIMEOUT_MS = 10 * 60 * 1000;
