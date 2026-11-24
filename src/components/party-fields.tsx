@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { CountryField, Field } from "./form";
+import { FLAG_GROUPS, RISK_FLAGS, type FlagGroup, type RiskFlag } from "@/lib/cdd/risk-flags";
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
 /** "What are you adding?" options on Add Client (ClearAML's wording). */
@@ -92,28 +93,55 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
               <Field label="Nature of business" name={n("natureOfBusiness")} />
             </>
           )}
-          <CheckWithHelp name={n("bearerShares")} label="Has bearer shares">
-            Shares owned by whoever physically holds the certificate, with no name in a share register. Ownership can change hands without any record, so the real owner can&apos;t be verified. Entities with bearer shares can&apos;t be accepted.
-          </CheckWithHelp>
-          <CheckWithHelp name={n("nomineeArrangements")} label="Nominee shareholders or directors">
-            People named on the register or board who hold the shares or role on behalf of someone else, often through a corporate service provider. You must identify the person behind them. This raises the client&apos;s risk score.
-          </CheckWithHelp>
         </div>
       )}
+      {(!compact || kind === "LEGAL") && <RiskFlagsSection kind={kind} n={n} groups={compact ? ["ownership"] : undefined} />}
     </div>
   );
 }
 
+/** Expandable "High-risk flags" section, grouped, each with a "?" explanation (lib/cdd/risk-flags). */
+function RiskFlagsSection({ kind, n, groups }: { kind: "NATURAL" | "LEGAL"; n: (k: string) => string; groups?: FlagGroup[] }) {
+  const applies = (f: RiskFlag) => f.appliesTo === "both" || f.appliesTo === kind;
+  const shown = FLAG_GROUPS.filter((g) => !groups || groups.includes(g.id))
+    .map((g) => ({ ...g, flags: RISK_FLAGS.filter((f) => f.group === g.id && applies(f)) }))
+    .filter((g) => g.flags.length);
+  return (
+    <details className="rounded-xl border border-border p-3" data-testid="risk-flags">
+      <summary className="cursor-pointer text-sm font-semibold">High-risk flags <span className="font-normal text-muted">(optional — tick any that apply)</span></summary>
+      <div className="mt-3 space-y-4">
+        {shown.map((g) => (
+          <fieldset key={g.id} className="space-y-2">
+            <legend className="mb-1 text-sm font-semibold">{g.label}</legend>
+            {g.flags.map((f) => (
+              <CheckWithHelp
+                key={f.id}
+                name={f.legacyKey ? n(f.legacyKey) : n("riskFlags")}
+                value={f.legacyKey ? undefined : f.id}
+                label={f.label}
+                badge={f.block ? "Blocks acceptance" : f.forcesHigh ? "Requires EDD" : undefined}
+              >
+                {f.help} <span className="whitespace-nowrap">({f.article})</span>
+              </CheckWithHelp>
+            ))}
+          </fieldset>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 /** Checkbox with a "(?)" button that shows a short explanation underneath. */
-function CheckWithHelp({ name, label, children }: { name: string; label: string; children: ReactNode }) {
+function CheckWithHelp({ name, value, label, badge, children }: { name: string; value?: string; label: string; badge?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const helpId = useId();
   return (
     <div className="text-sm">
       <div className="flex items-center gap-2">
         <label className="flex items-center gap-2">
-          <input type="checkbox" name={name} /> {label}
+          <input type="checkbox" name={name} value={value} /> {label}
         </label>
+        {badge && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">{badge}</span>}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
