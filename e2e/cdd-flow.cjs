@@ -3,7 +3,7 @@
 // e2e/fixtures/test-sanctions.csv loaded and two fresh sign-up codes:
 //   CODE1=… CODE2=… node e2e/cdd-flow.cjs
 const { chromium } = require("playwright");
-const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
+const { BASE, log, openSection, signupFirm, submit } = require("./helpers.cjs");
 
 (async () => {
   const b = await chromium.launch();
@@ -63,7 +63,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("checks per person: beneficial owners need reasonable measures, below-threshold owners screening only, owning companies their chain; acceptance blocked");
   await p.getByLabel("Reason for your decision *").fill("Different date of birth (1990 vs 1965) and nationality LT; not the listed person.");
   await submit(p, "Record decision", "Decided matches (1)");
-  if (await p.getByText("Record an extract you obtained yourself", { exact: true }).count()) await p.getByText("Record an extract you obtained yourself", { exact: true }).click();
+  await openSection(p, "Record an extract you obtained yourself");
   await p.getByLabel("Register", { exact: true }).fill("JANGIS");
   await p.getByLabel("Extract date").fill("2027-08-01");
   await submit(p, "Record extract", "Register extract recorded");
@@ -89,7 +89,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await p.getByRole("heading", { name: "Petras Politikas" }).waitFor();
   await p.getByRole("heading", { name: /Risk: High/ }).waitFor();
   log("PEP → risk High, EDD required");
-  if (await p.getByText("Record a check done another way (in person, eID)").count()) await p.getByText("Record a check done another way (in person, eID)").click();
+  await openSection(p, "Record a check done another way (in person, eID)");
   await p.locator("select[name=method]").selectOption("IN_PERSON");
   await p.getByLabel("Document type").fill("ID card");
   await p.getByLabel("Document number").fill("LT1234567");
