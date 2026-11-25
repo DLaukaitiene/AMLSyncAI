@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, startTransition, useActionState, useContext, useId, useState, type ReactNode } from "react";
+import { CircleHelp } from "lucide-react";
 import { countryName, countryOptions, normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
 
 export type ActionState = { error?: string; fieldErrors?: Record<string, string[]>; message?: string; data?: unknown } | null;
@@ -67,9 +68,9 @@ function HintButton({ open, onToggle, controls, label }: { open: boolean; onTogg
       // Generic name on purpose: a name containing the field label would also match getByLabel(label).
       aria-label="Show help"
       title={`Help: ${label}`}
-      className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-border align-middle text-[10px] font-normal text-muted hover:border-accent hover:text-accent"
+      className="ml-1.5 inline-flex items-center justify-center rounded-full align-middle text-accent hover:brightness-110"
     >
-      ?
+      <CircleHelp aria-hidden className="h-4 w-4" />
     </button>
   );
 }

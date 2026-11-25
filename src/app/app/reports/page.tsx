@@ -7,6 +7,7 @@ import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
 import { decryptField } from "@/lib/server/crypto";
 import { ReportBlock } from "@/components/report-block";
+import { PageTitle } from "@/components/help";
 
 export default async function ReportsPage() {
   const s = await requireUser("case.view");
@@ -19,11 +20,10 @@ export default async function ReportsPage() {
   }));
   return (
     <div className="max-w-4xl space-y-4">
-      <h1 className="text-2xl font-semibold">Report Queue</h1>
-      <p className="text-sm text-muted">
+      <PageTitle className="text-3xl" help={<>
         Suspicious transaction reports, threshold and cash reports, register discrepancy reports and sanctions notices. Export the file and upload
         it through the channel in your Country Profile, then record the receipt.
-      </p>
+      </>}>Report Queue</PageTitle>
       {reports.length === 0 && <EmptyState icon={FileText} title="No reports" text="Suspicious transaction reports and threshold reports to your FIU appear here once a case or a payment needs one." />}
       {reports.map((r) => (
         <div key={r.id} className="space-y-1">

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { RiskChip, StatusChip } from "@/components/chips";
 import { EmptyState } from "@/components/empty-state";
+import { PageTitle } from "@/components/help";
 
 const FILTERS = [{ id: "all", label: "All" }, { id: "HIGH", label: "High" }, { id: "MEDIUM", label: "Medium" }, { id: "LOW", label: "Low" }, { id: "overridden", label: "Overridden" }] as const;
 
@@ -23,8 +24,7 @@ export default async function RiskAssessmentsPage({ searchParams }: { searchPara
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Risk Ratings</h1>
-        <p className="text-sm text-muted">The current risk rating of every client, calculated from the file data. A change of rating needs a reason and is kept with the assessment.</p>
+        <PageTitle className="text-3xl" help={<>The current risk rating of every client, calculated from the file data. A change of rating needs a reason and is kept with the assessment.</>}>Risk Ratings</PageTitle>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {(["HIGH", "MEDIUM", "LOW"] as const).map((l) => (

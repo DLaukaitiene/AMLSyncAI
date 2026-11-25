@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { firmReviewPack } from "@/lib/server/review-pack";
 import { DocView } from "@/components/doc-view";
+import { PageTitle } from "@/components/help";
 
 export default async function ReviewPackPage() {
   const s = await requireUser();
@@ -11,8 +12,7 @@ export default async function ReviewPackPage() {
     <div className="max-w-4xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl">Review Pack</h1>
-          <p className="text-sm text-muted">Every rule AMLSync App applies for your firm, in plain words: thresholds, deadlines, which checks are required, how risk is scored and when payments are flagged. Give it to your lawyer or accountant to confirm it fits your firm and country.</p>
+          <PageTitle className="text-3xl" help={<>Every rule AMLSync App applies for your firm, in plain words: thresholds, deadlines, which checks are required, how risk is scored and when payments are flagged. Give it to your lawyer or accountant to confirm it fits your firm and country.</>}>Review Pack</PageTitle>
         </div>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not navigation */}
         <a href="/api/review-pack" className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105"><Download aria-hidden className="h-4 w-4" />Download PDF</a>

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { OBJECT_LABEL } from "@/lib/audit-labels";
+import { PageTitle } from "@/components/help";
 
 const PAGE = 50;
 const ACTIONS = ["create", "update", "delete", "view", "export", "approve", "screen", "purge"];
@@ -30,8 +31,7 @@ export default async function AuditTrailPage({ searchParams }: { searchParams: P
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl">Audit Trail</h1>
-          <p className="text-sm text-muted">Every action in your firm&apos;s account, newest first. It can&apos;t be edited or deleted by anyone. Field names are recorded, never their values.</p>
+          <PageTitle className="text-3xl" help={<>Every action in your firm&apos;s account, newest first. It can&apos;t be edited or deleted by anyone. Field names are recorded, never their values.</>}>Audit Trail</PageTitle>
         </div>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not navigation */}
         {can(s.user.roles, "approve.compliance") && <a href="/api/registers/audit" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm hover:border-accent"><Download aria-hidden className="h-4 w-4" />Export CSV</a>}

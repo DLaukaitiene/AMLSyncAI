@@ -17,8 +17,8 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   for (const box of ["Your company", "Your team", "Clients", "Deals and transactions", "Reporting"]) await p.getByTestId(`box-${box}`).waitFor();
   await p.getByTestId("obligation-staff-integrity").getByText("Not needed for a one-person firm.").waitFor();
   if ((await p.getByTestId("obligation-staff-integrity").getAttribute("data-state")) !== "na") throw new Error("✘ staff integrity should be 'not needed'");
-  await p.getByTestId("obligation-risk-assessment").locator("summary").click();
-  await p.getByTestId("obligation-risk-assessment").getByText(/Once at the start, then review at least every year/).waitFor();
+  await p.getByTestId("obligation-risk-assessment").getByTestId("help").locator("summary").click();
+  await p.getByTestId("obligation-risk-assessment").getByText(/decides how strict your client checks must be/).waitFor();
   log("dashboard: 5 boxes (company, team, clients, deals, reporting); (?) opens the explanation; status per duty");
 
   // Appoint the Compliance Officer from the box (fresh sign-in, so no step-up needed)
@@ -36,8 +36,8 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Explainer page
   await p.goto(BASE + "/app");
-  await p.getByTestId("obligation-reporting").locator("summary").click();
-  await p.getByTestId("obligation-reporting").getByRole("link", { name: "How to do it, step by step" }).click();
+  await p.getByTestId("obligation-reporting").getByTestId("help").locator("summary").click();
+  await p.getByTestId("obligation-reporting").getByRole("link", { name: "Step by step" }).click();
   await p.waitForURL(/\/app\/obligations#reporting/);
   await p.getByTestId("reporting-guide").getByText(/Never tell the client/).waitFor();
   await p.getByTestId("reporting-guide").getByText(/not recorded yet/).waitFor();

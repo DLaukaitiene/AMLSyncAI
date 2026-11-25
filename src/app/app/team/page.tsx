@@ -6,6 +6,7 @@ import { ActionButton } from "@/components/action-button";
 import { StepUpLink } from "@/components/step-up";
 import { inviteAction, removeUserAction, resetMfaAction, revokeInviteAction, revokeSessionAction, signOutEverywhereAction } from "./actions";
 import { adminDb } from "@/lib/server/db";
+import { Help } from "@/components/help";
 
 export default async function TeamPage() {
   const s = await requireUser();
@@ -19,7 +20,7 @@ export default async function TeamPage() {
   const sessions = await adminDb.session.findMany({ where: { userId: s.user.id, revokedAt: null, stage: "ACTIVE", expiresAt: { gt: new Date() } }, orderBy: { lastSeenAt: "desc" } });
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Team</h1>
+      <h1 className="text-3xl">Team</h1>
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Users</h2>
@@ -78,10 +79,7 @@ export default async function TeamPage() {
 
           <section className="max-w-md space-y-2">
             <h2 className="text-lg font-semibold">Invite a user</h2>
-            <p className="text-sm text-muted">
-              People join only by invitation. Invitations must use an @{domain} address unless you allow an external user (for example an AMLSync
-              Expert reviewer). External users are labelled everywhere.
-            </p>
+            <div className="flex items-start gap-2 text-sm text-muted"><p>Invitations go to @{domain} addresses.</p><Help>People join only by invitation. You can allow an external user with another address (for example an AMLSync Expert reviewer); external users are labelled everywhere.</Help></div>
             <ActionForm action={inviteAction}>
               <Field label="Name" name="name" required />
               <Field label="Email" name="email" type="email" required />

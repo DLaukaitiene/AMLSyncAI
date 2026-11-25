@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
+import { PageTitle } from "@/components/help";
 
 const TYPE_LABELS: Record<string, string> = {
   ENGAGEMENT: "Engagement", PROPERTY_SALE: "Property sale", LETTING: "Letting", GOODS_SALE: "Sale of goods", COMPANY_FORMATION: "Company formation / transfer", TRANSACTION: "Transaction",
@@ -28,8 +29,7 @@ export default async function MattersPage({ searchParams }: { searchParams: Prom
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl">Cases</h1>
-          <p className="text-sm text-muted">Engagements, sales, lettings and transactions. Completed and cancelled cases stay here as your register.</p>
+          <PageTitle className="text-3xl" help={<>Engagements, sales, lettings and transactions. Completed and cancelled cases stay here as your register.</>}>Cases</PageTitle>
         </div>
         {can(s.user.roles, "client.edit") && <Link href="/app/matters/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">New matter</Link>}
       </div>

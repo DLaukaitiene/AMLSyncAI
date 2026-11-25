@@ -1,6 +1,7 @@
 import { Download, FileArchive } from "lucide-react";
 import { requireUser } from "@/lib/server/session";
 import { REGISTERS } from "@/lib/server/registers";
+import { PageTitle } from "@/components/help";
 
 export default async function ReportsPage() {
   await requireUser("approve.compliance");
@@ -8,8 +9,7 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Registers &amp; Exports</h1>
-        <p className="text-sm text-muted">Audit-ready registers from live data, as CSV (opens in Excel). Run them before a supervisor inspection or your annual review. Each export is logged and the Owner is told.</p>
+        <PageTitle className="text-3xl" help={<>Audit-ready registers from live data, as CSV (opens in Excel). Run them before a supervisor inspection or your annual review. Each export is logged and the Owner is told.</>}>Registers &amp; Exports</PageTitle>
       </div>
       {pillars.map((p) => (
         <section key={p} className="space-y-2">

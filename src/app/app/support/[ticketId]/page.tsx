@@ -14,7 +14,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
         <p className="text-sm text-muted">#{t.number} · {t.category} · {t.priority} · {t.status}</p>
-        <h1 className="text-2xl font-semibold">{t.subject}</h1>
+        <h1 className="text-3xl">{t.subject}</h1>
       </div>
       <ol className="space-y-3" data-testid="thread">
         {t.messages.map((m) => (

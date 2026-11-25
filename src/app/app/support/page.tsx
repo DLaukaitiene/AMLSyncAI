@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/server/db";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/server/tickets";
 import { createTicketAction } from "./actions";
+import { PageTitle, Help } from "@/components/help";
 
 export default async function SupportPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const s = await requireUser();
@@ -14,8 +15,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   return (
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Help Centre</h1>
-        <p className="text-sm text-muted">Guides for every part of the app, and a direct line to the AMLSync team.</p>
+        <PageTitle className="text-3xl" help={<>Guides for every part of the app, and a direct line to the AMLSync team.</>}>Help Centre</PageTitle>
       </div>
       <form role="search" aria-label="Search help articles" className="flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search help, e.g. screening, invoice, trust" aria-label="Search help articles" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
@@ -40,7 +40,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
       )}
       <div className="space-y-1" id="request">
         <h2 className="text-lg font-semibold">Contact support</h2>
-        <p className="text-sm text-muted">Ask the AMLSync team. We answer blocking problems within 1 hour and other questions within 1 business day. Describe the problem without client names, ID numbers or case details: AMLSync never needs your clients&apos; data to help.</p>
+        <div className="flex items-start gap-2 text-sm text-muted"><p>Ask the AMLSync team. Don&apos;t include client names or ID numbers.</p><Help>We answer blocking problems within 1 hour and other questions within 1 business day. AMLSync never needs your clients&apos; data to help, so leave out names, ID numbers and case details.</Help></div>
       </div>
       <section className="space-y-2">
         <h2 className="font-semibold">Your firm&apos;s requests</h2>

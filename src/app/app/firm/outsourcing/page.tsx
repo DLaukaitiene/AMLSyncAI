@@ -3,6 +3,7 @@ import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { outsourcingAction } from "../records-actions";
+import { PageTitle } from "@/components/help";
 
 const d = (x: Date | null) => (x ? x.toISOString().slice(0, 10) : "—");
 
@@ -11,11 +12,10 @@ export default async function OutsourcingPage() {
   const rows = await withTenant(s.firm.id, (tx) => tx.outsourcingArrangement.findMany({ orderBy: { createdAt: "desc" } }));
   return (
     <div className="max-w-4xl space-y-8">
-      <h1 className="text-2xl font-semibold">Outsourcing register</h1>
-      <p className="text-sm text-muted">
+      <PageTitle className="text-3xl" help={<>
         AMLR Art. 18: notify your supervisor before outsourcing starts and sign a written agreement. You stay responsible. Risk decisions, accepting clients
         and reporting can&apos;t be outsourced. Using AMLSync Expert is outsourcing.
-      </p>
+      </>}>Outsourcing register</PageTitle>
       {rows.length === 0 ? <p className="text-sm">No outsourcing arrangements.</p> : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

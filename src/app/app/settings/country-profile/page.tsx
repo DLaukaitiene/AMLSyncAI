@@ -8,6 +8,7 @@ import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { addOfficeAction, saveProfileAction } from "./actions";
 import Link from "next/link";
+import { Help } from "@/components/help";
 
 const NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -46,16 +47,12 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Country Profile · {NAMES.of(p.memberState)}{office ? ` · ${office.name} (host state)` : " · home state"}</h1>
+        <h1 className="text-3xl">Country Profile · {NAMES.of(p.memberState)}{office ? ` · ${office.name} (host state)` : " · home state"}</h1>
         <nav className="flex flex-wrap gap-3 text-sm">
           <Link className={office ? "text-accent underline" : "font-semibold"} href="/app/settings/country-profile">Home state</Link>
           {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
         </nav>
-        <p className="max-w-3xl text-sm text-muted">
-          AMLSync App applies the general EU rules (EU Core {EU_CORE.version}). Here your firm enters its national details. Values can only fill in
-          or tighten the EU rules, never relax them. Every change creates a new version, needs a Compliance Officer and is logged. Earlier
-          decisions keep the version that applied at the time. Current version: <strong>{cur.version}</strong>.
-        </p>
+        <div className="flex items-start gap-2 text-sm text-muted"><p>Your national details on top of the EU rules. Version <strong>{cur.version}</strong>.</p><Help>AMLSync App applies the general EU rules (EU Core {EU_CORE.version}). Values here can only fill in or tighten them, never relax them. Every change creates a new version, needs a Compliance Officer and is logged. Earlier decisions keep the version that applied at the time.</Help></div>
       </div>
 
       {weaker.length > 0 && (

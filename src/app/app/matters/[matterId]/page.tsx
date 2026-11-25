@@ -37,7 +37,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted">Case · {m.type === "OTHER" ? String((m.details as { typeOther?: string }).typeOther ?? "other") : m.type.toLowerCase().replace("_", " ")} · {m.status.toLowerCase().replace("_", " ")}</p>
-        <h1 className="text-2xl font-semibold">{m.title}</h1>
+        <h1 className="text-3xl">{m.title}</h1>
         <p className="text-sm text-muted">{Object.entries(det).filter(([k]) => k !== "transferApprovedAt").map(([k, v]) => `${k}: ${v}`).join(" · ")}</p>
         {m.status === "ON_HOLD" && <p className="text-sm text-red-700 dark:text-red-300">On hold: a sanctions match or a pending suspicion report blocks this case.</p>}
       </div>

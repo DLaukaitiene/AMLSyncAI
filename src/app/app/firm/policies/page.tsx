@@ -7,6 +7,7 @@ import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { acknowledgeAction, aiSectionAction, approvePolicyAction, editSectionAction, generatePoliciesAction } from "../actions";
 import { aiForFirm } from "@/lib/server/ai";
+import { PageTitle } from "@/components/help";
 
 export default async function PoliciesPage() {
   const s = await requireUser();
@@ -22,8 +23,7 @@ export default async function PoliciesPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">AML Program</h1>
-        <p className="text-sm text-muted">AMLR Art. 9. Generated from your firm profile, risk assessment and Country Profile. The policy needs management approval; procedures need at least the compliance manager.</p>
+        <PageTitle className="text-3xl" help={<>AMLR Art. 9. Generated from your firm profile, risk assessment and Country Profile. The policy needs management approval; procedures need at least the compliance manager.</>}>AML Program</PageTitle>
       </div>
       {edit && <ActionButton action={generatePoliciesAction} variant="primary">{drafts.length ? "Regenerate drafts" : "Generate new version"}</ActionButton>}
 

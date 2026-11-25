@@ -4,6 +4,7 @@ import { can } from "@/lib/auth/permissions";
 import { modulesForFirm } from "@/lib/training/built-in";
 import { ActionForm, Submit } from "@/components/form";
 import { assignTrainingAction, completeTrainingAction } from "../records-actions";
+import { PageTitle } from "@/components/help";
 
 export default async function TrainingPage() {
   const s = await requireUser();
@@ -17,8 +18,7 @@ export default async function TrainingPage() {
   const names = new Map(data.users.map((u) => [u.id, u.name]));
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-2xl font-semibold">My Training</h1>
-      <p className="text-sm text-muted">AMLR Art. 12. Completion records are part of the supervisor file.</p>
+      <PageTitle className="text-3xl" help={<>AMLR Art. 12. Completion records are part of the supervisor file.</>}>My Training</PageTitle>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">My training</h2>
         {data.mine.length === 0 && <p className="text-sm text-muted">Nothing assigned to you.</p>}

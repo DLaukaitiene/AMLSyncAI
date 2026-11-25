@@ -10,6 +10,7 @@ import { DocView } from "@/components/doc-view";
 import { annualReportAction, appointAction, approveAnnualReportAction } from "../records-actions";
 import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
 import { saveResponsibilitiesAction } from "../../team/training-register/actions";
+import { PageTitle } from "@/components/help";
 
 const FN = { "compliance-manager": "Compliance manager (member of the management body)", "compliance-officer": "Compliance officer" } as const;
 
@@ -32,8 +33,7 @@ export default async function GovernancePage() {
   return (
     <div className="max-w-5xl space-y-8">
       <div>
-        <h1 className="text-3xl">Roles and duties</h1>
-        <p className="text-sm text-muted">Who is responsible for AML in your firm: the two appointments the law requires (AMLR Art. 11; in a small firm one person may hold both), and a named person for every AML duty. Supervisors check both.</p>
+        <PageTitle className="text-3xl" help={<>Who is responsible for AML in your firm: the two appointments the law requires (AMLR Art. 11; in a small firm one person may hold both), and a named person for every AML duty. Supervisors check both.</>}>Roles and duties</PageTitle>
       </div>
       <h2 className="text-xl font-semibold" id="appointments">Appointments</h2>
       {(Object.keys(FN) as (keyof typeof FN)[]).map((fn) => {

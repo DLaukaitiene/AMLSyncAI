@@ -4,6 +4,7 @@ import { can } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { RULES, RULE_IDS } from "@/lib/monitoring/rules";
 import { monitoringSettingsAction } from "./actions";
+import { PageTitle, Help } from "@/components/help";
 
 export const metadata = { title: "Transaction Monitoring settings" };
 
@@ -15,8 +16,7 @@ export default async function TransactionMonitoringSettings() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-3xl">Transaction Monitoring settings</h1>
-        <p className="text-sm text-muted">The amounts and rules used to check every payment you record or import. {edit ? "" : "Only the Owner or Compliance Officer can change them."}</p>
+        <PageTitle className="text-3xl" help={<>The amounts and rules used to check every payment you record or import. {edit ? "" : "Only the Owner or Compliance Officer can change them."}</>}>Transaction Monitoring settings</PageTitle>
       </div>
       <ActionForm action={monitoringSettingsAction} className="space-y-6">
         <fieldset className="space-y-4 rounded-2xl border border-border p-4" disabled={!edit}>
@@ -39,7 +39,7 @@ export default async function TransactionMonitoringSettings() {
         </fieldset>
         <fieldset className="space-y-2 rounded-2xl border border-border p-4" disabled={!edit} data-testid="rule-toggles">
           <legend className="px-1 font-semibold">Rules</legend>
-          <p className="text-sm text-muted">All rules are on by default. Switch a rule off only if it doesn&apos;t fit your business, and record why in your risk assessment. Flags never close by themselves: a person reviews each one with a written note.</p>
+          <div className="flex items-start gap-2 text-sm text-muted"><p>All rules are on by default.</p><Help>Switch a rule off only if it doesn&apos;t fit your business, and record why in your risk assessment. Flags never close by themselves: a person reviews each one with a written note.</Help></div>
           {RULE_IDS.map((id) => (
             <label key={id} className="flex items-start gap-2 text-sm">
               <input type="checkbox" name={`rule_${id}`} defaultChecked={!off.has(id)} className="mt-1" />

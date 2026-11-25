@@ -7,6 +7,7 @@ import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { approveRiskAssessmentAction, saveAnswersAction, startRiskAssessmentAction } from "../actions";
+import { PageTitle } from "@/components/help";
 
 export default async function RiskAssessmentPage() {
   const s = await requireUser();
@@ -28,8 +29,7 @@ export default async function RiskAssessmentPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Business Risk Assessment</h1>
-        <p className="text-sm text-muted">AMLR Art. 10. The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</p>
+        <PageTitle className="text-3xl" help={<>AMLR Art. 10. The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</>}>Business Risk Assessment</PageTitle>
       </div>
 
       {data.current && data.currentDoc && (

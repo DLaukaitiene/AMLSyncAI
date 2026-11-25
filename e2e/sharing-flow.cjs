@@ -42,8 +42,8 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   const share = async (c, expect) => {
     await a.goto(fileUrl + "?tab=documents#documents");
     const box = a.getByTestId("share-file");
-    await a.waitForLoadState("networkidle"); await box.locator("summary").click();
-    if (!(await box.evaluate((e) => e.open))) await box.locator("summary").click();
+    await a.waitForLoadState("networkidle"); await box.locator(":scope > summary").click();
+    if (!(await box.evaluate((e) => e.open))) await box.locator(":scope > summary").click();
     await box.getByLabel("Their firm code").fill(c);
     await box.locator("select[name=legalBasis]").selectOption("consent");
     await box.getByLabel("Note to the other firm").fill("Client moves to you from January");

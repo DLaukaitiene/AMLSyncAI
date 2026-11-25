@@ -10,6 +10,7 @@ import { toIsoDate } from "@/lib/rules/dates";
 import { normalizeFlags, RULES, RULE_IDS } from "@/lib/monitoring/rules";
 import { clientFileForParties } from "@/lib/server/client-of-party";
 import { logTransactionAction, reviewTransactionAction } from "./actions";
+import { PageTitle } from "@/components/help";
 
 /**
  * Transaction Monitoring (ClearAML's layout; AMLR Art. 26): every payment in
@@ -65,8 +66,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl">Transaction Monitoring</h1>
-          <p className="text-sm text-muted">Every payment you record — here or on a case — is checked against red-flag rules. Each flag needs a review with a written reason (AMLR Art. 26). Escalate anything suspicious to your Compliance Officer.</p>
+          <PageTitle className="text-3xl" help={<>Every payment you record — here or on a case — is checked against red-flag rules. Each flag needs a review with a written reason (AMLR Art. 26). Escalate anything suspicious to your Compliance Officer.</>}>Transaction Monitoring</PageTitle>
         </div>
       </div>
 

@@ -17,7 +17,7 @@ export default async function FeatureRequestPage({ params }: { params: Promise<{
     <div className="max-w-3xl space-y-6">
       <div className="space-y-1">
         <p className="text-sm text-muted">{r.module} · {STATUS_LABELS[r.status as Status]} · {r._count.votes} vote(s){r.regulatory ? " · regulatory" : ""}</p>
-        <h1 className="text-2xl font-semibold">{r.title}</h1>
+        <h1 className="text-3xl">{r.title}</h1>
       </div>
       <p className="whitespace-pre-wrap text-sm">{r.problem}</p>
       <p className="text-sm text-muted">How often: {r.frequency || "—"} · Importance: {r.importance}{r.legalReference ? ` · Legal reference: ${r.legalReference}` : ""}</p>

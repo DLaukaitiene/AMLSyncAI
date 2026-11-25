@@ -36,7 +36,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Compliance Calendar</h1>
+        <h1 className="text-3xl">Compliance Calendar</h1>
         <Link href={show === "done" ? "/app/calendar" : "/app/calendar?show=done"} className="text-sm text-accent underline">{show === "done" ? "Show open" : "Show done"}</Link>
       </div>
       <p className="text-sm text-muted">Every deadline uses your Country Profile&apos;s working days and holidays.</p>

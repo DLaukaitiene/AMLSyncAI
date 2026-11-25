@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { CountryField, type ActionState } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { buySearchPackAction, kybRetrieveAction, kybSearchAction } from "../actions";
+import { Help } from "@/components/help";
 
 type Candidate = { id: string; name: string; registrationNumber: string | null; status: string | null; type: string | null; address: string | null };
 
@@ -18,10 +19,7 @@ export function KybSearch({ fileId, name, registrationNumber, country, litePrice
   return (
     <div className="space-y-3 rounded-xl border border-border p-3" data-testid="kyb-search">
       <p className="text-sm font-medium">Check the company register (Didit)</p>
-      <p className="text-xs text-muted">
-        Searching is free up to your plan&apos;s allowance (searches that find nothing don&apos;t count). You pay only when you retrieve the company, and only for what the register delivers: if it has no ownership data, a full ownership check is charged as company and status.
-        {search && !search.blocked ? ` ${search.remaining} free search${search.remaining === 1 ? "" : "es"} left before you order a check.` : ""}
-      </p>
+      <div className="flex items-start gap-2 text-xs text-muted"><p>{search && !search.blocked ? `${search.remaining} free search${search.remaining === 1 ? "" : "es"} left before you order a check.` : "Searching is free; you pay when you retrieve the company."}</p><Help>Searches that find nothing don&apos;t count towards your free searches. You pay only when you retrieve the company, and only for what the register delivers: if it has no ownership data, a full ownership check is charged as company and status.</Help></div>
       {search?.blocked && (
         <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-800 dark:bg-amber-950" data-testid="kyb-search-paused">
           <p>{search.message}</p>

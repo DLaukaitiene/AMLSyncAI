@@ -11,7 +11,7 @@ export default async function FeatureRequestsPage({ searchParams }: { searchPara
   return (
     <div className="max-w-4xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Feature Requests</h1>
+        <h1 className="text-3xl">Feature Requests</h1>
         <span className="flex gap-4 text-sm">
           {(await hasAdminPermission(s.user.email, "features.triage")) && <Link href="/adminpage1&/feature-requests" className="text-accent underline">Triage</Link>}
           <Link href="/app/feature-requests/new" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:brightness-105">Suggest a feature</Link>

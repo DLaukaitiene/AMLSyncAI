@@ -7,6 +7,7 @@ import { isOnePersonFirm } from "@/lib/server/governance";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { whistleStatusAction, whistleblowAction } from "../records-actions";
+import { PageTitle } from "@/components/help";
 
 export default async function WhistleblowingPage() {
   const s = await requireUser();
@@ -20,18 +21,15 @@ export default async function WhistleblowingPage() {
   if (data.onePerson) {
     return (
       <div className="max-w-3xl space-y-2">
-        <h1 className="text-2xl font-semibold">Whistleblowing</h1>
+        <h1 className="text-3xl">Whistleblowing</h1>
         <p className="text-sm">Not required: an internal reporting channel (AMLR Art. 14) is not needed in a one-person firm.</p>
       </div>
     );
   }
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-2xl font-semibold">Report a breach confidentially</h1>
-      <p className="text-sm text-muted">
-        Use this channel to report breaches of AML rules inside the firm (AMLR Art. 14). You can stay anonymous. You are protected against retaliation.
-        {data.external ? ` You can also report externally: ${data.external}.` : ""}
-      </p>
+      <PageTitle className="text-3xl" help={<>Report breaches of AML rules inside the firm (AMLR Art. 14). You are protected against retaliation.{data.external ? ` You can also report externally: ${data.external}.` : ""}</>}>Report a breach confidentially</PageTitle>
+      <p className="text-sm">You can stay anonymous.</p>
       <ActionForm action={whistleblowAction} className="space-y-3">
         <Field label="What do you want to report?" name="text" required>
           <textarea name="text" rows={5} aria-label="What do you want to report?" className="w-full rounded border border-border bg-transparent px-3 py-2 text-sm" />

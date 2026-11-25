@@ -13,7 +13,7 @@ export default async function ScreeningListsPage() {
   }));
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">Screening lists</h1>
+      <h1 className="text-3xl">Screening lists</h1>
       <ul className="divide-y divide-border rounded-xl border border-border text-sm">
         {lists.map((l) => (
           <li key={l.id} className="flex justify-between px-4 py-2">

@@ -4,6 +4,7 @@ import { partiesDueForDeletion } from "@/lib/server/retention";
 import { ActionForm, Submit } from "@/components/form";
 import { StepUpLink } from "@/components/step-up";
 import { purgeAction } from "./actions";
+import { PageTitle } from "@/components/help";
 
 export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
   const s = await requireUser("records.purge");
@@ -11,12 +12,11 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
   const due = await withTenant(s.firm.id, (tx) => partiesDueForDeletion(tx));
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Records & Retention</h1>
-      <p className="max-w-3xl text-sm text-muted">
+      <PageTitle className="text-3xl" help={<>
         Client records are kept for 5 years (or longer if your Country Profile says so) from the end of the relationship, the occasional
         transaction or the refusal, then deleted (AMLR Art. 77). Records under a legal hold are not listed. Deletion is permanent. Afterwards the
         audit log shows only that a record was deleted, by whom and when. It contains no client data.
-      </p>
+      </>}>Records & Retention</PageTitle>
       {Number.isInteger(deleted) && deleted >= 0 && (
         <p role="status" className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100">
           {deleted} client record(s) permanently deleted. The audit log keeps only that a deletion happened.

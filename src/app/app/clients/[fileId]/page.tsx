@@ -37,6 +37,7 @@ import { kybSearchStatus, searchLimitMessage } from "@/lib/server/kyb";
 import { Chip, RiskChip, StatusChip } from "@/components/chips";
 import { SCOPE_REASONS, scopeReasonsFor } from "@/lib/rules/cdd-scope";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
+import { Help } from "@/components/help";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -167,7 +168,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <p className="text-sm text-muted">{cf.party.kind === "NATURAL" ? "Individual" : String(d.legalForm ?? "") || "Entity"} · Client · ID {fileId.slice(0, 8)}</p>
-          <h1 className="text-2xl font-semibold">{cf.party.displayName}</h1>
+          <h1 className="text-3xl">{cf.party.displayName}</h1>
           <p className="flex flex-wrap items-center gap-2 text-sm">
             <StatusChip status={cf.file.status} ready={!decided && items.length === 0} />
             <RiskChip level={lastRisk?.final ?? cf.risk.level} />
@@ -457,7 +458,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <details className="rounded border border-border p-3" data-testid="ai-ownership">
                 <summary className="cursor-pointer text-sm font-medium">Draft the owners from a document (AI)</summary>
                 <div className="mt-3 space-y-2 text-sm">
-                  <p className="text-muted">Upload the shareholder register, articles or trust deed under Documents first. The AI reads it and lists the owners and controllers it names; you then check each one and add it. Nothing is added automatically.</p>
+                  <div className="flex items-start gap-2 text-muted"><p>Upload the shareholder register or trust deed under Documents first.</p><Help>The AI reads the document and lists the owners and controllers it names; you then check each one and add it. Nothing is added automatically.</Help></div>
                   {documents.filter((doc) => ["application/pdf", "image/png", "image/jpeg"].includes(doc.mimeType) && doc.malwareScan !== "quarantined").length ? (
                     <ActionForm action={aiOwnershipDraftAction.bind(null, fileId)}>
                       <Field label="Document" name="documentId" required>
@@ -583,7 +584,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
           <details className="mt-4 rounded border border-border p-3" data-testid="share-file">
             <summary className="cursor-pointer text-sm font-medium">Share with another firm</summary>
             <div className="mt-3 space-y-2 text-sm">
-              <p className="text-muted">Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Ask them for their firm code (Clients → Shared Files). Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off (Art. 73).</p>
+              <div className="flex items-start gap-2 text-muted"><p>Ask the other firm for its firm code (Clients → Shared Files).</p><Help>Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off (Art. 73).</Help></div>
               <ActionForm action={shareClientAction.bind(null, fileId)}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Their firm code" name="code" required hint="e.g. ABCD-EFGH" autoComplete="off" />
@@ -751,10 +752,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
       </Card>
 
       <Card title="Screening (sanctions, PEP)" id="screening" hide={!show("screening")}>
-        <p className="text-xs text-muted">
-          Every person and company in the structure is screened. Screening can&apos;t be reduced for low-risk clients. The PEP/RCA data provider is
-          not connected yet; record known PEP status on the client data.
-        </p>
+        <div className="flex items-start gap-2 text-xs text-muted"><p>Everyone in the structure is screened.</p><Help>Screening can&apos;t be reduced for low-risk clients. Record a known PEP status on the client data.</Help></div>
         {pending.map((x) => {
           const m = x.matchData as { matchedName: string; score: number; reasons: string[]; reference?: string };
           return (
@@ -955,10 +953,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
 
       {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
         <Card title="Periodic refresh (Art. 26)" hide={!show("refresh")}>
-          <p className="text-sm text-muted">
-            Due {cf.file.nextRefreshOn?.toISOString().slice(0, 10) ?? "—"}. 30 days before, the client automatically gets a link to confirm nothing changed; screening re-runs in the
-            background. You can also refresh now after updating the file.
-          </p>
+          <div className="flex items-start gap-2 text-sm text-muted"><p>Due {cf.file.nextRefreshOn?.toISOString().slice(0, 10) ?? "—"}.</p><Help>30 days before, the client automatically gets a link to confirm nothing changed, and screening re-runs in the background. You can also mark it refreshed now after updating the file.</Help></div>
           <ActionButton action={markRefreshedAction.bind(null, fileId)}>Mark CDD refreshed</ActionButton>
         </Card>
       )}

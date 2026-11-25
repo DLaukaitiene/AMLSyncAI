@@ -3,6 +3,7 @@ import { ActionForm, Submit } from "@/components/form";
 import { can } from "@/lib/auth/permissions";
 import { PartyFields } from "@/components/party-fields";
 import { createClientAction } from "../actions";
+import { Help } from "@/components/help";
 
 export default async function NewClientPage() {
   const s = await requireUser("client.edit");
@@ -11,7 +12,7 @@ export default async function NewClientPage() {
       <h1 className="text-3xl">Add Client</h1>
       <div className="rounded-2xl border border-accent/40 bg-brand/10 p-4 text-sm">
         <p className="font-semibold">Quickest way: just the name and an email.</p>
-        <p className="text-muted">Create the client and we send them a secure link — they fill in the rest, upload documents and verify their identity. Everything else below is optional. The client is screened at once and the risk is calculated from the data.</p>
+        <div className="flex items-start gap-2 text-muted"><p>Only the name is needed: the client can fill in the rest through a secure link.</p><Help>We send the client a secure link to fill in their details, upload documents and verify their identity. Everything else on this form is optional. The client is screened at once and the risk is calculated from the data.</Help></div>
       </div>
       <ActionForm action={createClientAction}>
         <PartyFields chooser canOverrideRisk={can(s.user.roles, "risk.override")} />

@@ -4,6 +4,7 @@ import { can } from "@/lib/auth/permissions";
 import { ensureShareCode, listShares, SHARE_BASES } from "@/lib/server/sharing";
 import { ActionButton } from "@/components/action-button";
 import { acceptShareAction, declineShareAction, withdrawShareAction } from "./actions";
+import { PageTitle, Help } from "@/components/help";
 
 export const metadata = { title: "Shared Files" };
 
@@ -17,8 +18,7 @@ export default async function SharedFilesPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-3xl">Shared Files</h1>
-        <p className="text-sm text-muted">Send a client&apos;s file to another firm that uses AMLSync App, or import a file another firm sent you, for example when a client moves to you or two firms work on the same deal. Only the Owner and Compliance Officer can send and import files.</p>
+        <PageTitle className="text-3xl" help={<>Send a client&apos;s file to another firm that uses AMLSync App, or import a file another firm sent you, for example when a client moves to you or two firms work on the same deal. Only the Owner and Compliance Officer can send and import files.</>}>Shared Files</PageTitle>
       </div>
       <section className="space-y-2 rounded-2xl border border-border p-4" data-testid="share-code">
         <h2 className="text-lg font-semibold">Your firm code</h2>
@@ -27,7 +27,7 @@ export default async function SharedFilesPage() {
       </section>
       <section className="space-y-3 rounded-2xl border border-border p-4">
         <h2 className="text-lg font-semibold">Received</h2>
-        <p className="text-sm text-muted">Importing creates a new client file with the client&apos;s data, ownership structure, check summary and documents. Everyone is screened again under your account. Under Art. 48 AMLR you may rely on another firm&apos;s checks, but your firm stays responsible: review the file before you accept the client.</p>
+        <div className="flex items-start gap-2 text-sm text-muted"><p>Review an imported file before you accept the client.</p><Help>Importing creates a new client file with the client&apos;s data, ownership structure, check summary and documents. Everyone is screened again under your account. Under Art. 48 AMLR you may rely on another firm&apos;s checks, but your firm stays responsible.</Help></div>
         {incoming.length ? (
           <ul className="divide-y divide-border rounded-lg border border-border" data-testid="shares-in">
             {incoming.map((x) => (

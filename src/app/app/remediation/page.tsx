@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { ImportForm } from "./import-form";
+import { PageTitle } from "@/components/help";
 
 type Rem = { gaps: { id: string; label: string }[]; priority?: number; risk?: string; lastCddDate?: string | null };
 
@@ -16,12 +17,11 @@ export default async function RemediationPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Import Clients</h1>
-        <p className="max-w-3xl text-sm text-muted">
+        <PageTitle className="text-3xl" help={<>
           Bring existing client files up to the new CDD standard (AMLR and the AMLA CDD RTS). Import your client list, then work from the top: high-risk
           files first, then the files with the most gaps. A file is remediated when it&apos;s accepted again with nothing open. Remediation deadline: per
           the final CDD RTS [verify].
-        </p>
+        </>}>Import Clients</PageTitle>
         {files.length > 0 && <p className="text-sm"><strong>{done}</strong> of {files.length} files remediated ({Math.round((done / files.length) * 100)}%).</p>}
       </div>
       {can(s.user.roles, "client.edit") && (

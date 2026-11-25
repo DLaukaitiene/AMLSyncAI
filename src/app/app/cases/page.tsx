@@ -4,6 +4,7 @@ import { withTenant } from "@/lib/server/db";
 import { CASE_LABELS, readContent } from "@/lib/server/cases";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { fiuRequestAction } from "./actions";
+import { PageTitle } from "@/components/help";
 
 export default async function CasesPage() {
   const s = await requireUser("case.view");
@@ -15,8 +16,7 @@ export default async function CasesPage() {
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">Investigations</h1>
-        <p className="text-sm text-muted">Visible only to the Compliance Officer. Every assessment is kept, including decisions not to report.</p>
+        <PageTitle className="text-3xl" help={<>Visible only to the Compliance Officer. Every assessment is kept, including decisions not to report.</>}>Investigations</PageTitle>
       </div>
       <section>
         <h2 className="mb-2 font-semibold">Needs attention ({open.length})</h2>

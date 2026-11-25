@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { BookOpen, CircleCheck, CircleAlert, CircleDot, CircleHelp, CircleMinus, Clock3 } from "lucide-react";
+import { BookOpen, CircleCheck, CircleAlert, CircleDot, CircleMinus, Clock3 } from "lucide-react";
 import { obligation, type Obligation, type ObligationId } from "@/lib/obligations/catalog";
+import { Help } from "./help";
 import type { ObligationState, ObligationStatus } from "@/lib/obligations/evaluate";
 
 const STATE: Record<ObligationState, { label: string; cls: string; icon: typeof CircleCheck }> = {
@@ -70,17 +71,13 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
   return (
     <li className="py-3" data-testid={`obligation-${o.id}`} data-state={status.state}>
       <div className="flex items-start justify-between gap-3">
-        <details className="group min-w-0">
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 font-semibold marker:hidden">
-            {o.title}
-            <CircleHelp aria-label="What does this mean?" className="h-4 w-4 shrink-0 text-accent" />
-          </summary>
-          <div className="mt-1 space-y-1 rounded-lg bg-surface p-3 text-sm text-muted">
-            <p>{o.what}</p>
-            <p><span className="font-medium text-foreground">When: </span>{o.when}</p>
-            <Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <span>· {o.article}</span>
-          </div>
-        </details>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="font-semibold">{o.title}</span>
+          <Help label="What does this mean?">
+            <p>{o.duty}</p>
+            <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link> · {o.article}</p>
+          </Help>
+        </span>
         <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
       </div>
       <p className={`mt-1 text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</p>
@@ -108,18 +105,18 @@ export function ObligationBox({ title, open, children }: { title: string; open: 
   );
 }
 
-/** "Your duty" callout at the top of a page: the obligation behind it, in one or two sentences. */
+/** "Your duty" line at the top of a working page: the duty in one sentence, details behind (?). */
 export function DutyNote({ id, extra }: { id: ObligationId; extra?: React.ReactNode }) {
   const o = obligation(id);
   return (
-    <aside className="flex gap-3 rounded-2xl border border-accent/40 bg-brand/10 p-4 text-sm" aria-label="Your duty" data-testid="duty-note">
-      <BookOpen aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
-      <div className="space-y-1">
-        <p><strong>Your duty: </strong>{o.duty}</p>
-        <p className="text-muted"><strong className="font-medium text-foreground">When: </strong>{o.when}</p>
+    <aside className="flex items-center gap-2 rounded-xl border border-accent/30 bg-brand/10 px-3 py-2 text-sm" aria-label="Your duty" data-testid="duty-note">
+      <BookOpen aria-hidden className="h-4 w-4 shrink-0 text-accent" />
+      <p className="min-w-0"><strong>Your duty: </strong>{o.duty}</p>
+      <Help label="When and how" align="right">
+        <p><span className="font-medium text-foreground">When: </span>{o.when}</p>
         {extra}
-        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <span className="text-muted">· {o.article}</span></p>
-      </div>
+        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link> · {o.article}</p>
+      </Help>
     </aside>
   );
 }

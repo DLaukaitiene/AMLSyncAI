@@ -11,6 +11,7 @@ import { ActionForm, Field, Submit } from "@/components/form";
 import { cancelSubscriptionAction, saveBillingDetails } from "./actions";
 import { can } from "@/lib/auth/permissions";
 import { StepUpLink } from "@/components/step-up";
+import { Help } from "@/components/help";
 
 export default async function BillingPage() {
   const s = await requireUser("approve.compliance");
@@ -33,7 +34,7 @@ export default async function BillingPage() {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="max-w-4xl space-y-6">
-      <h1 className="text-2xl font-semibold">Billing</h1>
+      <h1 className="text-3xl">Billing</h1>
       <div className="rounded-xl border border-border p-4 text-sm">
         <span className="font-medium">{plan.name} plan</span>
         {plan.monthlyCents !== null && <> · {formatEur(firm.customFeeCents ?? plan.monthlyCents)} per month excl. VAT</>}
@@ -47,10 +48,7 @@ export default async function BillingPage() {
         <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Price per check</span><span className="text-2xl font-semibold">{pr ? <>{formatEur(pr.idv)} / {formatEur(pr.screen)}</> : "updating"}</span><span className="block text-xs text-muted">identity check / provider screening</span>{pr && <span className="block text-xs text-muted">ECB rate USD {pr.rate.usdPerEur.toFixed(4)} per €1 ({pr.rate.date})</span>}<span className="block text-xs text-muted">excl. VAT; not charged if a check expires or fails</span></div>
         <div className="rounded-xl border border-border p-4"><span className="block text-sm text-muted">Monthly limit for paid checks</span><span className="text-2xl font-semibold">{formatEur(firm.spendLimitCents)}</span><span className="block text-xs text-muted">Contact AMLSync to raise it</span></div>
       </div>
-      <p className="text-sm text-muted">
-        Paid checks: remote identity checks and PEP / sanctions / adverse-media screening (Didit). Screening against EU and UN sanctions lists is included in your plan.
-        You receive one invoice per month, payable by bank transfer within 14 days. Each check also has a statement with the client reference, so you can re-bill it as a disbursement.
-      </p>
+      <div className="flex items-start gap-2 text-sm text-muted"><p>One invoice a month: your plan plus the paid checks you used.</p><Help>Paid checks are identity checks, provider screening and company register checks. Screening against EU and UN sanctions lists is included in your plan. Invoices are payable by bank transfer within 14 days. Each check has a statement with the client reference, so you can re-bill it as a disbursement.</Help></div>
 
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Invoices</h2>
@@ -102,10 +100,7 @@ export default async function BillingPage() {
       {can(s.user.roles, "approve.management") && firm.status !== "cancelled" && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">End subscription</h2>
-          <p className="text-sm text-muted">
-            Your records then stay available read-only for the retention period your country requires (at least 5 years), so you can still show them to a supervisor, and are deleted after that.
-            The monthly fee stops on the day you cancel; a final invoice follows. Download your full export first if you want your own copy.
-          </p>
+          <div className="flex items-start gap-2 text-sm text-muted"><p>Your records stay available read-only for as long as the law requires.</p><Help>You can still show them to a supervisor during the retention period your country requires (at least 5 years); they are deleted after that. The monthly fee stops on the day you cancel and a final invoice follows. Download your full export first if you want your own copy.</Help></div>
           <details className="rounded border border-border p-3">
             <summary className="cursor-pointer text-sm font-medium">End my subscription</summary>
             <ActionForm action={cancelSubscriptionAction} className="mt-3 space-y-3">

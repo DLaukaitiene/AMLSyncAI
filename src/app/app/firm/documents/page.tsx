@@ -5,6 +5,7 @@ import { can } from "@/lib/auth/permissions";
 import { ActionForm, Submit } from "@/components/form";
 import { FIRM_FOLDERS } from "@/lib/server/storage";
 import { uploadFirmDocumentAction } from "./actions";
+import { PageTitle } from "@/components/help";
 
 /** "My Firm Compliance" (ClearAML): the firm's own evidence library, the first thing a supervisor asks for. */
 export default async function FirmDocumentsPage() {
@@ -18,8 +19,7 @@ export default async function FirmDocumentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Firm Documents</h1>
-        <p className="text-sm text-muted">Your firm&apos;s own compliance evidence in one place. Supervisors usually ask for these first: keep them filed and current before an inspection notice arrives.</p>
+        <PageTitle className="text-3xl" help={<>Your firm&apos;s own compliance evidence in one place. Supervisors usually ask for these first: keep them filed and current before an inspection notice arrives.</>}>Firm Documents</PageTitle>
       </div>
       {manage && (
         <ActionForm action={uploadFirmDocumentAction} className="grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">

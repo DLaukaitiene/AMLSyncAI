@@ -42,7 +42,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
     <div className="max-w-4xl space-y-6">
       <div className="space-y-1">
         <p className="text-sm text-muted">Investigation · {c.status}{c.decision ? ` · decision: ${c.decision}` : ""}</p>
-        <h1 className="text-2xl font-semibold">{CASE_LABELS[c.type]}</h1>
+        <h1 className="text-3xl">{CASE_LABELS[c.type]}</h1>
         <p className="text-sm">Opened {c.createdAt.toISOString().slice(0, 10)}{c.dueOn ? ` · due ${toIsoDate(c.dueOn)}` : ""}</p>
       </div>
 

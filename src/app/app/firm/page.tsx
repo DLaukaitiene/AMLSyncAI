@@ -10,6 +10,7 @@ import { SECTORS } from "@/lib/server/auth/flows";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { saveFirmProfileAction } from "./actions";
 import { setDefaultScopeAction } from "../clients/actions";
+import { PageTitle, Help } from "@/components/help";
 
 const CLIENT_TYPES = ["Individuals", "Companies", "Trusts and arrangements", "Non-profit organisations", "Non-EU clients"];
 
@@ -25,8 +26,7 @@ export default async function FirmPage() {
   const edit = can(s.user.roles, "approve.compliance");
   return (
     <div className="max-w-3xl space-y-8">
-      <h1 className="text-3xl">Compliance Hub</h1>
-      <p className="text-sm text-muted">Your firm&apos;s own AMLR obligations. Each part generates its document and keeps the approvals and history for your supervisor.</p>
+      <PageTitle className="text-3xl" help={<>Your firm&apos;s own AMLR obligations. Each part generates its document and keeps the approvals and history for your supervisor.</>}>Compliance Hub</PageTitle>
       <ul className="grid gap-3 sm:grid-cols-2">
         {[
           { href: "/app/firm/risk-assessment", icon: Scale, title: "Business-wide risk assessment", note: "Art. 10", status: ra ? `v${ra.version} in force` : "Not approved yet", done: !!ra },
@@ -60,7 +60,7 @@ export default async function FirmPage() {
       </ul>
       <section className="space-y-2 rounded-2xl border border-border p-4" data-testid="ai-drafting">
         <h2 className="text-lg font-semibold">AI drafting</h2>
-        <p className="text-sm text-muted">AI can write a first draft of a suspicious transaction report narrative, help redraft your policy sections, and read a client&apos;s shareholder register or trust deed to propose the owners. A person always reviews and approves the text; AI never decides anything. The text you ask it to draft is sent to the AI provider ({aiProviderLabel()}) and is not used to train AI models. Your plan includes {aiUsage.strCap} report drafts a month; used this month: {aiUsage.str}. Ownership drafts from documents: {Math.round((aiUsage.ownershipCents / aiUsage.ownershipCapCents) * 100)}% of this month&apos;s allowance used.</p>
+        <div className="flex items-start gap-2 text-sm text-muted"><p>Drafts of report narratives, policy sections and owners from documents. A person always reviews them. This month: {aiUsage.str} of {aiUsage.strCap} report drafts.</p><Help>AI never decides anything: a person reviews and approves every text. What you ask it to draft is sent to the AI provider ({aiProviderLabel()}) and is not used to train AI models. Ownership drafts from documents: {Math.round((aiUsage.ownershipCents / aiUsage.ownershipCapCents) * 100)}% of this month&apos;s allowance used.</Help></div>
         {!aiEnabled() ? (
           <p className="text-sm">AI drafting isn&apos;t available yet. We&apos;ll let you know when it is.</p>
         ) : edit ? (
@@ -74,7 +74,7 @@ export default async function FirmPage() {
       </section>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Due diligence for new clients</h2>
-        <p className="text-sm text-muted">If most of your clients only receive services outside AMLR scope, new client files can start as identification only (identification and sanctions screening). Switch a client to full due diligence as soon as an AMLR service starts.</p>
+        <div className="flex items-start gap-2 text-sm text-muted"><p>How new client files start.</p><Help>If most of your clients only receive services outside AMLR scope, new client files can start as identification only (identification and sanctions screening). Switch a client to full due diligence as soon as an AMLR service starts.</Help></div>
         <ActionForm action={setDefaultScopeAction}>
           <fieldset disabled={!can(s.user.roles, "gate.override")} className="space-y-3">
             <Field label="New client files start with" name="defaultCddScope">

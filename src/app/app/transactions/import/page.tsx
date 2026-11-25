@@ -4,6 +4,7 @@ import { withTenant } from "@/lib/server/db";
 import { ActionForm, Submit } from "@/components/form";
 import { COLUMNS, MAX_ROWS } from "@/lib/transactions/format";
 import { uploadTransactionsAction } from "./actions";
+import { PageTitle } from "@/components/help";
 
 export const metadata = { title: "Import transactions" };
 
@@ -17,8 +18,7 @@ export default async function ImportTransactionsPage({ searchParams }: { searchP
     <div className="max-w-4xl space-y-6">
       <div>
         <p className="text-sm"><Link href="/app/transactions" className="text-accent underline">Transaction Monitoring</Link></p>
-        <h1 className="text-3xl">Import transactions</h1>
-        <p className="text-sm text-muted">Upload payments from your accounting software or bank as a .csv or .xlsx file (up to {MAX_ROWS.toLocaleString("en")} rows and 5 MB). You see every row checked before anything is saved, and you can undo an import for 24 hours. Importing never starts a paid check.</p>
+        <PageTitle className="text-3xl" help={<>Upload payments from your accounting software or bank as a .csv or .xlsx file (up to {MAX_ROWS.toLocaleString("en")} rows and 5 MB). You see every row checked before anything is saved, and you can undo an import for 24 hours. Importing never starts a paid check.</>}>Import transactions</PageTitle>
       </div>
       {sp.cancelled && <p role="status" className="rounded-lg border border-border p-3 text-sm">Import cancelled. Nothing was saved.</p>}
       <section className="space-y-3 rounded-2xl border border-border p-4">

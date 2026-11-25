@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { Chip } from "@/components/chips";
 import { EmptyState } from "@/components/empty-state";
+import { PageTitle } from "@/components/help";
 
 const METHOD: Record<string, string> = { EID: "eID", IN_PERSON: "In person", DOCUMENT_NFC_LIVENESS: "Document chip + liveness", DOCUMENT_LIVENESS: "Document + liveness" };
 
@@ -18,8 +19,7 @@ export default async function IdentityVerificationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Identity Checks</h1>
-        <p className="text-sm text-muted">Every identity check across your clients and the people behind them. Start a new check from the client&apos;s file.</p>
+        <PageTitle className="text-3xl" help={<>Every identity check across your clients and the people behind them. Start a new check from the client&apos;s file.</>}>Identity Checks</PageTitle>
       </div>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">In progress <span className="text-sm font-normal text-muted">({data.sessions.length})</span></h2>

@@ -6,6 +6,7 @@ import { can } from "@/lib/auth/permissions";
 import { Chip } from "@/components/chips";
 import { EmptyState } from "@/components/empty-state";
 import { clientFileForParties } from "@/lib/server/client-of-party";
+import { PageTitle } from "@/components/help";
 
 const TABS = [{ id: "open", label: "Open" }, { id: "resolved", label: "Resolved" }] as const;
 
@@ -31,8 +32,7 @@ export default async function MonitoringAlertsPage({ searchParams }: { searchPar
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl">Alerts</h1>
-        <p className="text-sm text-muted">Possible sanctions and PEP matches from screening and the daily re-screening of your clients and staff. Each one needs a decision with a reason: not the same person, or a confirmed match.</p>
+        <PageTitle className="text-3xl" help={<>Possible sanctions and PEP matches from screening and the daily re-screening of your clients and staff. Each one needs a decision with a reason: not the same person, or a confirmed match.</>}>Alerts</PageTitle>
       </div>
       <nav aria-label="Alerts" className="flex flex-wrap gap-2">
         {TABS.map((x) => (
