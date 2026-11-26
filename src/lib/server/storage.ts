@@ -186,7 +186,7 @@ export const DOCUMENT_KINDS: Record<string, string> = {
 /** Firm document library folders (Compliance Hub → My Firm Compliance). */
 export const FIRM_FOLDERS = [
   { kind: "firm:approvals", label: "Approvals & Sign-offs", hint: "Management approval of the AML Program and risk assessment, sign-off minutes", restricted: false },
-  { kind: "firm:audit", label: "Audit & Reviews", hint: "Independent audit reports (Art. 8(4)(b)), internal reviews and follow-up", restricted: false },
+  { kind: "firm:audit", label: "Audit & Reviews", hint: "Independent audit reports, internal reviews and follow-up", restricted: false },
   { kind: "firm:authority", label: "FIU & Supervisor Correspondence", hint: "Letters, requests, inspection notices and your replies", restricted: true },
   { kind: "firm:other", label: "Other", hint: "Anything else that supports your program", restricted: false },
 ] as const;

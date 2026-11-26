@@ -21,7 +21,7 @@ export default async function WhistleblowingPage() {
     return (
       <div className="max-w-3xl space-y-2">
         <h1 className="text-2xl font-semibold">Whistleblowing</h1>
-        <p className="text-sm">Not required: an internal reporting channel (AMLR Art. 14) is not needed in a one-person firm.</p>
+        <p className="text-sm">Not required: an internal reporting channel is not needed in a one-person firm.</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default async function WhistleblowingPage() {
     <div className="max-w-3xl space-y-8">
       <h1 className="text-2xl font-semibold">Report a breach confidentially</h1>
       <p className="text-sm text-muted">
-        Use this channel to report breaches of AML rules inside the firm (AMLR Art. 14). You can stay anonymous. You are protected against retaliation.
+        Use this channel to report breaches of AML rules inside the firm. You can stay anonymous. You are protected against retaliation.
         {data.external ? ` You can also report externally: ${data.external}.` : ""}
       </p>
       <ActionForm action={whistleblowAction} className="space-y-3">

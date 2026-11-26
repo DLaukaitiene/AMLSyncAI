@@ -10,6 +10,7 @@ import { PartyFields } from "@/components/party-fields";
 import { addPartyAction, addTransactionAction, completeMatterAction, matterState } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
 import { RaiseSuspicion } from "@/components/raise-suspicion";
+import { LawRef } from "@/components/law-ref";
 
 const sel = "w-full rounded border border-border bg-background px-3 py-2 text-sm";
 const STATUS: Record<string, string> = { OPEN: "CDD in progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
@@ -44,7 +45,7 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
 
       <section className="space-y-2 rounded-xl border border-border p-4">
         <h2 className="font-semibold">Parties</h2>
-        <p className="text-xs text-muted">Required here: {requiredRoles(st.sector, st.type).join(", ")} (AMLR Art. 19(6)).</p>
+        <p className="text-xs text-muted">Required here: {requiredRoles(st.sector, st.type).join(", ")}.</p>
         <ul className="divide-y divide-border text-sm">
           {m.parties.map((p) => {
             const f = files.find((x) => x.partyId === p.partyId && x.role === p.role);
@@ -113,13 +114,13 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
         <section className="space-y-3 rounded-xl border border-border p-4">
           <h2 className="font-semibold">{items.length ? "Open before completion" : "Ready"}</h2>
           {items.length > 0 && (
-            <ul className="list-disc pl-5 text-sm">{items.map((i) => <li key={i.id}>{i.message} <span className="text-muted">({i.article})</span></li>)}</ul>
+            <ul className="list-disc pl-5 text-sm">{items.map((i) => <li key={i.id}>{i.message} <LawRef basis={i.article} /></li>)}</ul>
           )}
           {can(s.user.roles, "client.accept") && (
             <div className="flex flex-wrap gap-6">
               {isEstate && !det.transferApprovedAt && (
                 <ActionForm action={completeMatterAction.bind(null, matterId, "transfer")} className="space-y-2">
-                  <p className="text-sm text-muted">Estate agents: both parties must be verified after the offer is accepted and before funds or property move (Art. 23).</p>
+                  <p className="text-sm text-muted">Estate agents: both parties must be verified after the offer is accepted and before funds or property move.</p>
                   {can(s.user.roles, "gate.override") && items.length > 0 && <Field label="Override reason (Compliance Officer)" name="overrideReason" />}
                   <Submit variant="secondary">Allow funds / property transfer</Submit>
                   <StepUpLink />

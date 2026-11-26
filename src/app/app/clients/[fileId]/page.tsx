@@ -37,6 +37,7 @@ import { kybSearchStatus, searchLimitMessage } from "@/lib/server/kyb";
 import { Chip, RiskChip, StatusChip } from "@/components/chips";
 import { SCOPE_REASONS, scopeReasonsFor } from "@/lib/rules/cdd-scope";
 import { LOOK_THROUGH_REASONS } from "@/lib/rules/ownership-branches";
+import { LawRef } from "@/components/law-ref";
 
 const STATUS: Record<string, string> = { OPEN: "In progress", COMPLETE: "Accepted", SDD: "Accepted (SDD)", EDD: "Accepted (EDD)", REFUSED: "Refused", TERMINATED: "Terminated" };
 const LABELS: Record<string, string> = {
@@ -190,7 +191,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
       </div>
       {can(r, "approve.compliance") && !hasCase && (
         <span className="flex flex-wrap gap-4 text-sm">
-          <a className="text-accent underline" href={`/api/explain/${fileId}`}>Explanation of the decision for the client (Art. 76(5))</a>
+          <a className="text-accent underline" href={`/api/explain/${fileId}`}>Explanation of the decision for the client</a> <LawRef basis="Art. 76(5)" why="Clients can ask why an automated or AI-supported decision was taken." />
         </span>
       )}
 
@@ -211,7 +212,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
         const rf = d.receivedFrom as { firm: string; sentAt: string; receivedAt: string; summary: string[] };
         return (
           <details className="rounded-2xl border border-sky-300 bg-sky-50 p-4 text-sm text-sky-950 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-50" data-testid="received-from">
-            <summary className="cursor-pointer font-medium">Received from {rf.firm} on {rf.receivedAt}. Review it before you accept the client: your firm is responsible for its own checks (Art. 48 AMLR).</summary>
+            <summary className="cursor-pointer font-medium">Received from {rf.firm} on {rf.receivedAt}. Review it before you accept the client: your firm is responsible for its own checks.</summary>
             <ul className="mt-2 list-disc pl-5">{rf.summary.map((x, i) => <li key={i}>{x}</li>)}</ul>
           </details>
         );
@@ -289,7 +290,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
 
       {hasCase && (
         <p role="note" className="rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-          Don&apos;t tell the client about any internal compliance review of this file (tipping-off is prohibited, AMLR Art. 73).
+          Don&apos;t tell the client about any internal compliance review of this file (tipping-off is prohibited). <LawRef basis="Art. 73" />
         </p>
       )}
 
@@ -298,7 +299,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
           {items.length ? (
             <ol className="list-decimal space-y-1 pl-5 text-sm">
               {items.map((i) => (
-                <li key={i.id}>{ANCHOR_FOR[i.id] ? <a className="hover:underline" href={`#${ANCHOR_FOR[i.id]}`}>{i.message}</a> : i.message} <span className="text-muted">({i.article})</span></li>
+                <li key={i.id}>{ANCHOR_FOR[i.id] ? <a className="hover:underline" href={`#${ANCHOR_FOR[i.id]}`}>{i.message}</a> : i.message} <LawRef basis={i.article} /></li>
               ))}
             </ol>
           ) : (
@@ -333,16 +334,16 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             <dt className="text-muted">ID number</dt><dd>{cf.party.nationalIdEnc ? "Recorded (encrypted)" : "—"}</dd>
             {cf.isPep && (<><dt className="text-muted">PEP</dt><dd>Yes</dd></>)}
             {!!d.isPepFamilyOrAssociate && (<><dt className="text-muted">PEP family / associate</dt><dd>Yes</dd></>)}
-            {cf.state.hasBearerShares && (<><dt className="text-muted">Bearer shares</dt><dd className="text-red-700 dark:text-red-300">Yes — cannot be accepted (Art. 79)</dd></>)}
+            {cf.state.hasBearerShares && (<><dt className="text-muted">Bearer shares</dt><dd className="text-red-700 dark:text-red-300">Yes — cannot be accepted <LawRef basis="Art. 79" /></dd></>)}
           </dl>
           <ActionForm action={updatePurposeAction.bind(null, fileId)}>
-            <Field label="Purpose and intended nature (Art. 25)" name="purpose" defaultValue={cf.file.purpose ?? ""} />
+            <Field label="Purpose and intended nature" name="purpose" defaultValue={cf.file.purpose ?? ""} />
             {edit && <Submit variant="secondary">Save purpose</Submit>}
           </ActionForm>
         </Card>
 
         {cf.party.kind === "NATURAL" ? (
-          <Card title="Identity verification (Art. 22)" id="identity" hide={!show("identity")}>
+          <Card title="Identity verification" id="identity" hide={!show("identity")}>
             {cf.verifications.length ? (
               <ul className="text-sm">
                 {cf.verifications.map((v) => (
@@ -399,7 +400,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
 
           </Card>
         ) : (
-          <Card title="Register extract (Art. 22(7), 23(4))" id="identity" hide={!show("extract")}>
+          <Card title="Register extract" id="identity" hide={!show("extract")}>
             {cf.extracts.length ? (
               <ul className="space-y-3 text-sm">
                 {cf.extracts.map((x) => {
@@ -583,7 +584,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
           <details className="mt-4 rounded border border-border p-3" data-testid="share-file">
             <summary className="cursor-pointer text-sm font-medium">Share with another firm</summary>
             <div className="mt-3 space-y-2 text-sm">
-              <p className="text-muted">Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Ask them for their firm code (Clients → Shared Files). Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off (Art. 73).</p>
+              <p className="text-muted">Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Ask them for their firm code (Clients → Shared Files). Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off.</p>
               <ActionForm action={shareClientAction.bind(null, fileId)}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Their firm code" name="code" required hint="e.g. ABCD-EFGH" autoComplete="off" />
@@ -601,7 +602,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
       </Card>
 
       {cf.bo && (
-        <Card title="Ownership and beneficial owners (Art. 51–60)" id="ownership" hide={!show("ownership")}>
+        <Card title="Ownership and beneficial owners" id="ownership" hide={!show("ownership")}>
           {cf.tree.links.length === 0 ? (
             <p className="text-sm text-muted">No shareholders or controllers recorded yet.</p>
           ) : (
@@ -712,7 +713,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               ) : null}
               {edit && (
                 <details className="rounded border border-border p-3" open={!smo}>
-                  <summary className="cursor-pointer text-sm font-medium">No beneficial owner found? Record senior managing officials (Art. 22(2))</summary>
+                  <summary className="cursor-pointer text-sm font-medium">No beneficial owner found? Record senior managing officials</summary>
                   <ActionForm action={saveSmoAction.bind(null, fileId)} className="mt-3 space-y-4">
                     <Field label="Senior managing officials (one per line: name, position)" name="officials">
                       <textarea name="officials" rows={3} className={area} aria-label="Senior managing officials" defaultValue={smo?.officials.map((o) => `${o.name}, ${o.position}`).join("\n")} />
@@ -729,7 +730,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
         </Card>
       )}
 
-      <Card title="Checks per person (Art. 20, 22, 58)" id="checks" hide={!show("checks")}>
+      <Card title="Checks per person" id="checks" hide={!show("checks")}>
         <p className="text-xs text-muted">What each person or company in the structure needs, from their role. Several roles: the strictest applies. Unknown role: the strictest check.</p>
         <ul className="divide-y divide-border rounded-lg border border-border text-sm" data-testid="checks-per-person">
           {cf.checks.map((c) => (
@@ -737,7 +738,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <span>
                 <span className="font-medium">{c.name}</span>
                 <span className="text-muted"> · {c.roles.map((r) => ROLE_TEXT[r] ?? r).join(", ")}</span>
-                <span className="block text-xs text-muted" title={`${c.required.why} (${c.required.article})`}>{c.required.label}{c.evidence.screened ? " · screened" : " · not screened yet"}</span>
+                <span className="block text-xs text-muted" title={c.required.why}>{c.required.label}{c.evidence.screened ? " · screened" : " · not screened yet"}</span>
               </span>
               <span className="flex items-center gap-2">
                 {c.done ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-900 dark:bg-green-900/40 dark:text-green-200">Done</span> : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">Needed</span>}
@@ -816,9 +817,8 @@ export default async function ClientFilePage({ params, searchParams }: { params:
             <tbody className="divide-y divide-border">
               {cf.risk.factors.map((f) => (
                 <tr key={f.id}>
-                  <td className="py-1 pr-4">{f.label}{f.forcesHigh ? " — requires EDD" : ""}</td>
-                  <td className="py-1 pr-4 text-right">+{f.points}</td>
-                  <td className="py-1 text-muted">{f.article ?? ""}</td>
+                  <td className="py-1 pr-4">{f.label}{f.forcesHigh ? " — requires EDD" : ""}{f.forcesHigh && <> <LawRef basis={f.article} /></>}</td>
+                  <td className="py-1 text-right">+{f.points}</td>
                 </tr>
               ))}
             </tbody>
@@ -847,7 +847,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
       </Card>
 
       {(cf.risk.eddRequired || cf.state.isPep) && (
-        <Card title="Enhanced due diligence (Art. 34, 42)" id="edd" hide={!show("edd")}>
+        <Card title="Enhanced due diligence" id="edd" hide={!show("edd")}>
           {cf.risk.eddRequired && (
             <ActionForm action={eddChecklistAction.bind(null, fileId)} className="space-y-2">
               {EDD_CHECKLIST.map((i) => (
@@ -928,7 +928,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <h3 className="text-sm font-semibold">Accept the client</h3>
               {cf.risk.sddEligible && (
                 <label className="flex items-start gap-2 text-sm">
-                  <input type="checkbox" name="sdd" className="mt-1" /> Apply simplified due diligence: verification may be completed within 60 days (Art. 33)
+                  <input type="checkbox" name="sdd" className="mt-1" /> Apply simplified due diligence: verification may be completed within 60 days
                 </label>
               )}
               {can(r, "gate.override") && items.length > 0 && (
@@ -938,7 +938,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <StepUpLink />
             </ActionForm>
             <ActionForm action={endAction.bind(null, fileId)} className="space-y-3">
-              <h3 className="text-sm font-semibold">Refuse (CDD can&apos;t be completed, Art. 21)</h3>
+              <h3 className="text-sm font-semibold">Refuse (CDD can&apos;t be completed) <LawRef basis="Art. 21" /></h3>
               <input type="hidden" name="kind" value="REFUSED" />
               <Field label="Reason" name="reason" required />
               <fieldset className="space-y-1 text-sm">
@@ -954,7 +954,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
       )}
 
       {decided && cf.file.status !== "REFUSED" && cf.file.status !== "TERMINATED" && can(r, "client.accept") && (
-        <Card title="Periodic refresh (Art. 26)" hide={!show("refresh")}>
+        <Card title="Periodic refresh" hide={!show("refresh")}>
           <p className="text-sm text-muted">
             Due {cf.file.nextRefreshOn?.toISOString().slice(0, 10) ?? "—"}. 30 days before, the client automatically gets a link to confirm nothing changed; screening re-runs in the
             background. You can also refresh now after updating the file.

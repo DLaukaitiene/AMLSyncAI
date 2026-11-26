@@ -7,6 +7,7 @@ import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { approveRiskAssessmentAction, saveAnswersAction, startRiskAssessmentAction } from "../actions";
+import { LawRef } from "@/components/law-ref";
 
 export default async function RiskAssessmentPage() {
   const s = await requireUser();
@@ -29,7 +30,7 @@ export default async function RiskAssessmentPage() {
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Business Risk Assessment</h1>
-        <p className="text-sm text-muted">AMLR Art. 10. The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</p>
+        <p className="text-sm text-muted">The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</p>
       </div>
 
       {data.current && data.currentDoc && (
@@ -63,7 +64,7 @@ export default async function RiskAssessmentPage() {
                 <legend className="px-1 font-semibold">Controls</legend>
                 {CONTROL_QUESTIONS.map((q) => (
                   <fieldset key={q.id} className="space-y-1 text-sm">
-                    <legend className="font-medium">{q.text} <span className="text-xs font-normal text-muted">({q.article})</span></legend>
+                    <legend className="font-medium">{q.text} <LawRef basis={q.article} /></legend>
                     <div className="flex flex-wrap gap-x-4">
                       {CONTROL_OPTIONS.map((o, i) => <label key={o} className="flex items-center gap-1"><input type="radio" name={q.id} value={i} defaultChecked={a[q.id] === i} /> {o}</label>)}
                     </div>

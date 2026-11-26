@@ -66,7 +66,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl">Transaction Monitoring</h1>
-          <p className="text-sm text-muted">Every payment you record — here or on a case — is checked against red-flag rules. Each flag needs a review with a written reason (AMLR Art. 26). Escalate anything suspicious to your Compliance Officer.</p>
+          <p className="text-sm text-muted">Every payment you record — here or on a case — is checked against red-flag rules. Each flag needs a review with a written reason. Escalate anything suspicious to your Compliance Officer.</p>
         </div>
       </div>
 

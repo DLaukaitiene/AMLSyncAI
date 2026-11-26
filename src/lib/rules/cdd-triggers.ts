@@ -165,7 +165,7 @@ export function checkCashPayment(amountEUR: number, profile: CountryProfile): Ca
     blocked,
     capEUR: cap,
     message: blocked
-      ? national ? `Cash payments above €${fmt(cap)} are not allowed (national cash limit in your Country Profile; AMLR Art. 80). Ask for a bank transfer.` : `Cash payments of €${fmt(cap)} or more are not allowed (AMLR Art. 80). Ask for a bank transfer.`
+      ? national ? `Cash payments above €${fmt(cap)} are not allowed (national cash limit in your Country Profile). Ask for a bank transfer.` : `Cash payments of €${fmt(cap)} or more are not allowed. Ask for a bank transfer.`
       : undefined,
     nationalReportRequired,
   };
@@ -179,10 +179,10 @@ export type GoodsCategory = "motor-vehicle" | "aircraft" | "watercraft" | "jewel
 
 export function thresholdReportRequired(category: GoodsCategory, priceEUR: number): { required: boolean; explanation?: string } {
   if (category === "motor-vehicle" && priceEUR >= EU_CORE.reporting.motorVehicleEUR) {
-    return { required: true, explanation: `Motor vehicle sale of €${fmt(priceEUR)} ≥ €${fmt(EU_CORE.reporting.motorVehicleEUR)}: report to the FIU (AMLR Art. 74).` };
+    return { required: true, explanation: `Motor vehicle sale of €${fmt(priceEUR)} ≥ €${fmt(EU_CORE.reporting.motorVehicleEUR)}: report to the FIU.` };
   }
   if ((category === "aircraft" || category === "watercraft") && priceEUR >= EU_CORE.reporting.aircraftWatercraftEUR) {
-    return { required: true, explanation: `${category === "aircraft" ? "Aircraft" : "Watercraft"} sale of €${fmt(priceEUR)} ≥ €${fmt(EU_CORE.reporting.aircraftWatercraftEUR)}: report to the FIU (AMLR Art. 74).` };
+    return { required: true, explanation: `${category === "aircraft" ? "Aircraft" : "Watercraft"} sale of €${fmt(priceEUR)} ≥ €${fmt(EU_CORE.reporting.aircraftWatercraftEUR)}: report to the FIU.` };
   }
   return { required: false };
 }

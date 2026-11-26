@@ -33,7 +33,7 @@ export default async function GovernancePage() {
     <div className="max-w-5xl space-y-8">
       <div>
         <h1 className="text-3xl">Roles and duties</h1>
-        <p className="text-sm text-muted">Who is responsible for AML in your firm: the two appointments the law requires (AMLR Art. 11; in a small firm one person may hold both), and a named person for every AML duty. Supervisors check both.</p>
+        <p className="text-sm text-muted">Who is responsible for AML in your firm: the two appointments the law requires (in a small firm one person may hold both), and a named person for every AML duty. Supervisors check both.</p>
       </div>
       <h2 className="text-xl font-semibold" id="appointments">Appointments</h2>
       {(Object.keys(FN) as (keyof typeof FN)[]).map((fn) => {

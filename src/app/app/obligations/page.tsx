@@ -7,6 +7,7 @@ import { firmObligations } from "@/lib/server/obligations";
 import { OBLIGATIONS } from "@/lib/obligations/catalog";
 import { sectorNote } from "@/lib/obligations/evaluate";
 import { StateBadge } from "@/components/obligations";
+import { LawRef } from "@/components/law-ref";
 
 /** Warning signs that should make anyone stop and report to the Compliance Officer (AMLR Annex III; FATF indicators). */
 const WARNING_SIGNS = [
@@ -57,7 +58,7 @@ export default async function ObligationsPage() {
               {note && (<><dt className="font-semibold">For your sector</dt><dd>{note}</dd></>)}
               <dt className="font-semibold">How, in AMLSync App</dt>
               <dd><ol className="list-decimal space-y-1 pl-5">{o.how.map((h) => <li key={h}>{h}</li>)}</ol></dd>
-              <dt className="font-semibold">Legal basis</dt><dd className="text-muted">{o.article}</dd>
+              <dt className="font-semibold">Legal basis</dt><dd className="text-muted"><LawRef basis={o.article} /></dd>
             </dl>
             {o.id === "reporting" && (
               <div className="space-y-3 rounded-xl border border-border bg-surface p-4 text-sm" data-testid="reporting-guide">
@@ -67,7 +68,7 @@ export default async function ObligationsPage() {
                   <p className="font-semibold">Warning signs: stop and report if you see</p>
                   <ul className="mt-1 list-disc space-y-0.5 pl-5">{WARNING_SIGNS.map((w) => <li key={w}>{w}</li>)}</ul>
                 </div>
-                <p><strong>Never tell the client</strong> that you reported or are thinking of reporting (tipping-off, AMLR Art. 73). Reporting in good faith is protected by law.</p>
+                <p><strong>Never tell the client</strong> that you reported or are thinking of reporting (tipping-off). <LawRef basis="Art. 73" /> Reporting in good faith is protected by law.</p>
               </div>
             )}
             <div className="flex flex-wrap gap-2 pt-1">

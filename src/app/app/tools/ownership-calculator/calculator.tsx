@@ -148,7 +148,7 @@ export function BoCalculator() {
             ))}
           </ul>
           {result.bo.requiresSmoFallback && (
-            <p className="text-sm">No beneficial owner found: identify all senior managing officials and record the steps taken (AMLR Art. 22(2)).</p>
+            <p className="text-sm">No beneficial owner found: identify all senior managing officials and record the steps taken.</p>
           )}
           {result.bo.unresolvedOwners.length > 0 && (
             <p className="text-sm">Unresolved corporate owners (look these up next): {result.bo.unresolvedOwners.join(", ")}</p>

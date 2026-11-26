@@ -25,7 +25,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await p.goto(BASE + "/app/team/responsibilities");
   await p.waitForURL(/\/app\/firm\/governance/);
   await p.getByText(/14 duties have nobody assigned/).waitFor();
-  await p.getByRole("checkbox", { name: /Compliance Officer \(Art\. 11\(2\)\)/ }).check();
+  await p.getByRole("checkbox", { name: /: Compliance Officer$/ }).first().check();
   await submit(p, "Save responsibilities", "Responsibilities saved.");
   await p.reload();
   await p.getByText(/13 duties have nobody assigned/).waitFor();

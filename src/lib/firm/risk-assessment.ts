@@ -111,7 +111,7 @@ export function assess(a: Answers, nationalRiskAssessmentReviewed: boolean, nati
   const actions = [
     ...controlGaps.map((q) => `${q.action} (${q.article})`),
     ...RISK_QUESTIONS.filter((q) => (a[q.id] ?? 0) >= 3).map((q) => `High-risk factor: "${q.text}" — apply EDD where it occurs and monitor more often.`),
-    ...(!nationalRiskAssessmentReviewed ? ["Review the national risk assessment and record any additional EDD cases in your Country Profile (Art. 10(3), 34(6))."] : []),
+    ...(!nationalRiskAssessmentReviewed ? ["Review the national risk assessment and record any additional EDD cases in your Country Profile."] : []),
     ...nationalEddCases.map((c) => `National EDD case applies: ${c}.`),
   ];
 

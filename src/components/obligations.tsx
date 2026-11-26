@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BookOpen, CircleCheck, CircleAlert, CircleDot, CircleHelp, CircleMinus, Clock3 } from "lucide-react";
 import { obligation, type Obligation, type ObligationId } from "@/lib/obligations/catalog";
 import type { ObligationState, ObligationStatus } from "@/lib/obligations/evaluate";
+import { LawRef } from "@/components/law-ref";
 
 const STATE: Record<ObligationState, { label: string; cls: string; icon: typeof CircleCheck }> = {
   done: { label: "In order", cls: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200", icon: CircleCheck },
@@ -78,7 +79,7 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
           <div className="mt-1 space-y-1 rounded-lg bg-surface p-3 text-sm text-muted">
             <p>{o.what}</p>
             <p><span className="font-medium text-foreground">When: </span>{o.when}</p>
-            <Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <span>· {o.article}</span>
+            <Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <LawRef basis={o.article} />
           </div>
         </details>
         <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
@@ -118,7 +119,7 @@ export function DutyNote({ id, extra }: { id: ObligationId; extra?: React.ReactN
         <p><strong>Your duty: </strong>{o.duty}</p>
         <p className="text-muted"><strong className="font-medium text-foreground">When: </strong>{o.when}</p>
         {extra}
-        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <span className="text-muted">· {o.article}</span></p>
+        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">How to do it, step by step</Link> <LawRef basis={o.article} /></p>
       </div>
     </aside>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionForm, Field, Submit, type ActionState } from "./form";
+import { LawRef } from "@/components/law-ref";
 
 /** "Something feels off" — available to every user on client and matter pages (spec §4.6). */
 export function RaiseSuspicion({ action }: { action: (prev: ActionState, fd: FormData) => Promise<ActionState> }) {
@@ -9,7 +10,7 @@ export function RaiseSuspicion({ action }: { action: (prev: ActionState, fd: For
       <summary className="cursor-pointer text-sm font-medium">Report a suspicion to the Compliance Officer</summary>
       <ActionForm action={action} className="mt-3 space-y-3">
         <p className="text-xs text-muted">
-          Only the Compliance Officer will see this report. Never tell the client or anyone involved (AMLR Art. 73).
+          Only the Compliance Officer will see this report. Never tell the client or anyone involved. <LawRef basis="Art. 73" why="Tipping-off is prohibited." />
         </p>
         <Field label="What happened?" name="summary" required />
         <Field label="Why does it seem suspicious?" name="details" required />

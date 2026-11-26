@@ -255,7 +255,7 @@ const KIND: Record<ReportType, Parameters<typeof canMarkSubmitted>[1]> = {
 };
 
 export const REPORT_LABELS: Record<ReportType, string> = {
-  STR: "Suspicious transaction report", THRESHOLD: "Threshold report (Art. 74)", CASH: "National cash report", DISCREPANCY: "BO register discrepancy report",
+  STR: "Suspicious transaction report", THRESHOLD: "Threshold report", CASH: "National cash report", DISCREPANCY: "BO register discrepancy report",
   SANCTIONS_NOTICE: "Notice to sanctions authority", SUPERVISOR_NOTICE: "Notice to supervisor",
 };
 

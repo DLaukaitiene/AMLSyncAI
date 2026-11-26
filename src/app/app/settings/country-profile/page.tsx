@@ -110,7 +110,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Cash cap (EUR)" name="cashCapEUR" type="number" defaultValue={p.cashCapEUR} hint={`EU cap €${EU_CORE.cash.capEUR.toLocaleString("en")}. Enter a lower national cap if your state has one (e.g. LT €5,000).`} />
               <Field label="FIU request deadline (working days)" name="fiuRequestWorkingDays" type="number" defaultValue={p.fiuRequestWorkingDays} hint="5 under AMLR; enter a shorter one if your FIU sets it." />
-              <Field label="Threshold report deadline (working days)" name="thresholdReportDeadlineWorkingDays" type="number" defaultValue={p.thresholdReportDeadlineWorkingDays ?? ""} hint="Set by your FIU for Art. 74 reports." />
+              <Field label="Threshold report deadline (working days)" name="thresholdReportDeadlineWorkingDays" type="number" defaultValue={p.thresholdReportDeadlineWorkingDays ?? ""} hint="Set by your FIU for threshold reports." />
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="cashReport.enabled" defaultChecked={p.nationalCashReport.enabled} /> National cash-transaction reports apply
@@ -123,11 +123,11 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
           <Section title="Reporting options">
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="sro.enabled" defaultChecked={p.sroReportingRoute.enabled} /> Professionals report suspicions through a self-regulatory body (Art. 70(1))
+              <input type="checkbox" name="sro.enabled" defaultChecked={p.sroReportingRoute.enabled} /> Professionals report suspicions through a self-regulatory body
             </label>
             <Field label="Self-regulatory body" name="sro.body" defaultValue={p.sroReportingRoute.body ?? ""} />
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="privilege.enabled" defaultChecked={p.privilegeNarrowing.enabled} /> Privilege exemption is narrowed for some transactions (Art. 70(3))
+              <input type="checkbox" name="privilege.enabled" defaultChecked={p.privilegeNarrowing.enabled} /> Privilege exemption is narrowed for some transactions
             </label>
             <Field label="Transaction types where privilege doesn't apply (one per line)" name="privilege.types">
               <textarea name="privilege.types" rows={2} className={area} defaultValue={p.privilegeNarrowing.transactionTypes.join("\n")} aria-label="Privilege transaction types" />
@@ -135,7 +135,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           </Section>
 
           <Section title="Risk">
-            <Field label="Additional EDD cases (one per line, as id: description)" name="additionalEddCases" hint="From your national risk assessment (Art. 34(6)). Each forces at least High risk / EDD.">
+            <Field label="Additional EDD cases (one per line, as id: description)" name="additionalEddCases" hint="From your national risk assessment. Each forces at least High risk / EDD.">
               <textarea name="additionalEddCases" rows={3} className={area} defaultValue={p.additionalEddCases.map((c) => `${c.id}: ${c.description}`).join("\n")} aria-label="Additional EDD cases" />
             </Field>
             <label className="flex items-center gap-2 text-sm">
@@ -182,7 +182,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
       {edit && !office && (
         <section className="max-w-xl space-y-2">
           <h2 className="text-lg font-semibold">Office in another member state</h2>
-          <p className="text-sm text-muted">Branches or activity in another member state use that state&apos;s Country Profile for their matters (Art. 8) [verify scope with counsel].</p>
+          <p className="text-sm text-muted">Branches or activity in another member state use that state&apos;s Country Profile for their matters.</p>
           <ActionForm action={addOfficeAction} className="grid gap-3 sm:grid-cols-3">
             <Field label="Office name" name="name" required />
             <CountryField label="Country of the office" name="memberState" required euFirst hint="EU countries are listed first." />

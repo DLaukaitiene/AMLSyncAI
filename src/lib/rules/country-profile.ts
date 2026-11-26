@@ -80,26 +80,26 @@ export function findEuCoreRelaxations(p: CountryProfile): ProfileViolation[] {
   if (p.cashCapEUR > EU_CORE.cash.capEUR) {
     v.push({
       field: "cashCapEUR",
-      message: `The cash cap cannot exceed the EU cap of €${EU_CORE.cash.capEUR.toLocaleString("en")} (AMLR Art. 80(1)). Member states may only set a lower cap.`,
+      message: `The cash cap cannot exceed the EU cap of €${EU_CORE.cash.capEUR.toLocaleString("en")}. Member states may only set a lower cap.`,
     });
   }
   if (p.retentionYears < EU_CORE.records.retentionYears) {
     v.push({
       field: "retentionYears",
-      message: `Records must be kept for at least ${EU_CORE.records.retentionYears} years (AMLR Art. 77). National law may only require longer retention.`,
+      message: `Records must be kept for at least ${EU_CORE.records.retentionYears} years. National law may only require longer retention.`,
     });
   }
   if (p.fiuRequestWorkingDays > EU_CORE.reporting.fiuRequestWorkingDays) {
     v.push({
       field: "fiuRequestWorkingDays",
-      message: `FIU requests must be answered within ${EU_CORE.reporting.fiuRequestWorkingDays} working days (AMLR Art. 69). The FIU may only set a shorter deadline.`,
+      message: `FIU requests must be answered within ${EU_CORE.reporting.fiuRequestWorkingDays} working days. The FIU may only set a shorter deadline.`,
     });
   }
   for (const cat of p.higherRiskEntityCategories) {
     if (cat.boThresholdPct > EU_CORE.beneficialOwnership.thresholdPct) {
       v.push({
         field: "higherRiskEntityCategories",
-        message: `A beneficial-ownership threshold for "${cat.legalForm}" cannot be above ${EU_CORE.beneficialOwnership.thresholdPct}% (AMLR Art. 52).`,
+        message: `A beneficial-ownership threshold for "${cat.legalForm}" cannot be above ${EU_CORE.beneficialOwnership.thresholdPct}%.`,
       });
     }
   }

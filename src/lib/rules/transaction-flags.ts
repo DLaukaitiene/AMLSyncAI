@@ -44,7 +44,7 @@ export function flagTransaction(t: TxForFlags, c: FlagContext): Flag[] {
   if (t.method === "crypto") f.push({ code: "crypto", text: "Paid in crypto-assets: check the source of funds" });
   if (t.thirdPartyPayer) f.push({ code: "third-party", text: "Paid by someone other than the client: check who the payer is and why" });
   const cc = t.fromCountry?.toUpperCase();
-  if (cc && EU_HIGH_RISK_THIRD_COUNTRIES.has(cc)) f.push({ code: "high-risk-country", text: `Funds from ${cc}, on the EU list of high-risk third countries (EDD, Art. 29)` });
+  if (cc && EU_HIGH_RISK_THIRD_COUNTRIES.has(cc)) f.push({ code: "high-risk-country", text: `Funds from ${cc}, on the EU list of high-risk third countries (enhanced due diligence)` });
   if ((c.clientHighRisk || c.clientIsPep) && t.amountEUR >= 10_000) f.push({ code: "high-risk-client", text: `${eur(t.amountEUR)} from a ${c.clientIsPep ? "PEP" : "high-risk"} client: check it matches the source of funds on file` });
   return f;
 }

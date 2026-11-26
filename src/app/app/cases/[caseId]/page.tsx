@@ -12,6 +12,7 @@ import { StepUpLink } from "@/components/step-up";
 import { ReportBlock } from "@/components/report-block";
 import { toIsoDate } from "@/lib/rules/dates";
 import { answerFiuAction, decideAction, fiuInstructionAction, noteAction, resolveDiscrepancyAction, sanctionsNoticeAction } from "../actions";
+import { LawRef } from "@/components/law-ref";
 
 const PROFESSIONS = ["ACCOUNTANT", "LEGAL"];
 
@@ -54,7 +55,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
             {c.suspicionFormedAt && (<><dt className="text-muted">Suspicion formed (decision to report)</dt><dd>{fmtTime(c.suspicionFormedAt)}</dd></>)}
             {c.decidedAt && (<><dt className="text-muted">Decision recorded</dt><dd>{fmtTime(c.decidedAt)}</dd></>)}
           </dl>
-          <p className="mt-2 text-xs text-muted">Set by the server clock when the decision was recorded and cannot be edited, so the supervisor can see the report was made promptly (AMLR Art. 69).</p>
+          <p className="mt-2 text-xs text-muted">Set by the server clock when the decision was recorded and cannot be edited, so the supervisor can see the report was made promptly.</p>
         </section>
       )}
 
@@ -86,19 +87,19 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
 
       {c.type === "INTERNAL_SUSPICION" && c.status === "open" && (
         <section className="space-y-3 rounded-xl border border-border p-4">
-          <h2 className="font-semibold">Decision (Art. 69)</h2>
+          <h2 className="font-semibold">Decision <LawRef basis="Art. 69" why="Report to the FIU promptly when you know or suspect money laundering or terrorist financing." /></h2>
           <ActionForm action={decideAction.bind(null, caseId)} className="space-y-3">
             <fieldset className="space-y-1 text-sm">
               <label className="flex items-center gap-2"><input type="radio" name="decision" value="report" /> Report to the FIU</label>
               <label className="flex items-center gap-2"><input type="radio" name="decision" value="no-report" /> Don&apos;t report (no grounds for suspicion)</label>
               {firm.sectors.some((x) => PROFESSIONS.includes(x)) && (
                 <label className="flex items-center gap-2">
-                  <input type="radio" name="decision" value="privilege" /> Don&apos;t report: privilege exemption applies (ascertaining the legal position or defending the client, Art. 70(2)){profile.privilegeNarrowing.enabled ? " — check the narrowed cases in your Country Profile" : ""}
+                  <input type="radio" name="decision" value="privilege" /> Don&apos;t report: privilege exemption applies (ascertaining the legal position or defending the client) <LawRef basis="Art. 70(2)" />{profile.privilegeNarrowing.enabled ? " — check the narrowed cases in your Country Profile" : ""}
                 </label>
               )}
             </fieldset>
             {c.matterIds.length > 0 && (
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="hold" defaultChecked /> Hold the related transaction (3 working days unless the FIU instructs otherwise, Art. 71)</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="hold" defaultChecked /> Hold the related transaction (3 working days unless the FIU instructs otherwise) <LawRef basis="Art. 71" /></label>
             )}
             <Field label="Reasons" name="reasons" required hint="Kept for the supervisor, whatever the decision." />
             <Submit>Record decision</Submit>
@@ -109,7 +110,7 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
 
       {c.holdEndsOn && (
         <section className="space-y-2 rounded-xl border border-border p-4 text-sm">
-          <h2 className="font-semibold">Transaction hold (Art. 71)</h2>
+          <h2 className="font-semibold">Transaction hold <LawRef basis="Art. 71" /></h2>
           <p>
             {c.fiuInstruction === "stop" ? "The FIU instructed you not to proceed. The case stays blocked." :
               c.fiuInstruction === "proceed" ? "The FIU allowed the transaction to proceed." :

@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { CountryField, Field } from "./form";
 import { FLAG_GROUPS, RISK_FLAGS, type FlagGroup, type RiskFlag } from "@/lib/cdd/risk-flags";
+import { LawRef } from "@/components/law-ref";
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
 /** "What are you adding?" options on Add Client (ClearAML's wording). */
@@ -75,7 +76,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
               <Field label="Phone" name={n("phone")} />
             </>
           )}
-          {chooser && <Field label="Purpose and intended nature of the relationship" name="purpose" hint="AMLR Art. 25, e.g. personal income tax returns." />}
+          {chooser && <Field label="Purpose and intended nature of the relationship" name="purpose" hint="For example: personal income tax returns." />}
           {!compact && <Field label="Occupation" name={n("occupation")} />}
         </div>
       ) : (
@@ -95,7 +96,7 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
           {chooser && <Field label="Tax ID" name="taxId" hint="Company tax or VAT number. Stored encrypted." autoComplete="off" />}
           {!compact && <Field label="LEI" name={n("lei")} hint="Legal Entity Identifier — 20 letters and digits, if the entity has one. Look it up at search.gleif.org." />}
           {!compact && <Field label="Nature of business" name={n("natureOfBusiness")} hint="What the company does, e.g. wholesale of building materials, software development, property rental." />}
-          {chooser && <Field label="Nature of relationship" name="purpose" hint="Purpose and intended nature of the relationship (AMLR Art. 25), e.g. annual accounts and tax returns for a trading company." />}
+          {chooser && <Field label="Nature of relationship" name="purpose" hint="Purpose and intended nature of the relationship, e.g. annual accounts and tax returns for a trading company." />}
         </div>
       )}
       <RiskFlagsSection kind={kind} n={n} groups={compact ? ["ownership"] : undefined} />
@@ -164,16 +165,16 @@ function RiskFlagsSection({ kind, n, groups }: { kind: "NATURAL" | "LEGAL"; n: (
           <fieldset className="space-y-2">
             <legend className="mb-1 text-sm font-semibold">Politically exposed persons</legend>
             <CheckWithHelp name={n("isPep")} label="Politically exposed person (now or in the last 12 months)" badge="Requires EDD" onChange={setIsPep}>
-              Someone who holds, or held in the last 12 months, a prominent public function: for example a head of state or government, minister, member of parliament, judge of a supreme or constitutional court, central bank board member, ambassador, senior military officer, or board member of a state-owned company. Senior management approval and enhanced due diligence are required. <span className="whitespace-nowrap">(Art. 42, 46)</span>
+              Someone who holds, or held in the last 12 months, a prominent public function: for example a head of state or government, minister, member of parliament, judge of a supreme or constitutional court, central bank board member, ambassador, senior military officer, or board member of a state-owned company. Senior management approval and enhanced due diligence are required. <LawRef basis="Art. 42, 46" />
             </CheckWithHelp>
             {isPep && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Prominent public function" name={n("pepFunction")} />
-                <Field label="Left office on" name={n("pepLeftOfficeOn")} type="date" hint="Former PEPs stay in scope at least 12 months (Art. 46)." />
+                <Field label="Left office on" name={n("pepLeftOfficeOn")} type="date" hint="Former PEPs stay in scope at least 12 months." />
               </div>
             )}
             <CheckWithHelp name={n("isPepFamilyOrAssociate")} label="Family member or close associate of a PEP" badge="Requires EDD">
-              A PEP&apos;s spouse or partner, children and their spouses or partners, parents and, for the most senior functions, siblings; or a person known to have close business relations with a PEP, such as joint ownership of a company. <span className="whitespace-nowrap">(Art. 2, 44)</span>
+              A PEP&apos;s spouse or partner, children and their spouses or partners, parents and, for the most senior functions, siblings; or a person known to have close business relations with a PEP, such as joint ownership of a company. <LawRef basis="Art. 2, 44" />
             </CheckWithHelp>
           </fieldset>
         )}
@@ -188,7 +189,7 @@ function RiskFlagsSection({ kind, n, groups }: { kind: "NATURAL" | "LEGAL"; n: (
                 label={f.label}
                 badge={f.block ? "Blocks acceptance" : f.forcesHigh ? "Requires EDD" : undefined}
               >
-                {f.help} <span className="whitespace-nowrap">({f.article})</span>
+                {f.help} <LawRef basis={f.article} />
               </CheckWithHelp>
             ))}
           </fieldset>

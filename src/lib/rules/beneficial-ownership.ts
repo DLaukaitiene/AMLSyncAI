@@ -164,9 +164,9 @@ export function calculateBeneficialOwnership(
     const ctrl = controlByPerson.get(pid) ?? [];
     const reasons: string[] = [];
     if (effectivePct + EPS >= thresholdPct) {
-      reasons.push(`Owns ${effectivePct}% (threshold ${thresholdPct}%), AMLR Art. 52`);
+      reasons.push(`Owns ${effectivePct}% (threshold ${thresholdPct}%)`);
     }
-    for (const c of ctrl) reasons.push(`Control by other means (${c.type}): ${c.description}, AMLR Art. 53`);
+    for (const c of ctrl) reasons.push(`Control by other means (${c.type}): ${c.description}`);
     return {
       personId: pid,
       name: byId.get(pid)!.name,
@@ -200,7 +200,7 @@ export interface SmoFallbackRecord {
 /** Validates the "no BO — SMO recorded" outcome (spec §11.6). */
 export function validateSmoFallback(r: SmoFallbackRecord): string[] {
   const errors: string[] = [];
-  if (r.seniorManagingOfficials.length === 0) errors.push("Identify all senior managing officials (AMLR Art. 22(2)).");
+  if (r.seniorManagingOfficials.length === 0) errors.push("Identify all senior managing officials.");
   if (r.stepsTaken.trim().length < 20) errors.push("Describe the steps taken to identify a beneficial owner.");
   return errors;
 }

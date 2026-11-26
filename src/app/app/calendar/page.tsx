@@ -7,6 +7,7 @@ import { bucket, type CalendarBucket } from "@/lib/rules/deadlines";
 import { toIsoDate } from "@/lib/rules/dates";
 import { can } from "@/lib/auth/permissions";
 import { TASK_KIND as KIND, taskHref } from "@/lib/tasks/labels";
+import { LawRef } from "@/components/law-ref";
 
 
 const TITLES: Record<CalendarBucket, string> = { overdue: "Overdue", "due-30-days": "Due in the next 30 days", later: "Later", done: "Done" };
@@ -48,7 +49,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             {groups.get(b)!.map((t) => (
               <li key={t.id} className="flex justify-between px-4 py-2">
                 <Link href={href(t)} className="text-accent underline">{KIND[t.kind] ?? t.kind}</Link>
-                <span className="text-muted">{toIsoDate(t.dueOn)}{t.article ? ` · ${t.article}` : ""}</span>
+                <span className="text-muted">{toIsoDate(t.dueOn)}</span> <LawRef basis={t.article} />
               </li>
             ))}
           </ul>

@@ -34,7 +34,7 @@ export default async function CasesPage() {
             <Field label="FIU reference" name="reference" required />
           </div>
           <Field label="What the FIU asked for" name="request" required />
-          <Field label="FIU deadline (working days)" name="deadlineWorkingDays" type="number" hint="Leave empty for 5 working days (Art. 69(1)(b)); enter a shorter deadline if the FIU set one." />
+          <Field label="FIU deadline (working days)" name="deadlineWorkingDays" type="number" hint="Leave empty for 5 working days; enter a shorter deadline if the FIU set one." />
           <Submit variant="secondary">Log request</Submit>
         </ActionForm>
       </section>

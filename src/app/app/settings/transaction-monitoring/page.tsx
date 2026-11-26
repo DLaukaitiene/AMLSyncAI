@@ -28,7 +28,7 @@ export default async function TransactionMonitoringSettings() {
                 hint="From 10 July 2027, the EU AML Regulation (2024/1624) requires you to identify and verify a customer who pays or receives cash of €3,000 or more, in one payment or linked payments. Default €3,000." />
               <div>
                 <Field label="Legal cash payment limit (EUR)" name="legal" type="number" defaultValue={String(firm.txCashLegalLimitEUR)}
-                  hint="Cash payments above this amount are not allowed. Lithuania: €5,000 under the Law on Restriction of Cash Payments (since 1 Nov 2022). A bill to lower it to €3,000 for business payments has been in the Seimas since March 2026, so check before relying on it. EU-wide cap from 10 July 2027: €10,000 (AMLR Art. 80); the lower national limit still applies." />
+                  hint="Cash payments above this amount are not allowed. Lithuania: €5,000 under the Law on Restriction of Cash Payments (since 1 Nov 2022). A bill to lower it to €3,000 for business payments has been in the Seimas since March 2026, so check before relying on it. EU-wide cap from 10 July 2027: €10,000; the lower national limit still applies." />
                 <p className="mt-1 text-xs text-muted" data-testid="legal-limit-checked">Last checked: {firm.txCashLimitCheckedAt ? firm.txCashLimitCheckedAt.toISOString().slice(0, 10) : "not yet"}</p>
                 <label className="mt-1 flex items-center gap-2 text-xs"><input type="checkbox" name="checkedNow" /> I checked the legal limit today</label>
               </div>

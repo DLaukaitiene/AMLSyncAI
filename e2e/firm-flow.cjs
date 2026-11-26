@@ -19,6 +19,9 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("new sector → risk-assessment review task");
 
   // Risk assessment
+  await p.goto(BASE + "/app/firm");
+  if ((await p.getByTestId("hub-risk-assessment").getAttribute("data-state")) !== "todo") throw new Error("risk assessment should start as To do");
+  await p.getByTestId("hub-risk-assessment").getByText("To do").waitFor();
   await p.goto(BASE + "/app/firm/risk-assessment");
   await submit(p, "Start the risk assessment", null);
   await p.getByRole("heading", { name: /Draft version 1/ }).waitFor();
@@ -70,6 +73,14 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
     await p.getByRole("heading", { name: `In force: ${title} v1` }).waitFor();
   }
   log("policy and procedures approved and in force");
+  await p.goto(BASE + "/app/firm");
+  const hub = async (k) => p.getByTestId(`hub-${k}`).getAttribute("data-state");
+  if ((await hub("risk-assessment")) !== "done" || (await hub("policies")) !== "done") throw new Error("hub statuses after approval: " + (await hub("risk-assessment")) + "/" + (await hub("policies")));
+  await p.getByTestId("hub-risk-assessment").getByText(/Next review (in \d+ days|due today|due tomorrow)/).waitFor();
+  await p.getByTestId("hub-policies").getByText(/Next review (in \d+ days|due today|due tomorrow)/).waitFor();
+  if (/Art\. ?\d/.test(await p.locator("main").innerText())) throw new Error("article numbers still shown on the Compliance Hub");
+  log("Compliance Hub: done, with the next yearly review date; no article numbers");
+  await p.goto(BASE + "/app/firm/policies");
   await p.locator("section", { hasText: "In force: AML/CTF policy v1" }).getByRole("button", { name: /I have read and will follow this policy/ }).click();
   await p.locator("section", { hasText: "In force: AML/CTF policy v1" }).getByText("You acknowledged this version.").waitFor();
   log("acknowledged by the user");

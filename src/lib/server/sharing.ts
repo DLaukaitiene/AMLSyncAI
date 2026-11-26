@@ -23,8 +23,8 @@ export const SHARE_BASES: Record<string, string> = {
   // [revised 23 Nov 2026 after the legal pre-review] AML data rests on a legal obligation, not consent: the client's
   // instruction is the trigger, not the legal basis. Reliance needs Art. 48 conditions and an Art. 49 written agreement.
   consent: "The client instructed us to pass their file to this firm (e.g. they are moving to it). Legal basis: legitimate interest / contract, not consent",
-  reliance: "Reliance under Art. 48 AMLR, with a written reliance agreement (Art. 49): the receiving firm relies on our identity, owner and purpose checks and can get copies within 5 working days",
-  group: "Same group under a parent undertaking's group-wide AML policies (Art. 16 AMLR)",
+  reliance: "Reliance, with a written reliance agreement: the receiving firm relies on our identity, owner and purpose checks and can get copies within 5 working days",
+  group: "Same group under a parent undertaking's group-wide AML policies",
 };
 const MAX_DOCS = 20;
 const MAX_BYTES = 40 * 1024 * 1024;

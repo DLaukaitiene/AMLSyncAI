@@ -104,7 +104,7 @@ export function gapsFor(r: Pick<BackBookRow, "kind" | "birthDate" | "nationaliti
     if (!r.documents.includes("extract")) g.push({ id: "register-extract", label: "Company / BO register extract" });
     if (!r.documents.includes("bo")) g.push({ id: "beneficial-owners", label: "Beneficial owners identified and verified" });
   }
-  if (!r.purpose) g.push({ id: "purpose", label: "Purpose and intended nature (Art. 25)" });
+  if (!r.purpose) g.push({ id: "purpose", label: "Purpose and intended nature" });
   if (!r.lastCddDate) g.push({ id: "last-cdd", label: "Date of last CDD unknown" });
   else if (r.lastCddDate < `${Number(today.slice(0, 4)) - 5}${today.slice(4)}`) g.push({ id: "stale-cdd", label: "Last CDD more than 5 years ago" });
   return g;

@@ -13,7 +13,7 @@ export default async function OutsourcingPage() {
     <div className="max-w-4xl space-y-8">
       <h1 className="text-2xl font-semibold">Outsourcing register</h1>
       <p className="text-sm text-muted">
-        AMLR Art. 18: notify your supervisor before outsourcing starts and sign a written agreement. You stay responsible. Risk decisions, accepting clients
+        Notify your supervisor before outsourcing starts and sign a written agreement. You stay responsible. Risk decisions, accepting clients
         and reporting can&apos;t be outsourced. Using AMLSync Expert is outsourcing.
       </p>
       {rows.length === 0 ? <p className="text-sm">No outsourcing arrangements.</p> : (

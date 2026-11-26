@@ -23,7 +23,7 @@ export default async function PoliciesPage() {
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">AML Program</h1>
-        <p className="text-sm text-muted">AMLR Art. 9. Generated from your firm profile, risk assessment and Country Profile. The policy needs management approval; procedures need at least the compliance manager.</p>
+        <p className="text-sm text-muted">Generated from your firm profile, risk assessment and Country Profile. The policy needs management approval; procedures need at least the compliance manager.</p>
       </div>
       {edit && <ActionButton action={generatePoliciesAction} variant="primary">{drafts.length ? "Regenerate drafts" : "Generate new version"}</ActionButton>}
 

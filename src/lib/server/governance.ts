@@ -25,7 +25,7 @@ export async function appoint(tx: Tx, ctx: Ctx, fn: "compliance-manager" | "comp
   const today = toIsoDate(new Date());
   const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
   if (user.deactivatedAt) throw new Error("This user has left the firm.");
-  if (user.external) throw new Error("External users can't hold this function (Art. 18: these tasks can't be outsourced).");
+  if (user.external) throw new Error("External users can't hold this function: these tasks can't be outsourced.");
   const role = fn === "compliance-officer" ? "COMPLIANCE_OFFICER" : "OWNER";
   if (!user.roles.includes(role)) await tx.user.update({ where: { id: userId }, data: { roles: [...user.roles, role] } });
   const current = await tx.appointment.findFirst({ where: { function: fn, toDate: null } });

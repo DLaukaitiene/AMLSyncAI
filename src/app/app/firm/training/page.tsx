@@ -18,7 +18,7 @@ export default async function TrainingPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <h1 className="text-2xl font-semibold">My Training</h1>
-      <p className="text-sm text-muted">AMLR Art. 12. Completion records are part of the supervisor file.</p>
+      <p className="text-sm text-muted">Completion records are part of the supervisor file.</p>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">My training</h2>
         {data.mine.length === 0 && <p className="text-sm text-muted">Nothing assigned to you.</p>}
