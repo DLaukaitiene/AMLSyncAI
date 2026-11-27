@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { adminDb } from "@/lib/server/db";
+import { saveWebsiteLead } from "@/lib/server/website-lead";
 import { hit } from "@/lib/server/rate-limit";
 import { allowedOrigin, clientIp, cors, readJson, str, visitorId } from "@/lib/server/backoffice/web";
 
@@ -23,12 +23,6 @@ export async function POST(req: NextRequest) {
   const name = str(j.name, 120);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !name) return reply(400);
   const data = { name, company: str(j.company, 160) || null, need: str(j.need, 80) || null, message: str(j.message, 4000) || null, visitor, country: (req.headers.get("x-vercel-ip-country") ?? "").slice(0, 2).toUpperCase() || null };
-  const existing = await adminDb.lead.findFirst({ where: { email }, orderBy: { createdAt: "desc" } });
-  if (existing && existing.stage !== "lost") {
-    await adminDb.leadNote.create({ data: { leadId: existing.id, authorEmail: "website", text: `New website message (${data.need ?? "—"}):\n${data.message ?? ""}` } });
-    await adminDb.lead.update({ where: { id: existing.id }, data: { visitor } });
-  } else {
-    await adminDb.lead.create({ data: { ...data, email, source: "website-form" } });
-  }
+  await saveWebsiteLead({ ...data, email });
   return reply(204);
 }
