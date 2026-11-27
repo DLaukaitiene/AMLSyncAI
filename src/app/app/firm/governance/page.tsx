@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
@@ -42,6 +43,9 @@ export default async function GovernancePage() {
           <section key={fn} className="space-y-2 rounded-xl border border-border p-4 text-sm" data-testid={`appointment-${fn}`}>
             <h2 className="font-semibold">{FN[fn]}</h2>
             <p>{current ? `${data.allUsers.get(current.userId)} since ${current.fromDate.toISOString().slice(0, 10)}` : "Not appointed."}</p>
+            {current && (current.notifiedAt
+              ? <p className="text-muted">Regulator informed on {current.notifiedAt.toISOString().slice(0, 10)} · <Link href={`/app/firm/governance/notify/${current.id}`} className="text-accent underline">View the email</Link></p>
+              : manageDuties && <Link href={`/app/firm/governance/notify/${current.id}`} className="inline-flex rounded-full bg-brand px-4 py-1.5 font-semibold text-brand-ink hover:brightness-105" data-testid={`inform-regulator-${fn}`}>Inform the Regulator</Link>)}
             {data.appts.filter((a) => a.function === fn && a.toDate).map((a) => (
               <p key={a.id} className="text-muted">Previously {data.allUsers.get(a.userId)}: {a.fromDate.toISOString().slice(0, 10)} – {a.toDate!.toISOString().slice(0, 10)}{a.reason ? ` (${a.reason})` : ""}</p>
             ))}

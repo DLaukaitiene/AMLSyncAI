@@ -77,6 +77,7 @@ export default async function Dashboard() {
       obligations: await firmObligations(tx, s.firm.id, { seeCases }),
       usage: await screeningUsage(tx, s.firm.id),
       sample: await hasSampleData(tx),
+      uninformed: seeStaff ? await tx.appointment.findMany({ where: { toDate: null, notifiedAt: null }, select: { id: true, function: true, userId: true } }) : [],
     };
   });
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
@@ -105,6 +106,7 @@ export default async function Dashboard() {
     ...(seeStaff && oi.whistleblowingLate ? [{ key: "wb-late", tone: "red" as const, href: "/app/firm/whistleblowing", text: <><strong>{oi.whistleblowingLate} whistleblowing report(s)</strong> not acknowledged within 7 days</> }] : []),
     ...(oi.trainingOverdue ? [{ key: "training-late", tone: "red" as const, href: "/app/team/training-register", text: <><strong>{oi.trainingOverdue} training(s)</strong> overdue</> }] : []),
     // Amber: waiting for someone, or due soon.
+    ...data.uninformed.map((x) => ({ key: `inform-${x.id}`, tone: "amber" as const, href: `/app/firm/governance/notify/${x.id}`, text: <>Inform the regulator: <strong>{data.userNames.get(x.userId) ?? "someone"}</strong> is your {x.function === "compliance-officer" ? "Compliance Officer" : "responsible manager"}</> })),
     ...(oi.highRiskOrPepAwaitingApproval ? [{ key: "hr-approval", tone: "amber" as const, href: "/app/risk-assessments?risk=HIGH", text: <><strong>{oi.highRiskOrPepAwaitingApproval} high-risk or PEP client(s)</strong> waiting for senior management approval</> }] : []),
     ...(oi.clientsInProgress - oi.clientsStale > 0 ? [{ key: "in-progress", tone: "amber" as const, href: "/app/clients?status=open", text: <><strong>{oi.clientsInProgress - oi.clientsStale} client file(s)</strong> not yet decided: finish the checks before you start work</> }] : []),
     ...(oi.internalReportsOpen ? [{ key: "internal-reports", tone: "amber" as const, href: "/app/cases", text: <><strong>{oi.internalReportsOpen} internal suspicion report(s)</strong> to decide</> }] : []),

@@ -979,6 +979,8 @@ model Appointment {
   fromDate  DateTime  @db.Date
   toDate    DateTime? @db.Date
   reason    String? // reason for ending the appointment
+  notifiedAt DateTime? // the firm marked the supervisor as informed of this appointment (AMLR Art. 11)
+  notifiedBy String?   @db.Uuid
   createdAt DateTime  @default(now())
 
   @@index([firmId])

@@ -11,6 +11,7 @@ import {
 import { approvePolicy } from "@/lib/server/firm-docs";
 import { addCalendarDays, toIsoDate } from "@/lib/rules/dates";
 import { reviewStaffScreening, screenStaff } from "@/lib/server/staff-screening";
+import { audit } from "@/lib/server/audit";
 
 const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 const ctxOf = (s: { firm: { id: string }; user: { id: string } }) => ({ firmId: s.firm.id, userId: s.user.id });
@@ -23,13 +24,26 @@ export async function appointAction(fn: "compliance-manager" | "compliance-offic
   // without confirming it's them [27 Nov 2026]. The change is still audited and only management can make it.
   const reason = String(fd.get("reason") ?? "").trim();
   try {
-    const r = await withTenant(s.firm.id, (tx) => appoint(tx, ctxOf(s), fn, userId, reason || "Change of appointment"));
+    await withTenant(s.firm.id, (tx) => appoint(tx, ctxOf(s), fn, userId, reason || "Change of appointment"));
     revalidatePath("/app/firm/governance");
     revalidatePath("/app");
-    return { message: r.noticeId ? "Appointed. The previous compliance officer's removal must be notified to the supervisor: a draft notice is in Reports." : "Appointed." };
+    return { message: "Appointed. Now inform the regulator: use the Inform the Regulator button." };
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+/** Records that the supervisor was informed of an appointment (or un-does it). */
+export async function markRegulatorInformedAction(appointmentId: string, informed: boolean): Promise<ActionState> {
+  const s = await requireUser("approve.compliance");
+  await withTenant(s.firm.id, async (tx) => {
+    await tx.appointment.update({ where: { id: appointmentId }, data: informed ? { notifiedAt: new Date(), notifiedBy: s.user.id } : { notifiedAt: null, notifiedBy: null } });
+    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Appointment", objectId: appointmentId, fields: ["notifiedAt"] });
+  });
+  revalidatePath("/app");
+  revalidatePath("/app/firm/governance");
+  revalidatePath(`/app/firm/governance/notify/${appointmentId}`);
+  return { message: informed ? "Recorded: the regulator has been informed." : "Marked as not yet informed." };
 }
 
 export async function annualReportAction(): Promise<ActionState> {

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "notifiedAt" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "notifiedBy" UUID;
