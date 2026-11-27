@@ -75,7 +75,7 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
           <span className="font-semibold">{o.title}</span>
           <Help label="What does this mean?">
             <p>{o.duty}</p>
-            <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link> · {o.article}</p>
+            <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link></p>
           </Help>
         </span>
         <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
@@ -115,7 +115,7 @@ export function DutyNote({ id, extra }: { id: ObligationId; extra?: React.ReactN
       <Help label="When and how" align="right">
         <p><span className="font-medium text-foreground">When: </span>{o.when}</p>
         {extra}
-        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link> · {o.article}</p>
+        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link></p>
       </Help>
     </aside>
   );

@@ -18,7 +18,7 @@ export default async function TrainingPage() {
   const names = new Map(data.users.map((u) => [u.id, u.name]));
   return (
     <div className="max-w-3xl space-y-8">
-      <PageTitle className="text-3xl" help={<>AMLR Art. 12. Completion records are part of the supervisor file.</>}>My Training</PageTitle>
+      <PageTitle className="text-3xl" help={<>Completion records are part of the supervisor file.</>}>My Training</PageTitle>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">My training</h2>
         {data.mine.length === 0 && <p className="text-sm text-muted">Nothing assigned to you.</p>}

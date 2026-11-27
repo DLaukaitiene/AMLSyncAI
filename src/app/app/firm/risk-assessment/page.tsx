@@ -29,7 +29,7 @@ export default async function RiskAssessmentPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
-        <PageTitle className="text-3xl" help={<>AMLR Art. 10. The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</>}>Business Risk Assessment</PageTitle>
+        <PageTitle className="text-3xl" help={<>The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</>}>Business Risk Assessment</PageTitle>
       </div>
 
       {data.current && data.currentDoc && (

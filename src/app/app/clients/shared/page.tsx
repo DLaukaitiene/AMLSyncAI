@@ -27,7 +27,7 @@ export default async function SharedFilesPage() {
       </section>
       <section className="space-y-3 rounded-2xl border border-border p-4">
         <h2 className="text-lg font-semibold">Received</h2>
-        <div className="flex items-start gap-2 text-sm text-muted"><p>Review an imported file before you accept the client.</p><Help>Importing creates a new client file with the client&apos;s data, ownership structure, check summary and documents. Everyone is screened again under your account. Under Art. 48 AMLR you may rely on another firm&apos;s checks, but your firm stays responsible.</Help></div>
+        <div className="flex items-start gap-2 text-sm text-muted"><p>Review an imported file before you accept the client.</p><Help>Importing creates a new client file with the client&apos;s data, ownership structure, check summary and documents. Everyone is screened again under your account. Under the AML rules you may rely on another firm&apos;s checks, but your firm stays responsible.</Help></div>
         {incoming.length ? (
           <ul className="divide-y divide-border rounded-lg border border-border" data-testid="shares-in">
             {incoming.map((x) => (

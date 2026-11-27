@@ -22,7 +22,7 @@ export default async function TrainingRegisterPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <PageTitle className="text-3xl" help={<>Workshops, seminars, courses and internal sessions your team attended outside the app (AMLR Art. 12). Training done in the app is recorded automatically under My Compliance.</>}>Training Register</PageTitle>
+          <PageTitle className="text-3xl" help={<>Workshops, seminars, courses and internal sessions your team attended outside the app. Training done in the app is recorded automatically under My Compliance.</>}>Training Register</PageTitle>
         </div>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not navigation */}
         {manage && <a href="/api/registers/training" className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm hover:border-accent"><Download aria-hidden className="h-4 w-4" />Export CSV</a>}

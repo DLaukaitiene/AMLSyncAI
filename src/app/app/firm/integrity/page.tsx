@@ -28,7 +28,7 @@ export default async function IntegrityPage() {
   }
   return (
     <div className="max-w-3xl space-y-8">
-      <PageTitle className="text-3xl" help={<>Integrity and conflict-of-interest declarations (AMLR Art. 13), on joining and every year, and screening of staff against sanctions and PEP lists.</>}>Staff Checks</PageTitle>
+      <PageTitle className="text-3xl" help={<>Integrity and conflict-of-interest declarations, on joining and every year, and screening of staff against sanctions and PEP lists.</>}>Staff Checks</PageTitle>
       <p className="text-sm">{data.mine ? `Your last declaration: ${data.mine.declaredAt.toISOString().slice(0, 10)}.` : "You haven't made a declaration yet."}</p>
       <ActionForm action={integrityAction} className="space-y-4">
         {INTEGRITY_QUESTIONS.map((q) => (
@@ -48,7 +48,7 @@ export default async function IntegrityPage() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Staff screening</h2>
-              <div className="flex items-start gap-2 text-sm text-muted"><p>Free; repeat on joining and when lists change.</p><Help>Your colleagues&apos; names are checked against the sanctions and PEP lists loaded in the app (AMLR Art. 11). It doesn&apos;t count towards your screening limits.</Help></div>
+              <div className="flex items-start gap-2 text-sm text-muted"><p>Free; repeat on joining and when lists change.</p><Help>Your colleagues&apos; names are checked against the sanctions and PEP lists loaded in the app. It doesn&apos;t count towards your screening limits.</Help></div>
             </div>
             <ActionForm action={screenStaffAction}><Submit>Screen all staff now</Submit></ActionForm>
           </div>

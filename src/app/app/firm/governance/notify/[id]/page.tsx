@@ -53,7 +53,7 @@ export default async function InformRegulatorPage({ params }: { params: Promise<
     <div className="max-w-3xl space-y-6" data-testid="inform-regulator">
       <div className="space-y-1">
         <Link href="/app/firm/governance" className="text-sm text-accent underline">← Roles and duties</Link>
-        <PageTitle className="text-3xl" help={<>The AML rules (AMLR Art. 11) require your firm to tell its AML supervisor who your Compliance Officer and your Compliance Manager are, and to tell them when either changes. When the Compliance Officer is replaced, give the reason.</>}>Inform the Regulator</PageTitle>
+        <PageTitle className="text-3xl" help={<>The AML rules require your firm to tell its AML supervisor who your Compliance Officer and your Compliance Manager are, and to tell them when either changes. When the Compliance Officer is replaced, give the reason.</>}>Inform the Regulator</PageTitle>
         <p className="text-muted">{person.name}, {ROLE_NAME[fn]}, from {iso(a.fromDate)}.</p>
       </div>
 

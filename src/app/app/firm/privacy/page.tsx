@@ -22,7 +22,7 @@ export default async function PrivacyPage() {
   const edit = can(s.user.roles, "approve.compliance");
   return (
     <div className="max-w-4xl space-y-8">
-      <PageTitle className="text-3xl" help={<>AMLR Art. 76 and GDPR. The privacy notice in force is shown to clients in the portal. AMLSync acts as your processor (data processing agreement). Its suppliers and where they process data: <a className="text-accent underline" href="/subprocessors">sub-processors</a>.</>}>Data Protection</PageTitle>
+      <PageTitle className="text-3xl" help={<>The privacy notice in force is shown to clients in the portal. AMLSync acts as your processor (data processing agreement). Its suppliers and where they process data: <a className="text-accent underline" href="/subprocessors">sub-processors</a>.</>}>Data Protection</PageTitle>
       <section className="space-y-2 rounded-2xl border border-border p-4 text-sm" data-testid="data-protection-lead">
         <h2 className="text-lg font-semibold">Data protection lead</h2>
         <p className="text-muted">Who handles privacy notices, requests from people about their data, and data breaches (GDPR). This is separate from your AML roles.</p>

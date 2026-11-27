@@ -28,7 +28,7 @@ export default async function WhistleblowingPage() {
   }
   return (
     <div className="max-w-3xl space-y-8">
-      <PageTitle className="text-3xl" help={<>Report breaches of AML rules inside the firm (AMLR Art. 14). You are protected against retaliation.{data.external ? ` You can also report externally: ${data.external}.` : ""}</>}>Report a breach confidentially</PageTitle>
+      <PageTitle className="text-3xl" help={<>Report breaches of AML rules inside the firm. You are protected against retaliation.{data.external ? ` You can also report externally: ${data.external}.` : ""}</>}>Report a breach confidentially</PageTitle>
       <p className="text-sm">You can stay anonymous.</p>
       <ActionForm action={whistleblowAction} className="space-y-3">
         <Field label="What do you want to report?" name="text" required>

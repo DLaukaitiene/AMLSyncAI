@@ -14,7 +14,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
     <div className="space-y-6">
       <PageTitle className="text-3xl" help={<>
         Client records are kept for 5 years (or longer if your Country Profile says so) from the end of the relationship, the occasional
-        transaction or the refusal, then deleted (AMLR Art. 77). Records under a legal hold are not listed. Deletion is permanent. Afterwards the
+        transaction or the refusal, then deleted. Records under a legal hold are not listed. Deletion is permanent. Afterwards the
         audit log shows only that a record was deleted, by whom and when. It contains no client data.
       </>}>Records & Retention</PageTitle>
       {Number.isInteger(deleted) && deleted >= 0 && (

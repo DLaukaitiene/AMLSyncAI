@@ -584,7 +584,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
           <details className="mt-4 rounded border border-border p-3" data-testid="share-file">
             <summary className="cursor-pointer text-sm font-medium">Share with another firm</summary>
             <div className="mt-3 space-y-2 text-sm">
-              <div className="flex items-start gap-2 text-muted"><p>Ask the other firm for its firm code (Clients → Shared Files).</p><Help>Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off (Art. 73).</Help></div>
+              <div className="flex items-start gap-2 text-muted"><p>Ask the other firm for its firm code (Clients → Shared Files).</p><Help>Sends a copy of this client&apos;s data, ownership structure, check summary and documents to another firm that uses AMLSync App. Nothing is shared until they import it, and you can withdraw it until then. Never share a file when the client is under an internal suspicion report: that could tip them off.</Help></div>
               <ActionForm action={shareClientAction.bind(null, fileId)}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Their firm code" name="code" required hint="e.g. ABCD-EFGH" autoComplete="off" />
