@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/manrope";
 import "./globals.css";
+import { HelpAutoClose } from "@/components/help-auto-close";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? "https://app.amlsync.com"),
@@ -18,7 +19,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   await headers();
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen">{children}</body>
+      <body className="antialiased min-h-screen">{children}<HelpAutoClose /></body>
     </html>
   );
 }

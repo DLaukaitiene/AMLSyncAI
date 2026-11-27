@@ -50,7 +50,7 @@ export default async function ObligationsPage() {
               </div>
               <StateBadge state={st.state} />
             </div>
-            <p className="text-sm font-medium">{st.detail}</p>
+            <p className="whitespace-pre-line text-sm font-medium">{st.detail}</p>
             <dl className="grid gap-3 text-sm sm:grid-cols-[9rem_1fr]">
               <dt className="font-semibold">What the law asks</dt><dd>{o.what}</dd>
               <dt className="font-semibold">When</dt><dd>{o.when}</dd>

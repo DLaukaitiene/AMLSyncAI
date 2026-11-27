@@ -44,10 +44,10 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
   const s = (id: ObligationId, state: ObligationState, detail: string): ObligationStatus => ({ id, state, detail });
   const out: Record<ObligationId, ObligationStatus> = {
     "compliance-officer": !i.complianceOfficer || !i.responsibleManager
-      ? s("compliance-officer", "todo", !i.complianceOfficer && !i.responsibleManager ? "Nobody is appointed yet." : !i.complianceOfficer ? `Responsible manager: ${i.responsibleManager}. Appoint the Compliance Officer.` : `Compliance Officer: ${i.complianceOfficer}. Appoint the responsible manager.`)
+      ? s("compliance-officer", "todo", !i.complianceOfficer && !i.responsibleManager ? "Nobody is appointed yet." : !i.complianceOfficer ? `Responsible manager: ${i.responsibleManager}\nAppoint the Compliance Officer.` : `Compliance Officer: ${i.complianceOfficer}\nAppoint the Responsible manager.`)
       : i.unassignedDuties
-        ? s("compliance-officer", "todo", `Compliance Officer: ${i.complianceOfficer} · responsible manager: ${i.responsibleManager}. ${n(i.unassignedDuties, "AML duty", "AML duties")} still without a named person.`)
-        : s("compliance-officer", "done", `Compliance Officer: ${i.complianceOfficer} · responsible manager: ${i.responsibleManager}.`),
+        ? s("compliance-officer", "todo", `Compliance Officer: ${i.complianceOfficer}\nResponsible manager: ${i.responsibleManager}\n${n(i.unassignedDuties, "AML duty", "AML duties")} still without a named person.`)
+        : s("compliance-officer", "done", `Compliance Officer: ${i.complianceOfficer}\nResponsible manager: ${i.responsibleManager}`),
     "risk-assessment": !i.riskAssessmentInForce ? (i.riskAssessmentDraft ? s("risk-assessment", "pending", "Pending approval by management: a draft is ready.") : s("risk-assessment", "todo", "Not approved yet. It takes about 15 minutes."))
       : i.riskAssessmentReviewOverdue ? s("risk-assessment", "overdue", "The yearly review is overdue.")
       : s("risk-assessment", "done", "Approved and in force."),

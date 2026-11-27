@@ -22,8 +22,8 @@ export async function summaryText(firmId: string, seeCases: boolean): Promise<{ 
   const todo = ob.statuses.filter((s) => s.state === "todo");
   const lines = [
     `${firm.name}: ${sum.done} of ${sum.total} AML obligations in order${sum.overdue ? `, ${sum.overdue} need action now` : ""}.`,
-    ...(act.length ? ["Act now:", ...act.map((s) => `- ${title.get(s.id)}: ${s.detail}`)] : []),
-    ...(todo.length ? ["To do:", ...todo.map((s) => `- ${title.get(s.id)}: ${s.detail}`)] : []),
+    ...(act.length ? ["Act now:", ...act.map((s) => `- ${title.get(s.id)}: ${s.detail.replace(/\n/g, " · ")}`)] : []),
+    ...(todo.length ? ["To do:", ...todo.map((s) => `- ${title.get(s.id)}: ${s.detail.replace(/\n/g, " · ")}`)] : []),
     ...(!act.length && !todo.length ? ["Everything is in order. Well done."] : []),
   ];
   return {

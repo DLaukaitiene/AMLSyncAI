@@ -25,7 +25,7 @@ describe("obligation status", () => {
   });
   it("shows the appointed names, and asks for unassigned duties", () => {
     const s = by({ ...fresh, complianceOfficer: "Ona Jonaitė", responsibleManager: "Ona Jonaitė", unassignedDuties: 3 });
-    expect(s["compliance-officer"]).toMatchObject({ state: "todo", detail: "Compliance Officer: Ona Jonaitė · responsible manager: Ona Jonaitė. 3 AML duties still without a named person." });
+    expect(s["compliance-officer"]).toMatchObject({ state: "todo", detail: "Compliance Officer: Ona Jonaitė\nResponsible manager: Ona Jonaitė\n3 AML duties still without a named person." });
     expect(by({ ...fresh, complianceOfficer: "A", responsibleManager: "B", unassignedDuties: 0 })["compliance-officer"].state).toBe("done");
   });
   it("overdue beats to-do", () => {

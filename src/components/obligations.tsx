@@ -28,7 +28,7 @@ export function ObligationCard({ o, status, note, children }: { o: Obligation; s
       </div>
       <p className="text-sm text-muted">{o.what}</p>
       {note && <p className="text-xs text-muted">{note}</p>}
-      <p className={`text-sm font-medium ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : ""}`}>{status.detail}</p>
+      <p className={`whitespace-pre-line text-sm font-medium ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : ""}`}>{status.detail}</p>
       {children}
       <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
         {status.state !== "na" && <Link href={o.action.href} className={`rounded-full px-4 py-1.5 text-sm font-semibold ${status.state === "done" ? "border border-border hover:border-accent" : "bg-brand text-brand-ink hover:brightness-105"}`}>{o.action.label}</Link>}
@@ -46,7 +46,7 @@ export function ObligationRow({ o, status, children }: { o: Obligation; status: 
       <span className="sm:w-24"><StateBadge state={status.state} /></span>
       <span className="min-w-0 flex-1">
         <span className="block font-semibold">{o.title}</span>
-        <span className={`block text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</span>
+        <span className={`block whitespace-pre-line text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</span>
         {children}
       </span>
       <span className="flex flex-wrap items-center gap-2">
@@ -80,7 +80,7 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
         </span>
         <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
       </div>
-      <p className={`mt-1 text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</p>
+      <p className={`mt-1 whitespace-pre-line text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</p>
       {children}
       {status.state !== "na" && (
         <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">

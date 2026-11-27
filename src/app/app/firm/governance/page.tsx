@@ -51,7 +51,7 @@ export default async function GovernancePage() {
               <p key={a.id} className="text-muted">Previously {appointeeName(a, data.allUsers)}: {a.fromDate.toISOString().slice(0, 10)} – {a.toDate!.toISOString().slice(0, 10)}{a.reason ? ` (${a.reason})` : ""}</p>
             ))}
             {mgmt && (
-              <ActionForm action={appointAction.bind(null, fn)} className="grid gap-3 sm:grid-cols-3">
+              <ActionForm action={appointAction.bind(null, fn)} className="grid gap-3 sm:grid-cols-3 [&>[role=alert]]:order-last [&>[role=alert]]:col-span-full [&>[role=status]]:order-last [&>[role=status]]:col-span-full">
                 <Field label="Appoint" name="userId">
                   <select name="userId" aria-label={`Appoint ${fn}`} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">{data.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
                 </Field>
