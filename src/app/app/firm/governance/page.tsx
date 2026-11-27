@@ -12,7 +12,8 @@ import { annualReportAction, appointAction, approveAnnualReportAction, inviteAnd
 import { InviteAppoint } from "@/components/invite-appoint";
 import { RESPONSIBILITIES, withoutArticles } from "@/lib/firm/responsibilities";
 import { saveResponsibilitiesAction } from "../../team/training-register/actions";
-import { PageTitle } from "@/components/help";
+import { Help, PageTitle } from "@/components/help";
+import { ROLE_HELP } from "@/components/role-help";
 
 const FN = { "compliance-manager": "Compliance Manager", "compliance-officer": "Compliance Officer" } as const;
 
@@ -42,7 +43,7 @@ export default async function GovernancePage() {
         const current = data.appts.find((a) => a.function === fn && !a.toDate);
         return (
           <section key={fn} className="space-y-2 rounded-xl border border-border p-4 text-sm" data-testid={`appointment-${fn}`}>
-            <h2 className="font-semibold">{FN[fn]}</h2>
+            <h2 className="flex items-center gap-1.5 font-semibold">{FN[fn]}<Help label={`What does the ${FN[fn]} do?`}>{ROLE_HELP[fn]}</Help></h2>
             <p>{current ? `${appointeeName(current, data.allUsers)} since ${current.fromDate.toISOString().slice(0, 10)}` : "Not appointed."}</p>
             {current && (current.notifiedAt
               ? <p className="text-muted">Regulator informed on {current.notifiedAt.toISOString().slice(0, 10)} · <Link href={`/app/firm/governance/notify/${current.id}`} className="text-accent underline">View the email</Link></p>

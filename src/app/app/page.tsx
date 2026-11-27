@@ -16,6 +16,7 @@ import { ObligationBox, ObligationItem } from "@/components/obligations";
 import { AppointInline } from "@/components/appoint-inline";
 import { appointAction, inviteAndAppointAction } from "@/app/app/firm/records-actions";
 import { InviteAppoint } from "@/components/invite-appoint";
+import { ROLE_HELP } from "@/components/role-help";
 import { newsConsentAction } from "./settings/email/actions";
 import { hasSampleData } from "@/lib/server/sample-data";
 import { loadSampleAction, removeSampleAction, setSampleHintAction } from "./sample-actions";
@@ -218,17 +219,9 @@ export default async function Dashboard() {
                   <ObligationItem key={id} o={o} status={statusOf.get(id)!}>
                     {id === "compliance-officer" && canAppoint && (!ob.input.complianceOfficer || !ob.input.responsibleManager) && (
                       <div className="mt-2 space-y-2">
-                        {!ob.input.complianceOfficer && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-officer")} label="Compliance Officer" current={ob.input.complianceOfficer} help={<>
-                          <p><strong className="text-foreground">Compliance Officer</strong>: the person who runs AML compliance day to day.</p>
-                          <p>They put your AML policy and controls into practice and check they work, make sure clients are checked and screened, receive staff&apos;s internal suspicion reports and decide whether to report to the FIU, are the contact point for the FIU and your supervisor, and report to management on how compliance is going.</p>
-                          <p>They need enough seniority, knowledge and time for the role. In a small firm it is often the owner. Tell your supervisor when the Compliance Officer changes.</p>
-                        </>} />}
+                        {!ob.input.complianceOfficer && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-officer")} label="Compliance Officer" current={ob.input.complianceOfficer} help={ROLE_HELP["compliance-officer"]} />}
                         {!ob.input.complianceOfficer && <InviteAppoint action={inviteAndAppointAction.bind(null, "compliance-officer")} label="Compliance Officer" />}
-                        {!ob.input.responsibleManager && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-manager")} label="Compliance Manager" current={ob.input.responsibleManager} help={<>
-                          <p><strong className="text-foreground">Compliance Manager</strong>: the member of management (owner, partner or director) who answers for AML compliance at the top of the firm.</p>
-                          <p>They make sure the Compliance Officer has the time, resources and authority to do the job, approve the firm&apos;s risk assessment and AML policy, receive the Compliance Officer&apos;s reports and act on them, and give senior management approval for high-risk and PEP clients.</p>
-                          <p>In a one-person firm you hold both roles.</p>
-                        </>} />}
+                        {!ob.input.responsibleManager && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-manager")} label="Compliance Manager" current={ob.input.responsibleManager} help={ROLE_HELP["compliance-manager"]} />}
                         {!ob.input.responsibleManager && <InviteAppoint action={inviteAndAppointAction.bind(null, "compliance-manager")} label="Compliance Manager" />}
                       </div>
                     )}
