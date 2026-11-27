@@ -11,10 +11,10 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
 
   const nav = p.getByRole("navigation", { name: "Main" });
   const top = await nav.locator(":scope > ul > li").allInnerTexts().catch(() => []);
-  for (const label of ["Dashboard", "Clients", "Alerts", "Cases & Payments", "Reporting", "Compliance Hub", "Team", "Settings", "Help Centre"]) {
+  for (const label of ["Dashboard", "Clients", "Alerts", "Cases & Payments", "Reporting", "Compliance Hub", "Team", "Settings", "Help"]) {
     await nav.getByText(label, { exact: true }).first().waitFor();
   }
-  for (const gone of ["Identity Verification", "Risk Assessments", "Monitoring Alerts", "FIU Reporting", "My Compliance", "Feature Requests"]) {
+  for (const gone of ["Identity Verification", "Risk Assessments", "Monitoring Alerts", "FIU Reporting", "My Compliance"]) {
     if (await nav.getByText(gone, { exact: true }).count()) throw new Error("✘ old top-level item still in the menu: " + gone);
   }
   void top;
@@ -65,17 +65,14 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
   await p.getByTestId("client-row").filter({ hasText: "Viktor Malenko" }).getByText("Possible match").waitFor();
   log("Clients: type filter, sort, verification and screening columns");
 
-  await p.goto(BASE + "/app/firm/policies");
-  await p.getByRole("navigation", { name: "Compliance Hub sections" }).getByRole("link", { name: "Business Risk Assessment" }).waitFor();
-  await p.goto(BASE + "/app/billing");
-  await p.getByRole("navigation", { name: "Settings sections" }).getByRole("link", { name: "Screening Lists" }).waitFor();
-  await p.goto(BASE + "/app/identity-verification");
-  await p.getByRole("navigation", { name: "Clients sections" }).getByRole("link", { name: "Risk Ratings" }).waitFor();
+  // One menu only (left); grouped pages are sub-items, no tabs across the top.
   await p.goto(BASE + "/app/firm/whistleblowing");
-  await p.getByRole("navigation", { name: "Compliance Hub sections" }).getByRole("link", { name: "Audit Trail" }).waitFor();
-  await p.goto(BASE + "/app/support");
-  await p.getByRole("navigation", { name: "Help sections" }).getByRole("link", { name: "Feature Requests" }).waitFor();
-  log("section tabs on Clients, Compliance Hub, Settings and Help pages, including pages only reached by tabs");
+  if (await p.getByRole("navigation", { name: /sections$/ }).count()) throw new Error("✘ tabs across the top are back");
+  const sub = p.getByRole("navigation", { name: "Main" });
+  for (const l of ["Outsourcing", "Whistleblowing", "Data Protection", "Firm Documents", "Review Pack"]) await sub.getByRole("link", { name: l, exact: true }).waitFor();
+  await sub.getByRole("button", { name: "Help" }).click();
+  await sub.getByRole("link", { name: "Feature Requests", exact: true }).waitFor();
+  log("one menu: former tab-only pages are in the left menu");
 
   await p.goto(BASE + "/app/monitoring-alerts");
   await p.getByRole("heading", { name: "Alerts", exact: true }).waitFor();

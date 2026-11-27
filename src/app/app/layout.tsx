@@ -6,7 +6,6 @@ import { SuggestFeature } from "@/components/suggest-feature";
 import { AppShell, type NavItem } from "@/components/app-shell";
 import { isPlatformAdmin } from "@/lib/server/feedback";
 import { Announcements } from "@/components/announcements";
-import { SectionTabs } from "@/components/section-tabs";
 import { PageDuty } from "@/components/page-duty";
 
 type Child = { href: string; label: string; icon: string; show?: boolean };
@@ -14,13 +13,11 @@ type Entry = Child & { children?: Child[] };
 const strip = ({ href, label, icon }: Child): NavItem => ({ href, label, icon });
 
 /** Pages reached through the tabs of their section rather than the menu (each page checks its own permission). */
-const TAB_ONLY = ["/app/firm/outsourcing", "/app/firm/whistleblowing", "/app/firm/privacy", "/app/firm/documents", "/app/firm/review-pack", "/app/feature-requests"];
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await requireUser();
   const r = s.user.roles;
   // Menu [restructured 24 Nov 2026]: daily work first (clients, alerts, cases), then reporting, then the firm's
-  // programme, team, settings and help. Pages that belong together share one entry and tabs across the page.
+  // programme, team, settings and help. Pages that belong together share one entry with sub-items; there is no second menu across the top [27 Nov 2026].
   const entries: Entry[] = [
     { href: "/app", label: "Dashboard", icon: "dashboard" },
     {
@@ -61,6 +58,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/firm/risk-assessment", label: "Business Risk Assessment", icon: "risk" },
         { href: "/app/firm/policies", label: "AML Program", icon: "policies" },
         { href: "/app/firm/governance", label: "Roles and Duties", icon: "firm" },
+        { href: "/app/firm/outsourcing", label: "Outsourcing", icon: "outsourcing" },
+        { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
+        { href: "/app/firm/privacy", label: "Data Protection", icon: "privacy" },
+        { href: "/app/firm/documents", label: "Firm Documents", icon: "folder" },
+        { href: "/app/firm/review-pack", label: "Review Pack", icon: "report" },
         { href: "/app/audit-trail", label: "Audit Trail", icon: "audit", show: can(r, "securityLog.view") },
       ],
     },
@@ -86,7 +88,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },
       ],
     },
-    { href: "/app/support", label: "Help Centre", icon: "help" },
+    {
+      href: "/app/support", label: "Help", icon: "help",
+      children: [
+        { href: "/app/support", label: "Help Centre", icon: "help" },
+        { href: "/app/feature-requests", label: "Feature Requests", icon: "ideas" },
+      ],
+    },
     ...(isPlatformAdmin(s.user.email)
       ? [{
           href: "/adminpage1&", label: "Backoffice", icon: "settings",
@@ -117,7 +125,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
     >
       <Announcements firmId={s.firm.id} userId={s.user.id} />
-      <SectionTabs allowed={[...nav.flatMap((n) => [n.href, ...(n.children ?? []).map((c) => c.href)]), ...TAB_ONLY]} />
       <PageDuty />
       {children}
     </AppShell>
