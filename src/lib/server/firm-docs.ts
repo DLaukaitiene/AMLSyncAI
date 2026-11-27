@@ -86,7 +86,7 @@ export async function generatePolicies(tx: Tx, ctx: Ctx) {
   const ra = await tx.firmRiskAssessment.findFirst({ where: { status: "IN_FORCE" }, orderBy: { version: "desc" } });
   const raResult = ra?.result as { overallResidual?: string; actions?: string[] } | undefined;
   const input = {
-    firm: { name: firm.name, sectors: firm.sectors, memberState: firm.homeState, onePersonFirm: users.length <= 1 },
+    firm: { name: firm.name, sectors: firm.sectors, memberState: firm.homeState, onePersonFirm: firm.size === 1 },
     officers: {
       complianceManager: users.filter((u) => u.roles.includes("OWNER")).map((u) => u.name).join(", ") || "—",
       complianceOfficer: users.filter((u) => u.roles.includes("COMPLIANCE_OFFICER")).map((u) => u.name).join(", ") || "—",

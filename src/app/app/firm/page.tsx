@@ -105,7 +105,7 @@ export default async function FirmPage() {
               <div className="flex flex-wrap gap-4">{CLIENT_TYPES.map((t) => <label key={t} className="flex items-center gap-2"><input type="checkbox" name="clientTypes" value={t} defaultChecked={firm.clientTypes.includes(t)} /> {t}</label>)}</div>
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Number of staff" name="size" type="number" defaultValue={firm.size ?? ""} />
+              <Field label="Number of staff (including you)" name="size" type="number" defaultValue={firm.size ?? ""} hint="1 means a one-person firm: staff checks and an internal whistleblowing channel aren't needed." />
               <Field label="Cross-border business (%)" name="crossBorderPct" type="number" defaultValue={firm.crossBorderPct ?? ""} />
             </div>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="usesCash" defaultChecked={firm.usesCash} /> We accept cash</label>

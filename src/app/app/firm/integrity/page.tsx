@@ -11,7 +11,7 @@ export default async function IntegrityPage() {
   const s = await requireUser();
   const manage = can(s.user.roles, "approve.compliance");
   const data = await withTenant(s.firm.id, async (tx) => ({
-    onePerson: await isOnePersonFirm(tx),
+    onePerson: await isOnePersonFirm(tx, s.firm.id),
     mine: await tx.integrityDeclaration.findFirst({ where: { userId: s.user.id }, orderBy: { declaredAt: "desc" } }),
     all: manage ? await tx.integrityDeclaration.findMany({ orderBy: { declaredAt: "desc" }, take: 200 }) : [],
     names: new Map((await tx.user.findMany({ select: { id: true, name: true } })).map((u) => [u.id, u.name])),

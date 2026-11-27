@@ -13,8 +13,12 @@ import { addCalendarDays, addYears, toIsoDate } from "@/lib/rules/dates";
 
 type Ctx = { firmId: string; userId: string };
 
-export async function isOnePersonFirm(tx: Tx): Promise<boolean> {
-  return (await tx.user.count({ where: { deactivatedAt: null, external: false } })) <= 1;
+/**
+ * One-person firm: decided by the firm's own answer to "Number of staff" in its firm profile
+ * (Compliance Hub → Overview), not by how many people use the app [27 Nov 2026].
+ */
+export async function isOnePersonFirm(tx: Tx, firmId: string): Promise<boolean> {
+  return (await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { size: true } })).size === 1;
 }
 
 // ---------------------------------------------------------------------------

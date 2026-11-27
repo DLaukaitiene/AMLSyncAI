@@ -41,13 +41,15 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
   ]);
   const declared = new Set((await tx.integrityDeclaration.findMany({ where: { declaredAt: { gte: yearAgo } }, select: { userId: true } })).map((x) => x.userId));
   const screened = new Set((await tx.staffScreening.findMany({ select: { userId: true } })).map((x) => x.userId));
-  const onePerson = await isOnePersonFirm(tx);
+  const onePerson = await isOnePersonFirm(tx, firmId);
+  const staffUnknown = (await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { size: true } })).size == null;
   const wb = onePerson ? [] : await tx.whistleblowingReport.findMany({ where: { status: "received" }, select: { createdAt: true } });
 
   return {
     sectors: firm.sectors,
     staff: staff.map((u) => ({ id: u.id, name: u.name })),
     onePerson,
+    staffUnknown,
     complianceOfficer: appointed("compliance-officer"),
     responsibleManager: appointed("compliance-manager"),
     unassignedDuties: resolveDuties(resp, { "compliance-manager": holderOf("compliance-manager"), "compliance-officer": holderOf("compliance-officer") }, name).filter((d) => d.source === "none").length,

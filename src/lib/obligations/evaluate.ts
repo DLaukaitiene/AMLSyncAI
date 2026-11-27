@@ -3,6 +3,7 @@ import { OBLIGATIONS, type Obligation, type ObligationId } from "./catalog";
 /** What the dashboard knows about the firm, gathered on the server. */
 export interface ObligationInput {
   onePerson: boolean;
+  staffUnknown?: boolean; // the firm hasn't said how many staff it has yet
   complianceOfficer: string | null; // name
   responsibleManager: string | null; // name
   unassignedDuties: number;
@@ -74,9 +75,11 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
       : i.staffWithoutTraining ? s("training", "todo", `${n(i.staffWithoutTraining, "person", "people")} without AML training in the last 12 months.`)
       : s("training", "done", "Everyone trained in the last 12 months."),
     "staff-integrity": i.onePerson ? s("staff-integrity", "na", "Not needed for a one-person firm.")
+      : i.staffUnknown ? s("staff-integrity", "todo", "Tell us your number of staff first (Compliance Hub → Overview). If it's just you, this isn't needed.")
       : i.integrityDue || i.staffScreeningOpen ? s("staff-integrity", "todo", [i.integrityDue ? `${n(i.integrityDue, "declaration")} due` : "", i.staffScreeningOpen ? "staff screening to run or review" : ""].filter(Boolean).join(" · ") + ".")
       : s("staff-integrity", "done", "Declarations current and staff screened."),
     whistleblowing: i.onePerson ? s("whistleblowing", "na", "Not needed for a one-person firm.")
+      : i.staffUnknown ? s("whistleblowing", "todo", "Tell us your number of staff first (Compliance Hub → Overview). If it's just you, this isn't needed.")
       : i.whistleblowingLate ? s("whistleblowing", "overdue", `${n(i.whistleblowingLate, "report")} not acknowledged within 7 days.`)
       : i.whistleblowingUnacknowledged ? s("whistleblowing", "todo", `${n(i.whistleblowingUnacknowledged, "report")} to acknowledge.`)
       : s("whistleblowing", "done", "The confidential channel is open to staff."),

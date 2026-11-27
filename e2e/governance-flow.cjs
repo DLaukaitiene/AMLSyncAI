@@ -14,11 +14,13 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   const { p } = await signupFirm(b, { code: process.env.CODE, company: "Teisė ir apskaita UAB", email: "owner@teise.lt", sector: "ACCOUNTANT" });
   p.on("pageerror", (e) => errors.push(e.message));
 
-  // One-person firm: Art. 13/14 hidden with reason
+  // One-person firm (the firm says it has 1 member of staff): Art. 13/14 hidden with reason
+  await p.goto(BASE + "/app/firm"); await p.getByLabel("Number of staff (including you)").fill("1"); await submit(p, "Save firm profile", /^Saved/);
   await p.goto(BASE + "/app/firm/whistleblowing"); await p.getByText(/not needed in a one-person firm/).waitFor();
   await p.goto(BASE + "/app/firm/integrity"); await p.getByText(/don't apply to a one-person firm/).waitFor();
   log("one-person firm: whistleblowing and integrity hidden with the reason");
 
+  await p.goto(BASE + "/app/firm"); await p.getByLabel("Number of staff (including you)").fill("2"); await submit(p, "Save firm profile", /^Saved/);
   // Invite Bob
   await p.goto(BASE + "/app/team");
   await p.getByLabel("Name *").fill("Viktor Malenko"); await p.getByLabel("Email *").fill("bob@teise.lt");

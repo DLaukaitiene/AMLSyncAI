@@ -30,7 +30,7 @@ export default async function GovernancePage() {
       allUsers: new Map((await tx.user.findMany()).map((u) => [u.id, u.name])),
       reports: await tx.policyDocument.findMany({ where: { kind: "annual-report", status: { in: ["DRAFT", "IN_FORCE"] } }, orderBy: { version: "desc" } }),
       duties: ((await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { responsibilities: true } })).responsibilities ?? {}) as Record<string, unknown>,
-      onePerson: await isOnePersonFirm(tx),
+      onePerson: await isOnePersonFirm(tx, s.firm.id),
     };
   });
   const mgmt = can(s.user.roles, "approve.management");

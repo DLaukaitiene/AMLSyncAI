@@ -8,6 +8,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   const errors = [];
   const { p } = await signupFirm(b, { code: process.env.CODE, company: "Pareigos UAB", email: "owner@pareigos.lt", sector: "ESTATE_AGENT" });
   p.on("pageerror", (e) => errors.push(e.message));
+  await p.goto(BASE + "/app/firm"); await p.getByLabel("Number of staff (including you)").fill("1"); await submit(p, "Save firm profile", /^Saved/);
   await p.goto(BASE + "/app");
 
   // Obligations on the dashboard: open duties first, settled ones folded away

@@ -153,7 +153,7 @@ export async function whistleblowAction(_: ActionState, fd: FormData): Promise<A
   const text = String(fd.get("text") ?? "").trim();
   if (text.length < 20) return { error: "Describe what you want to report (at least 20 characters).", fieldErrors: { text: ["Required."] } };
   await withTenant(s.firm.id, async (tx) => {
-    if (await isOnePersonFirm(tx)) throw new Error("Not available for one-person firms.");
+    if (await isOnePersonFirm(tx, s.firm.id)) throw new Error("Not available for one-person firms.");
     await submitWhistleblowing(tx, ctxOf(s), text, fd.get("anonymous") === "on");
   });
   return { message: "Your report was received. It will be acknowledged within 7 days." };

@@ -13,7 +13,7 @@ export default async function WhistleblowingPage() {
   const s = await requireUser();
   const handle = can(s.user.roles, "approve.compliance");
   const data = await withTenant(s.firm.id, async (tx) => ({
-    onePerson: await isOnePersonFirm(tx),
+    onePerson: await isOnePersonFirm(tx, s.firm.id),
     external: (await currentProfile(tx, s.firm.id)).profile.whistleblowing?.externalChannel,
     reports: handle ? (await tx.whistleblowingReport.findMany({ orderBy: { createdAt: "desc" } })).map((r) => ({ ...r, text: (JSON.parse(decryptField(s.firm.id, r.contentEnc)) as { text: string }).text })) : [],
     names: new Map((await tx.user.findMany({ select: { id: true, name: true } })).map((u) => [u.id, u.name])),
