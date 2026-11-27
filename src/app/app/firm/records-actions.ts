@@ -19,7 +19,8 @@ export async function appointAction(fn: "compliance-manager" | "compliance-offic
   const s = await requireUser("approve.management");
   const userId = String(fd.get("userId") ?? "");
   if (!userId) return { error: "Choose a person first." };
-  if (!hasRecentMfa(s)) return STEP_UP(fd.get("from") === "dashboard" ? "/app" : "/app/firm/governance");
+  // No 2FA step here: owners asked to appoint or change the Compliance Officer and responsible manager
+  // without confirming it's them [27 Nov 2026]. The change is still audited and only management can make it.
   const reason = String(fd.get("reason") ?? "").trim();
   try {
     const r = await withTenant(s.firm.id, (tx) => appoint(tx, ctxOf(s), fn, userId, reason || "Change of appointment"));
