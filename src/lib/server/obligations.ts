@@ -20,7 +20,7 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
   const staff = users.filter((u) => !u.external);
   const name = new Map(users.map((u) => [u.id, u.name]));
   const appts = await tx.appointment.findMany({ where: { toDate: null } });
-  const appointed = (fn: string) => { const a = appts.find((x) => x.function === fn); return a ? name.get(a.userId) ?? null : null; };
+  const appointed = (fn: string) => { const a = appts.find((x) => x.function === fn); return a ? (a.userId ? name.get(a.userId) : null) ?? (a.name ? `${a.name} (invited)` : null) : null; };
   const resp = (firm.responsibilities ?? {}) as Record<string, string[]>;
   const { profile } = await currentProfile(tx, firmId);
   const openTaskOverdue = (kinds: string[]) => tx.task.count({ where: { status: "OPEN", kind: { in: kinds }, dueOn: { lt: today } } });

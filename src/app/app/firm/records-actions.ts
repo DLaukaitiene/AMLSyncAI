@@ -12,6 +12,9 @@ import { approvePolicy } from "@/lib/server/firm-docs";
 import { addCalendarDays, toIsoDate } from "@/lib/rules/dates";
 import { reviewStaffScreening, screenStaff } from "@/lib/server/staff-screening";
 import { audit } from "@/lib/server/audit";
+import { adminDb } from "@/lib/server/db";
+import { createInvitation, inviteSchema } from "@/lib/server/auth/flows";
+import { EmailDeliveryError } from "@/lib/server/email";
 
 const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 const ctxOf = (s: { firm: { id: string }; user: { id: string } }) => ({ firmId: s.firm.id, userId: s.user.id });
@@ -31,6 +34,34 @@ export async function appointAction(fn: "compliance-manager" | "compliance-offic
   } catch (e) {
     return { error: (e as Error).message };
   }
+}
+
+/**
+ * Invite and appoint: for a Compliance Officer or responsible manager who isn't on the app yet.
+ * Sends the invitation and records the appointment at once; it is linked to them when they accept.
+ */
+export async function inviteAndAppointAction(fn: "compliance-manager" | "compliance-officer", _: ActionState, fd: FormData): Promise<ActionState> {
+  const s = await requireUser("approve.management");
+  const parsed = inviteSchema.safeParse({ name: fd.get("name"), email: fd.get("email"), role: fn === "compliance-officer" ? "COMPLIANCE_OFFICER" : "OWNER", allowExternal: false });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the name and email." };
+  const reason = String(fd.get("reason") ?? "").trim();
+  const existing = await adminDb.user.findUnique({ where: { email: parsed.data.email }, select: { firmId: true, deactivatedAt: true } });
+  if (existing) return { error: existing.firmId === s.firm.id && !existing.deactivatedAt ? "This person is already on the app: choose them from the list above." : "This email already has an AMLSync App account." };
+  try {
+    const r = await createInvitation(s.firm.id, s.user.id, parsed.data);
+    if (!r.ok) return { error: r.error };
+  } catch (e) {
+    if (e instanceof EmailDeliveryError) return { error: "The invitation email could not be sent. Try again in a few minutes." };
+    throw e;
+  }
+  try {
+    await withTenant(s.firm.id, (tx) => appoint(tx, ctxOf(s), fn, { invited: { name: parsed.data.name, email: parsed.data.email } }, reason || "Change of appointment"));
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath("/app/firm/governance");
+  revalidatePath("/app");
+  return { message: `Invitation sent to ${parsed.data.email} and appointed. Now inform the regulator: use the Inform the Regulator button.` };
 }
 
 /** Records that the supervisor was informed of an appointment (or un-does it). */

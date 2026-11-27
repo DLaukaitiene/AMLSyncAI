@@ -23,7 +23,7 @@ export default async function InformRegulatorPage({ params }: { params: Promise<
     const prev = await tx.appointment.findFirst({ where: { function: fn, toDate: { not: null }, fromDate: { lte: a.fromDate }, id: { not: a.id } }, orderBy: { toDate: "desc" } });
     const otherFn: AppointmentFn = fn === "compliance-officer" ? "compliance-manager" : "compliance-officer";
     const other = await tx.appointment.findFirst({ where: { function: otherFn, toDate: null } });
-    const ids = [a.userId, prev?.userId, other?.userId, a.notifiedBy].filter(Boolean) as string[];
+    const ids = [a.userId, prev?.userId, other?.userId, a.notifiedBy].filter((x): x is string => !!x);
     const users = new Map((await tx.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true, email: true } })).map((u) => [u.id, u]));
     const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { name: true, homeState: true, sectors: true } });
     let supervisors: { name: string; channel: string; notes?: string; sector: string }[] = [];
@@ -32,13 +32,14 @@ export default async function InformRegulatorPage({ params }: { params: Promise<
   });
   if (!d) notFound();
   const { a, fn, prev, other, users, firm } = d;
-  const person = users.get(a.userId);
+  const who = (x: { userId: string | null; name: string | null; email: string | null }) => (x.userId ? users.get(x.userId) : null) ?? (x.name ? { name: x.name, email: x.email ?? "" } : null);
+  const person = who(a);
   if (!person) notFound();
   // Prefer the supervisors for the firm's own sectors; show all if none match.
   const mine = d.supervisors.filter((x) => firm.sectors.some((sec) => x.sector.toUpperCase().replace(/\W+/g, "_").includes(sec)));
   const supervisors = mine.length ? mine : d.supervisors;
-  const prevUser = prev ? users.get(prev.userId) : null;
-  const otherUser = other ? users.get(other.userId) : null;
+  const prevUser = prev ? who(prev) : null;
+  const otherUser = other ? who(other) : null;
   const { subject, body } = regulatorNotice({
     fn,
     firm: { name: firm.name, country: countryName(firm.homeState) },
@@ -85,20 +86,18 @@ export default async function InformRegulatorPage({ params }: { params: Promise<
         <p className="text-muted">Send it by email, or through the supervisor&apos;s portal if they ask for that. Some supervisors also want a signed letter: if so, attach this text as a PDF signed by management.</p>
       </section>
 
-      <section className="space-y-2 rounded-2xl border border-border p-4 text-sm">
-        <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">2. Subject</h2><CopyButton text={subject} /></div>
+      <section className="space-y-3 rounded-2xl border border-border p-4 text-sm">
+        <h2 className="text-lg font-semibold">2. Email</h2>
+        <div className="flex items-center justify-between gap-3"><span className="font-medium">Subject</span><CopyButton text={subject} label="Copy subject" /></div>
         <p className="rounded-xl bg-surface p-3 font-medium">{subject}</p>
-      </section>
-
-      <section className="space-y-2 rounded-2xl border border-border p-4 text-sm">
-        <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">3. Email</h2><CopyButton text={body} /></div>
+        <div className="flex items-center justify-between gap-3"><span className="font-medium">Email text</span><CopyButton text={body} label="Copy email text" /></div>
         <pre className="whitespace-pre-wrap rounded-xl bg-surface p-3 font-[inherit]">{body}</pre>
         <p className="text-muted">Check the text before you send it, and keep a copy of what you sent.</p>
       </section>
 
       {!a.notifiedAt && (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-4 text-sm">
-          <p><strong>4. Sent it?</strong> Record it here so the reminder goes away and your records show when the regulator was informed.</p>
+          <p><strong>3. Sent it?</strong> Record it here so the reminder goes away and your records show when the regulator was informed.</p>
           <ActionButton action={markRegulatorInformedAction.bind(null, a.id, true)} variant="primary">I&apos;ve informed the regulator</ActionButton>
         </section>
       )}

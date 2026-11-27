@@ -2,13 +2,14 @@ import Link from "next/link";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
-import { ensureAppointments } from "@/lib/server/governance";
+import { appointeeName, ensureAppointments } from "@/lib/server/governance";
 import type { GeneratedDoc } from "@/lib/docs/model";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { StepUpLink } from "@/components/step-up";
 import { DocView } from "@/components/doc-view";
-import { annualReportAction, appointAction, approveAnnualReportAction } from "../records-actions";
+import { annualReportAction, appointAction, approveAnnualReportAction, inviteAndAppointAction } from "../records-actions";
+import { InviteAppoint } from "@/components/invite-appoint";
 import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
 import { saveResponsibilitiesAction } from "../../team/training-register/actions";
 import { PageTitle } from "@/components/help";
@@ -42,12 +43,12 @@ export default async function GovernancePage() {
         return (
           <section key={fn} className="space-y-2 rounded-xl border border-border p-4 text-sm" data-testid={`appointment-${fn}`}>
             <h2 className="font-semibold">{FN[fn]}</h2>
-            <p>{current ? `${data.allUsers.get(current.userId)} since ${current.fromDate.toISOString().slice(0, 10)}` : "Not appointed."}</p>
+            <p>{current ? `${appointeeName(current, data.allUsers)} since ${current.fromDate.toISOString().slice(0, 10)}` : "Not appointed."}</p>
             {current && (current.notifiedAt
               ? <p className="text-muted">Regulator informed on {current.notifiedAt.toISOString().slice(0, 10)} · <Link href={`/app/firm/governance/notify/${current.id}`} className="text-accent underline">View the email</Link></p>
               : manageDuties && <Link href={`/app/firm/governance/notify/${current.id}`} className="inline-flex rounded-full bg-brand px-4 py-1.5 font-semibold text-brand-ink hover:brightness-105" data-testid={`inform-regulator-${fn}`}>Inform the Regulator</Link>)}
             {data.appts.filter((a) => a.function === fn && a.toDate).map((a) => (
-              <p key={a.id} className="text-muted">Previously {data.allUsers.get(a.userId)}: {a.fromDate.toISOString().slice(0, 10)} – {a.toDate!.toISOString().slice(0, 10)}{a.reason ? ` (${a.reason})` : ""}</p>
+              <p key={a.id} className="text-muted">Previously {appointeeName(a, data.allUsers)}: {a.fromDate.toISOString().slice(0, 10)} – {a.toDate!.toISOString().slice(0, 10)}{a.reason ? ` (${a.reason})` : ""}</p>
             ))}
             {mgmt && (
               <ActionForm action={appointAction.bind(null, fn)} className="grid gap-3 sm:grid-cols-3">
@@ -58,6 +59,7 @@ export default async function GovernancePage() {
                 <div className="flex items-end gap-2"><Submit variant="secondary">Appoint</Submit><StepUpLink /></div>
               </ActionForm>
             )}
+            {mgmt && <InviteAppoint action={inviteAndAppointAction.bind(null, fn)} label={FN[fn]} withReason={!!current} />}
           </section>
         );
       })}

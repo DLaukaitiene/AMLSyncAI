@@ -22,7 +22,7 @@ export interface NoticeInput {
 export function regulatorNotice(i: NoticeInput): { subject: string; body: string } {
   const role = ROLE_NAME[i.fn];
   const short = i.fn === "compliance-officer" ? "Compliance Officer" : "responsible member of management";
-  const subject = `${i.firm.name}: ${i.previous ? "change of" : "appointment of"} ${short} (AMLR Article 11)`;
+  const subject = `${i.firm.name}: ${i.previous ? "change of" : "appointment of"} ${short}`;
   const lines = [
     "Dear Sir or Madam,",
     "",

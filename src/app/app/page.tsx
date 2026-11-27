@@ -14,7 +14,8 @@ import { OBLIGATION_BOXES, OBLIGATIONS } from "@/lib/obligations/catalog";
 import { obligationSummary } from "@/lib/obligations/evaluate";
 import { ObligationBox, ObligationItem } from "@/components/obligations";
 import { AppointInline } from "@/components/appoint-inline";
-import { appointAction } from "@/app/app/firm/records-actions";
+import { appointAction, inviteAndAppointAction } from "@/app/app/firm/records-actions";
+import { InviteAppoint } from "@/components/invite-appoint";
 import { newsConsentAction } from "./settings/email/actions";
 import { hasSampleData } from "@/lib/server/sample-data";
 import { loadSampleAction, removeSampleAction, setSampleHintAction } from "./sample-actions";
@@ -77,7 +78,7 @@ export default async function Dashboard() {
       obligations: await firmObligations(tx, s.firm.id, { seeCases }),
       usage: await screeningUsage(tx, s.firm.id),
       sample: await hasSampleData(tx),
-      uninformed: seeStaff ? await tx.appointment.findMany({ where: { toDate: null, notifiedAt: null }, select: { id: true, function: true, userId: true } }) : [],
+      uninformed: seeStaff ? await tx.appointment.findMany({ where: { toDate: null, notifiedAt: null }, select: { id: true, function: true, userId: true, name: true } }) : [],
     };
   });
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
@@ -106,7 +107,7 @@ export default async function Dashboard() {
     ...(seeStaff && oi.whistleblowingLate ? [{ key: "wb-late", tone: "red" as const, href: "/app/firm/whistleblowing", text: <><strong>{oi.whistleblowingLate} whistleblowing report(s)</strong> not acknowledged within 7 days</> }] : []),
     ...(oi.trainingOverdue ? [{ key: "training-late", tone: "red" as const, href: "/app/team/training-register", text: <><strong>{oi.trainingOverdue} training(s)</strong> overdue</> }] : []),
     // Amber: waiting for someone, or due soon.
-    ...data.uninformed.map((x) => ({ key: `inform-${x.id}`, tone: "amber" as const, href: `/app/firm/governance/notify/${x.id}`, text: <>Inform the regulator: <strong>{data.userNames.get(x.userId) ?? "someone"}</strong> is your {x.function === "compliance-officer" ? "Compliance Officer" : "responsible manager"}</> })),
+    ...data.uninformed.map((x) => ({ key: `inform-${x.id}`, tone: "amber" as const, href: `/app/firm/governance/notify/${x.id}`, text: <>Inform the regulator: <strong>{(x.userId ? data.userNames.get(x.userId) : null) ?? x.name ?? "someone"}</strong> is your {x.function === "compliance-officer" ? "Compliance Officer" : "responsible manager"}</> })),
     ...(oi.highRiskOrPepAwaitingApproval ? [{ key: "hr-approval", tone: "amber" as const, href: "/app/risk-assessments?risk=HIGH", text: <><strong>{oi.highRiskOrPepAwaitingApproval} high-risk or PEP client(s)</strong> waiting for senior management approval</> }] : []),
     ...(oi.clientsInProgress - oi.clientsStale > 0 ? [{ key: "in-progress", tone: "amber" as const, href: "/app/clients?status=open", text: <><strong>{oi.clientsInProgress - oi.clientsStale} client file(s)</strong> not yet decided: finish the checks before you start work</> }] : []),
     ...(oi.internalReportsOpen ? [{ key: "internal-reports", tone: "amber" as const, href: "/app/cases", text: <><strong>{oi.internalReportsOpen} internal suspicion report(s)</strong> to decide</> }] : []),
@@ -222,11 +223,13 @@ export default async function Dashboard() {
                           <p>They put your AML policy and controls into practice and check they work, make sure clients are checked and screened, receive staff&apos;s internal suspicion reports and decide whether to report to the FIU, are the contact point for the FIU and your supervisor, and report to management on how compliance is going.</p>
                           <p>They need enough seniority, knowledge and time for the role. In a small firm it is often the owner. Tell your supervisor when the Compliance Officer changes.</p>
                         </>} />}
+                        {!ob.input.complianceOfficer && <InviteAppoint action={inviteAndAppointAction.bind(null, "compliance-officer")} label="Compliance Officer" />}
                         {!ob.input.responsibleManager && <AppointInline staff={ob.input.staff} action={appointAction.bind(null, "compliance-manager")} label="Responsible manager" current={ob.input.responsibleManager} help={<>
                           <p><strong className="text-foreground">Responsible manager</strong>: the member of management (owner, partner or director) who answers for AML compliance at the top of the firm.</p>
                           <p>They make sure the Compliance Officer has the time, resources and authority to do the job, approve the firm&apos;s risk assessment and AML policy, receive the Compliance Officer&apos;s reports and act on them, and give senior management approval for high-risk and PEP clients.</p>
                           <p>In a one-person firm you hold both roles.</p>
                         </>} />}
+                        {!ob.input.responsibleManager && <InviteAppoint action={inviteAndAppointAction.bind(null, "compliance-manager")} label="Responsible manager" />}
                       </div>
                     )}
                   </ObligationItem>

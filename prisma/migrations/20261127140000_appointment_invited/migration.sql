@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Appointment" ALTER COLUMN "userId" DROP NOT NULL;
+ALTER TABLE "Appointment" ADD COLUMN IF NOT EXISTS "name" TEXT,
+ADD COLUMN IF NOT EXISTS "email" TEXT;

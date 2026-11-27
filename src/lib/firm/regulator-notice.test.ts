@@ -11,7 +11,7 @@ const base = {
 describe("regulatorNotice", () => {
   it("first appointment of a Compliance Officer", () => {
     const n = regulatorNotice({ ...base, fn: "compliance-officer" });
-    expect(n.subject).toBe("Acme UAB: appointment of Compliance Officer (AMLR Article 11)");
+    expect(n.subject).toBe("Acme UAB: appointment of Compliance Officer");
     expect(n.body).toContain("Name: Dana Doe");
     expect(n.body).toContain("Effective from: 2026-11-27");
     expect(n.body).not.toContain("replaces");

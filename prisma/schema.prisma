@@ -975,7 +975,9 @@ model Appointment {
   id        String    @id @default(uuid()) @db.Uuid
   firmId    String    @db.Uuid
   function  String // compliance-manager | compliance-officer
-  userId    String    @db.Uuid
+  userId    String?   @db.Uuid // null while the appointed person hasn't accepted their invitation yet
+  name      String? // invited person's name (set when appointed by invitation)
+  email     String? // invited person's email; linked to their user when they accept
   fromDate  DateTime  @db.Date
   toDate    DateTime? @db.Date
   reason    String? // reason for ending the appointment

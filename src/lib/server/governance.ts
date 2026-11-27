@@ -21,40 +21,54 @@ export async function isOnePersonFirm(tx: Tx): Promise<boolean> {
 // Appointments (Art. 11). Removing the compliance officer → supervisor notice draft.
 // ---------------------------------------------------------------------------
 
-export async function appoint(tx: Tx, ctx: Ctx, fn: "compliance-manager" | "compliance-officer", userId: string, reason: string) {
+/** Who is appointed: a user of the app, or a person just invited who hasn't accepted yet. */
+export type AppointTarget = { userId: string } | { invited: { name: string; email: string } };
+
+export async function appoint(tx: Tx, ctx: Ctx, fn: "compliance-manager" | "compliance-officer", target: string | AppointTarget, reason: string) {
+  const t: AppointTarget = typeof target === "string" ? { userId: target } : target;
   const today = toIsoDate(new Date());
-  const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
-  if (user.deactivatedAt) throw new Error("This user has left the firm.");
-  if (user.external) throw new Error("External users can't hold this function (Art. 18: these tasks can't be outsourced).");
-  const role = fn === "compliance-officer" ? "COMPLIANCE_OFFICER" : "OWNER";
-  if (!user.roles.includes(role)) await tx.user.update({ where: { id: userId }, data: { roles: [...user.roles, role] } });
+  let person: { userId: string | null; name: string; email: string | null };
+  if ("userId" in t) {
+    const user = await tx.user.findUniqueOrThrow({ where: { id: t.userId } });
+    if (user.deactivatedAt) throw new Error("This user has left the firm.");
+    if (user.external) throw new Error("External users can't hold this function (Art. 18: these tasks can't be outsourced).");
+    const role = fn === "compliance-officer" ? "COMPLIANCE_OFFICER" : "OWNER";
+    if (!user.roles.includes(role)) await tx.user.update({ where: { id: t.userId }, data: { roles: [...user.roles, role] } });
+    person = { userId: user.id, name: user.name, email: null };
+  } else {
+    person = { userId: null, name: t.invited.name, email: t.invited.email };
+  }
   const current = await tx.appointment.findFirst({ where: { function: fn, toDate: null } });
-  if (current?.userId === userId) return { noticeId: null };
+  if (current && (person.userId ? current.userId === person.userId : current.email === person.email)) return { noticeId: null, appointmentId: current.id };
   let noticeId: string | null = null;
   if (current) {
     await tx.appointment.update({ where: { id: current.id }, data: { toDate: new Date(today), reason } });
     if (fn === "compliance-officer") {
-      const prev = await tx.user.findUniqueOrThrow({ where: { id: current.userId } });
+      const prevName = current.userId ? (await tx.user.findUniqueOrThrow({ where: { id: current.userId } })).name : current.name ?? "—";
       const { version } = await currentProfile(tx, ctx.firmId);
       const firm = await tx.firm.findUniqueOrThrow({ where: { id: ctx.firmId } });
       const r = await tx.report.create({
         data: {
           firmId: ctx.firmId, type: "SUPERVISOR_NOTICE", format: "text", euCoreVersion: EU_CORE_VERSION, countryProfileVersion: version,
           contentEnc: encryptField(ctx.firmId, JSON.stringify({
-            subject: "Removal of the compliance officer (AMLR Art. 11)", firm: firm.name, removedOfficer: prev.name, removedOn: today,
-            reasons: reason, newOfficer: user.name, newOfficerFrom: today,
+            subject: "Removal of the compliance officer (AMLR Art. 11)", firm: firm.name, removedOfficer: prevName, removedOn: today,
+            reasons: reason, newOfficer: person.name, newOfficerFrom: today,
           })),
         },
       });
       noticeId = r.id;
     }
   }
-  const a = await tx.appointment.create({ data: { firmId: ctx.firmId, function: fn, userId, fromDate: new Date(today) } });
-  await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "Appointment", objectId: a.id, fields: ["function", "userId"] });
-  return { noticeId };
+  const a = await tx.appointment.create({ data: { firmId: ctx.firmId, function: fn, userId: person.userId, name: person.userId ? null : person.name, email: person.email, fromDate: new Date(today) } });
+  await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "Appointment", objectId: a.id, fields: ["function", person.userId ? "userId" : "email"] });
+  return { noticeId, appointmentId: a.id };
 }
 
-/** Makes sure the first users holding the roles have appointment records. */
+/** Name to show for an appointment: the user's name, or the invited person's name. */
+export function appointeeName(a: { userId: string | null; name: string | null }, users: Map<string, string>): string {
+  return (a.userId ? users.get(a.userId) : null) ?? (a.name ? `${a.name} (invited)` : "—");
+}
+
 export async function ensureAppointments(tx: Tx, firmId: string) {
   for (const [fn, role] of [["compliance-manager", "OWNER"], ["compliance-officer", "COMPLIANCE_OFFICER"]] as const) {
     if (await tx.appointment.count({ where: { function: fn } })) continue;
@@ -73,7 +87,7 @@ export async function collectAnnualStats(tx: Tx, firmId: string): Promise<Annual
   const since = new Date(from);
   const firm = await tx.firm.findUniqueOrThrow({ where: { id: firmId } });
   const users = await tx.user.findMany({ where: { deactivatedAt: null } });
-  const name = (fn: string) => tx.appointment.findFirst({ where: { function: fn, toDate: null } }).then((a) => users.find((u) => u.id === a?.userId)?.name ?? "—");
+  const name = (fn: string) => tx.appointment.findFirst({ where: { function: fn, toDate: null } }).then((a) => users.find((u) => u.id === a?.userId)?.name ?? a?.name ?? "—");
   const files = await tx.cddFile.findMany({ where: { role: "CLIENT" }, include: { riskAssessments: { orderBy: { createdAt: "desc" }, take: 1 }, party: true } });
   const active = files.filter((f) => ["COMPLETE", "SDD", "EDD"].includes(f.status));
   const byRisk: Record<string, number> = {};
