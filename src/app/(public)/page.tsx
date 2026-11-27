@@ -26,7 +26,7 @@ export default function Home() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/signup" className="rounded-full bg-brand px-6 py-3 font-semibold text-brand-ink hover:brightness-105">Start {TRIAL_DAYS}-day free trial</Link>
-          <Link href="/pricing" className="rounded-full border-2 border-white/35 px-6 py-3 font-semibold text-white hover:border-white">See pricing</Link>
+          <Link href="/contact?topic=demo" className="rounded-full border-2 border-white/35 px-6 py-3 font-semibold text-white hover:border-white">Book a demo</Link>
         </div>
         <p className="mt-4 text-sm text-white/55">From €{(PLANS.solo.monthlyCents! / 100).toFixed(0)} per month. No card needed.</p>
       </section>
