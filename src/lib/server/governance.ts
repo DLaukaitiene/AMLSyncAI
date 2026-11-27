@@ -59,7 +59,7 @@ export async function appoint(tx: Tx, ctx: Ctx, fn: "compliance-manager" | "comp
       noticeId = r.id;
     }
   }
-  const a = await tx.appointment.create({ data: { firmId: ctx.firmId, function: fn, userId: person.userId, name: person.userId ? null : person.name, email: person.email, fromDate: new Date(today) } });
+  const a = await tx.appointment.create({ data: { firmId: ctx.firmId, function: fn, userId: person.userId, name: person.userId ? null : person.name, email: person.email, fromDate: new Date(today), needsNotice: true } });
   await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "create", objectType: "Appointment", objectId: a.id, fields: ["function", person.userId ? "userId" : "email"] });
   return { noticeId, appointmentId: a.id };
 }

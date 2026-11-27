@@ -24,12 +24,14 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   // Responsibilities: now on "Roles and duties" (the old address redirects)
   await p.goto(BASE + "/app/team/responsibilities");
   await p.waitForURL(/\/app\/firm\/governance/);
-  await p.getByText(/14 duties have nobody assigned/).waitFor();
-  await p.getByRole("checkbox", { name: /Compliance Officer \(Art\. 11\(2\)\)/ }).check();
-  await submit(p, "Save responsibilities", "Responsibilities saved.");
-  await p.reload();
-  await p.getByText(/13 duties have nobody assigned/).waitFor();
-  log("Responsibilities: duty assigned and saved; unassigned count shown");
+  // Duties follow the two roles automatically; hand one to a colleague with Reassign.
+  await p.getByTestId("duties-covered").waitFor();
+  const training = p.getByTestId("responsibility").filter({ hasText: "Staff training" });
+  await training.getByText("Reassign").click();
+  await training.getByLabel("Reassign: Staff training").selectOption({ label: "Viktor Malenko" });
+  await training.getByRole("button", { name: "Save" }).click();
+  await training.getByText("Reassigned").waitFor();
+  log("Duties: filled in from the roles; training reassigned to a colleague");
 
   // Training Register
   await p.goto(BASE + "/app/team/training-register");

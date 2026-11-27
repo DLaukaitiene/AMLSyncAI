@@ -85,11 +85,15 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 
   // Appoint Bob as compliance officer → removal notice for the previous officer
   await p.goto(BASE + "/app/firm/governance");
-  const co = p.getByTestId("appointment-compliance-officer");
-  await co.locator("select[name=userId]").selectOption({ label: "Viktor Malenko" });
-  await co.getByLabel("Reason for the change").fill("Workload: owner hands over the function");
-  await co.getByRole("button", { name: "Appoint" }).click();
+  const ap = p.getByTestId("appointments");
+  await ap.getByTestId("appointments-change").click();
+  const sw = ap.getByRole("switch");
+  if (await sw.isChecked()) await sw.uncheck();
+  await ap.getByLabel("Compliance Officer", { exact: true }).selectOption({ label: "Viktor Malenko" });
+  await ap.getByLabel("Reason for the change").first().fill("Workload: owner hands over the function");
+  await ap.getByRole("button", { name: "Save" }).click();
   await p.getByText(/Viktor Malenko since/).waitFor();
+  await ap.getByTestId("inform-regulator-compliance-officer").waitFor();
   await p.goto(BASE + "/app/reports");
   if ((await p.getByText("Notice to supervisor").count()) < 2) throw new Error("expected 2 supervisor notices");
   log("officer change recorded; removal notice drafted (Reports has 2 supervisor notices)");

@@ -79,7 +79,7 @@ export default async function Dashboard() {
       obligations: await firmObligations(tx, s.firm.id, { seeCases }),
       usage: await screeningUsage(tx, s.firm.id),
       sample: await hasSampleData(tx),
-      uninformed: seeStaff ? await tx.appointment.findMany({ where: { toDate: null, notifiedAt: null }, select: { id: true, function: true, userId: true, name: true } }) : [],
+      uninformed: seeStaff ? await tx.appointment.findMany({ where: { toDate: null, notifiedAt: null, needsNotice: true }, select: { id: true, function: true, userId: true, name: true } }) : [],
     };
   });
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;

@@ -4,7 +4,7 @@ import type { Tx } from "./db";
 import { currentProfile } from "./country-profile";
 import { isOnePersonFirm } from "./governance";
 import { setupChecklist } from "@/lib/rules/country-profile";
-import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
+import { resolveDuties, type Holder } from "@/lib/firm/responsibilities";
 import { evaluateObligations, type ObligationInput } from "@/lib/obligations/evaluate";
 
 const DAY = 86_400_000;
@@ -21,7 +21,8 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
   const name = new Map(users.map((u) => [u.id, u.name]));
   const appts = await tx.appointment.findMany({ where: { toDate: null } });
   const appointed = (fn: string) => { const a = appts.find((x) => x.function === fn); return a ? (a.userId ? name.get(a.userId) : null) ?? (a.name ? `${a.name} (invited)` : null) : null; };
-  const resp = (firm.responsibilities ?? {}) as Record<string, string[]>;
+  const resp = (firm.responsibilities ?? {}) as Record<string, unknown>;
+  const holderOf = (fn: string): Holder | null => { const a = appts.find((x) => x.function === fn); return a ? { userId: a.userId, name: (a.userId ? name.get(a.userId) : null) ?? a.name ?? "—" } : null; };
   const { profile } = await currentProfile(tx, firmId);
   const openTaskOverdue = (kinds: string[]) => tx.task.count({ where: { status: "OPEN", kind: { in: kinds }, dueOn: { lt: today } } });
 
@@ -49,7 +50,7 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
     onePerson,
     complianceOfficer: appointed("compliance-officer"),
     responsibleManager: appointed("compliance-manager"),
-    unassignedDuties: RESPONSIBILITIES.filter((d) => !(resp[d.key] ?? []).some((id) => name.has(id))).length,
+    unassignedDuties: resolveDuties(resp, { "compliance-manager": holderOf("compliance-manager"), "compliance-officer": holderOf("compliance-officer") }, name).filter((d) => d.source === "none").length,
     riskAssessmentInForce: (await tx.firmRiskAssessment.count({ where: { status: "IN_FORCE" } })) > 0,
     riskAssessmentDraft: (await tx.firmRiskAssessment.count({ where: { status: "DRAFT" } })) > 0,
     policyDraft: (await tx.policyDocument.count({ where: { kind: "policy", status: "DRAFT" } })) > 0,

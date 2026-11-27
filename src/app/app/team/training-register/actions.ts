@@ -1,26 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
 import type { ActionState } from "@/components/form";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { audit } from "@/lib/server/audit";
-import { RESPONSIBILITIES, TRAINING_TYPES } from "@/lib/firm/responsibilities";
+import { TRAINING_TYPES } from "@/lib/firm/responsibilities";
 
-
-export async function saveResponsibilitiesAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const s = await requireUser("approve.compliance");
-  await withTenant(s.firm.id, async (tx) => {
-    const ids = new Set((await tx.user.findMany({ where: { deactivatedAt: null }, select: { id: true } })).map((u) => u.id));
-    const map: Record<string, string[]> = {};
-    for (const r of RESPONSIBILITIES) map[r.key] = fd.getAll(r.key).map(String).filter((x) => ids.has(x));
-    await tx.firm.update({ where: { id: s.firm.id }, data: { responsibilities: map as Prisma.InputJsonValue } });
-    await audit(tx, { firmId: s.firm.id, userId: s.user.id, action: "update", objectType: "Firm", objectId: s.firm.id, fields: ["responsibilities"] });
-  });
-  revalidatePath("/app/firm/governance");
-  return { message: "Responsibilities saved." };
-}
 
 export async function addExternalTrainingAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.compliance");

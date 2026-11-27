@@ -981,6 +981,7 @@ model Appointment {
   fromDate  DateTime  @db.Date
   toDate    DateTime? @db.Date
   reason    String? // reason for ending the appointment
+  needsNotice Boolean @default(false) // set when someone appoints or changes the role; the automatic first appointment does not need one
   notifiedAt DateTime? // the firm marked the supervisor as informed of this appointment (AMLR Art. 11)
   notifiedBy String?   @db.Uuid
   createdAt DateTime  @default(now())

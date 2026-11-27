@@ -3,10 +3,10 @@
 import { ActionForm, Submit, type ActionState } from "@/components/form";
 
 /** "Not on the app yet? Invite and appoint": name + email, sends the invitation and records the appointment. */
-export function InviteAppoint({ action, label, withReason = false }: { action: (s: ActionState, fd: FormData) => Promise<ActionState>; label: string; withReason?: boolean }) {
+export function InviteAppoint({ action, label, withReason = false, title = "Not on the app yet? Invite and appoint" }: { action: (s: ActionState, fd: FormData) => Promise<ActionState>; label: string; withReason?: boolean; title?: string }) {
   return (
     <details className="text-sm" data-testid="invite-appoint">
-      <summary className="cursor-pointer text-accent underline">Not on the app yet? Invite and appoint</summary>
+      <summary className="cursor-pointer text-accent underline">{title}</summary>
       <ActionForm action={action} className="mt-2 flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface p-2 [&>[role=alert]]:order-last [&>[role=alert]]:basis-full [&>[role=status]]:order-last [&>[role=status]]:basis-full">
         <label className="min-w-40 flex-1 space-y-1">
           <span className="block text-xs font-medium">Name</span>

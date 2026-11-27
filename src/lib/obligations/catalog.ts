@@ -51,7 +51,7 @@ export const OBLIGATIONS: Obligation[] = [
     when: "Once at the start, then review at least every year and whenever your business changes.",
     how: ["Compliance Hub → Business Risk Assessment: answer the questions.", "Review the draft AMLSync App writes for you and approve it."],
     article: "AMLR Art. 10",
-    duty: "Your firm's risk assessment decides how strict your client checks must be. Keep it approved and review it every year.",
+    duty: "Your firm's risk assessment decides how strict your client checks must be. Review it annually.",
     action: { href: "/app/firm/risk-assessment", label: "Business Risk Assessment" },
   },
   {
