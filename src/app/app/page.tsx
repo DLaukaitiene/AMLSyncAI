@@ -86,7 +86,10 @@ export default async function Dashboard() {
   const sum = obligationSummary(ob.statuses);
   const statusOf = new Map(ob.statuses.map((x) => [x.id, x]));
   const canAppoint = can(r, "approve.management");
-  // Everything that needs a person now, in one list.
+  // Everything that needs a person now, in one list: red = overdue or a possible breach, amber = waiting
+  // for someone or due within 30 days. One-off setup duties (appointing a Compliance Officer, writing the
+  // risk assessment for the first time, country profile) stay in the obligations section below.
+  const oi = ob.input;
   const attention: { key: string; text: React.ReactNode; href: string; tone: "red" | "amber" }[] = [
     ...data.pendingHits.map((a) => {
       const f = data.alertFiles.get(a.partyId);
@@ -98,6 +101,22 @@ export default async function Dashboard() {
     ...data.reviewQueue.map((f) => ({ key: f.id, tone: "red" as const, href: `/app/clients/${f.id}`, text: <><strong>{f.party.displayName}</strong> · client review overdue since {toIsoDate(f.nextRefreshOn!)} ({f.status === "EDD" ? "high risk: yearly" : "every 5 years"})</> })),
     ...(data.reviewQueueCount > data.reviewQueue.length ? [{ key: "more-reviews", tone: "red" as const, href: "/app/clients?status=overdue", text: <>{data.reviewQueueCount - data.reviewQueue.length} more overdue client reviews</> }] : []),
     ...(data.overdue ? [{ key: "deadlines", tone: "red" as const, href: "/app/calendar", text: <><strong>{data.overdue} deadline(s)</strong> passed</> }] : []),
+    ...(oi.clientsStale ? [{ key: "stale", tone: "red" as const, href: "/app/clients?status=open", text: <><strong>{oi.clientsStale} client file(s)</strong> in progress for more than 30 days</> }] : []),
+    ...(seeStaff && oi.whistleblowingLate ? [{ key: "wb-late", tone: "red" as const, href: "/app/firm/whistleblowing", text: <><strong>{oi.whistleblowingLate} whistleblowing report(s)</strong> not acknowledged within 7 days</> }] : []),
+    ...(oi.trainingOverdue ? [{ key: "training-late", tone: "red" as const, href: "/app/team/training-register", text: <><strong>{oi.trainingOverdue} training(s)</strong> overdue</> }] : []),
+    // Amber: waiting for someone, or due soon.
+    ...(oi.highRiskOrPepAwaitingApproval ? [{ key: "hr-approval", tone: "amber" as const, href: "/app/risk-assessments?risk=HIGH", text: <><strong>{oi.highRiskOrPepAwaitingApproval} high-risk or PEP client(s)</strong> waiting for senior management approval</> }] : []),
+    ...(oi.clientsInProgress - oi.clientsStale > 0 ? [{ key: "in-progress", tone: "amber" as const, href: "/app/clients?status=open", text: <><strong>{oi.clientsInProgress - oi.clientsStale} client file(s)</strong> not yet decided: finish the checks before you start work</> }] : []),
+    ...(oi.internalReportsOpen ? [{ key: "internal-reports", tone: "amber" as const, href: "/app/cases", text: <><strong>{oi.internalReportsOpen} internal suspicion report(s)</strong> to decide</> }] : []),
+    ...(oi.reportDrafts ? [{ key: "report-drafts", tone: "amber" as const, href: "/app/reports", text: <><strong>{oi.reportDrafts} report(s)</strong> drafted but not yet sent</> }] : []),
+    ...(seeStaff && oi.whistleblowingUnacknowledged - oi.whistleblowingLate > 0 ? [{ key: "wb", tone: "amber" as const, href: "/app/firm/whistleblowing", text: <><strong>{oi.whistleblowingUnacknowledged - oi.whistleblowingLate} whistleblowing report(s)</strong> to acknowledge</> }] : []),
+    ...(canAppoint && oi.riskAssessmentDraft && !oi.riskAssessmentInForce ? [{ key: "ra-draft", tone: "amber" as const, href: "/app/firm/risk-assessment", text: <>Firm risk assessment draft waiting for management approval</> }] : []),
+    ...(canAppoint && oi.policyDraft && !oi.policyInForce ? [{ key: "policy-draft", tone: "amber" as const, href: "/app/firm/policies", text: <>AML policy draft waiting for management approval</> }] : []),
+    ...(oi.reviewsDue30 ? [{ key: "reviews-soon", tone: "amber" as const, href: "/app/clients?status=refresh", text: <><strong>{oi.reviewsDue30} client review(s)</strong> due in the next 30 days</> }] : []),
+    ...(data.due30 ? [{ key: "deadlines-soon", tone: "amber" as const, href: "/app/calendar", text: <><strong>{data.due30} deadline(s)</strong> in the next 30 days</> }] : []),
+    ...(seeStaff && oi.staffWithoutTraining ? [{ key: "untrained", tone: "amber" as const, href: "/app/team/training-register", text: <><strong>{oi.staffWithoutTraining} colleague(s)</strong> without AML training in the last 12 months</> }] : []),
+    ...(seeStaff && oi.integrityDue ? [{ key: "integrity", tone: "amber" as const, href: "/app/firm/integrity", text: <><strong>{oi.integrityDue} integrity declaration(s)</strong> due</> }] : []),
+    ...(can(r, "records.purge") && oi.retentionDue ? [{ key: "retention", tone: "amber" as const, href: "/app/records", text: <><strong>{oi.retentionDue} client file(s)</strong> past the 5-year retention period: review for deletion</> }] : []),
     ...(!data.setup.billing && seeStaff ? [{ key: "billing", tone: "amber" as const, href: "/app/billing#invoice-details", text: <>Add your invoice details before your first invoice</> }] : []),
     ...(!data.setup.team && seeStaff ? [{ key: "team", tone: "amber" as const, href: "/app/team", text: <>Invite your colleagues so each has their own sign-in</> }] : []),
   ];
