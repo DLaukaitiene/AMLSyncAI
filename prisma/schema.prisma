@@ -283,6 +283,7 @@ model User {
   failedLogins  Int       @default(0)
   lockedUntil   DateTime?
   guideHiddenAt DateTime? // dashboard guide dismissed
+  sampleHintHiddenAt DateTime? // dashboard "Load sample data" box closed (only possible while no sample data is loaded)
   emailSummary  String    @default("auto") // auto (weekly for Owner/Compliance Officer, off for others) | weekly | monthly | off
   newsConsent   Boolean? // may AMLSync email AML rule updates and product news? null = not asked yet
   newsConsentAt DateTime?

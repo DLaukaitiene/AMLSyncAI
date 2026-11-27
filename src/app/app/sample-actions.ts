@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
 import { requireUser } from "@/lib/server/session";
-import { withTenant } from "@/lib/server/db";
+import { adminDb, withTenant } from "@/lib/server/db";
 import { loadSampleData, removeSampleData } from "@/lib/server/sample-data";
 
 export async function loadSampleAction(): Promise<ActionState> {
@@ -14,6 +14,7 @@ export async function loadSampleAction(): Promise<ActionState> {
     return { error: (e as Error).message };
   }
   revalidatePath("/app");
+  revalidatePath("/app/settings/sample-data");
   return { message: "Sample data loaded: 3 clients, a company with two owners, a case with 4 payments. Look around, then remove it in one click." };
 }
 
@@ -21,5 +22,14 @@ export async function removeSampleAction(): Promise<ActionState> {
   const s = await requireUser("approve.compliance");
   const n = await withTenant(s.firm.id, (tx) => removeSampleData(tx, { firmId: s.firm.id, userId: s.user.id }), { timeoutMs: 60_000 });
   revalidatePath("/app");
+  revalidatePath("/app/settings/sample-data");
   return { message: `Sample data removed (${n} people and companies).` };
+}
+
+/** Closes (or brings back) the dashboard "Load sample data" box for the signed-in person. */
+export async function setSampleHintAction(hidden: boolean) {
+  const s = await requireUser("approve.compliance");
+  await adminDb.user.update({ where: { id: s.user.id }, data: { sampleHintHiddenAt: hidden ? new Date() : null } });
+  revalidatePath("/app");
+  revalidatePath("/app/settings/sample-data");
 }

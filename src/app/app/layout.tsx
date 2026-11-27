@@ -82,6 +82,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/billing", label: "Billing", icon: "billing", show: can(r, "approve.compliance") },
         { href: "/app/security", label: "Security", icon: "security", show: can(r, "securityLog.view") },
         { href: "/app/settings/email", label: "Email Settings", icon: "mail" },
+        { href: "/app/settings/sample-data", label: "Sample Data", icon: "folder", show: can(r, "approve.compliance") },
         { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },
       ],
     },

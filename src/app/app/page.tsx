@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { NEEDS_REVIEW_WHERE } from "@/lib/monitoring/rules";
-import { BellRing, ShieldCheck, UserPlus } from "lucide-react";
+import { BellRing, ShieldCheck, UserPlus, X } from "lucide-react";
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
@@ -17,7 +17,7 @@ import { AppointInline } from "@/components/appoint-inline";
 import { appointAction } from "@/app/app/firm/records-actions";
 import { newsConsentAction } from "./settings/email/actions";
 import { hasSampleData } from "@/lib/server/sample-data";
-import { loadSampleAction, removeSampleAction } from "./sample-actions";
+import { loadSampleAction, removeSampleAction, setSampleHintAction } from "./sample-actions";
 import { ActionButton } from "@/components/action-button";
 import { screeningUsage } from "@/lib/server/screening-limits";
 import { ScreeningUsage } from "@/components/screening-usage";
@@ -81,7 +81,7 @@ export default async function Dashboard() {
   });
   const riskTotal = data.risk.HIGH + data.risk.MEDIUM + data.risk.LOW;
   const card = "rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]";
-  const me = await adminDb.user.findUnique({ where: { id: s.user.id }, select: { newsConsent: true } });
+  const me = await adminDb.user.findUnique({ where: { id: s.user.id }, select: { newsConsent: true, sampleHintHiddenAt: true } });
   const ob = data.obligations;
   const sum = obligationSummary(ob.statuses);
   const statusOf = new Map(ob.statuses.map((x) => [x.id, x]));
@@ -122,8 +122,14 @@ export default async function Dashboard() {
         </section>
       )}
 
-      {seeStaff && (data.sample || data.total === 0) && (
-        <section className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-sm ${data.sample ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950" : "border-dashed border-border"}`} data-testid="sample-data">
+      {seeStaff && (data.sample || (data.total === 0 && !me?.sampleHintHiddenAt)) && (
+        <section className={`relative flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-sm ${data.sample ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950" : "border-dashed border-border pr-10"}`} data-testid="sample-data">
+          {/* Can be closed only while no sample data is loaded; it can be loaded later from Settings → Sample Data. */}
+          {!data.sample && (
+            <form action={setSampleHintAction.bind(null, true)} className="absolute right-2 top-2">
+              <button type="submit" aria-label="Close" title="Close. You can load sample data later in Settings → Sample Data." className="rounded-full p-1 text-muted hover:bg-surface hover:text-foreground" data-testid="sample-data-close"><X aria-hidden className="h-4 w-4" /></button>
+            </form>
+          )}
           <p>{data.sample ? <><strong>Sample data is loaded.</strong> The clients and case marked &ldquo;(sample)&rdquo; are made up, so you can try everything safely. Remove them before you add real clients.</> : <><strong>New here?</strong> Load sample data to see how the app works: made-up clients, a company with owners, and a case with payments that raise red flags.</>}</p>
           {data.sample ? <ActionButton action={removeSampleAction}>Remove sample data</ActionButton> : <ActionButton action={loadSampleAction} variant="primary">Load sample data</ActionButton>}
         </section>
@@ -133,20 +139,26 @@ export default async function Dashboard() {
 
       {/* Key numbers */}
       <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4" data-testid="metrics">
-        {([
-          ["Clients", String(data.total), "/app/clients", "Active client files"],
-          ["Not yet decided", String(data.pendingReviews), "/app/clients?status=open", "Client files in progress"],
-          ["Up to date", data.portfolioHealth == null ? "—" : `${data.portfolioHealth}%`, "/app/clients?status=accepted", "Clients with complete, current checks"],
-          ["High risk", String(data.risk.HIGH), "/app/risk-assessments?risk=HIGH", riskTotal ? `${data.risk.MEDIUM} medium · ${data.risk.LOW} low` : "Clients rated high risk"],
-        ] as const).map(([label, value, href, hint]) => (
-          <li key={label}>
-            <Link href={href} className="block h-full rounded-2xl border border-border bg-surface p-4 hover:border-accent">
-              <span className="block text-sm text-muted">{label}</span>
-              <span className={`block font-[family-name:var(--font-heading)] text-3xl font-extrabold ${label === "High risk" && value !== "0" ? "text-red-700 dark:text-red-300" : ""}`}>{value}</span>
-              <span className="block text-xs text-muted">{hint}</span>
-            </Link>
-          </li>
-        ))}
+        {(() => {
+          // Number colour = how urgent: red needs action now, orange/amber needs work soon, black (default) is fine.
+          const tone = { red: "text-red-700 dark:text-red-300", orange: "text-orange-600 dark:text-orange-300", amber: "text-amber-600 dark:text-amber-300", ok: "" };
+          const health = data.portfolioHealth;
+          const cards: [string, string, string, string, string][] = [
+            ["Clients", String(data.total), "/app/clients", "Active client files", tone.ok],
+            ["Not yet decided", String(data.pendingReviews), "/app/clients?status=open", "Client files in progress", data.pendingReviews > 0 ? tone.amber : tone.ok],
+            ["Up to date", health == null ? "—" : `${health}%`, "/app/clients?status=accepted", "Clients with complete, current checks", health == null || health === 100 ? tone.ok : health >= 80 ? tone.amber : health >= 50 ? tone.orange : tone.red],
+            ["High risk", String(data.risk.HIGH), "/app/risk-assessments?risk=HIGH", riskTotal ? `${data.risk.MEDIUM} medium · ${data.risk.LOW} low` : "Clients rated high risk", data.risk.HIGH > 0 ? tone.red : tone.ok],
+          ];
+          return cards.map(([label, value, href, hint, cls]) => (
+            <li key={label}>
+              <Link href={href} className="block h-full rounded-2xl border border-border bg-surface p-4 hover:border-accent">
+                <span className="block text-sm text-muted">{label}</span>
+                <span className={`block font-[family-name:var(--font-heading)] text-3xl font-extrabold ${cls}`}>{value}</span>
+                <span className="block text-xs text-muted">{hint}</span>
+              </Link>
+            </li>
+          ));
+        })()}
       </ul>
 
       {/* Needs your attention */}
