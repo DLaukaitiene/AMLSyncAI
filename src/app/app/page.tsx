@@ -202,7 +202,6 @@ export default async function Dashboard() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="obligations" className="text-2xl">Your obligations</h2>
-            <p className="text-sm text-muted"><strong className="text-foreground">{sum.done} of {sum.total}</strong> in order{sum.overdue ? <> · <strong className="text-red-800 dark:text-red-300">{sum.overdue} need action now</strong></> : null}{sum.todo ? ` · ${sum.todo} to do` : ""}. Each line is a duty the AML rules give your firm: press <span aria-hidden>(?)</span> for what it means, and the link below it to do it.</p>
           </div>
           <Link href="/app/obligations" className="text-sm text-accent underline">All obligations explained</Link>
         </div>
