@@ -15,7 +15,7 @@ export async function loadSampleAction(): Promise<ActionState> {
   }
   revalidatePath("/app");
   revalidatePath("/app/settings/sample-data");
-  return { message: "Sample data loaded: 3 clients, a company with two owners, a case with 4 payments. Look around, then remove it in one click." };
+  return { message: "Sample data loaded: 3 clients, a company with two owners, a case with 4 payments." };
 }
 
 export async function removeSampleAction(): Promise<ActionState> {
