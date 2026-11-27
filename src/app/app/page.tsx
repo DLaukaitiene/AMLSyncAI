@@ -130,7 +130,7 @@ export default async function Dashboard() {
               <button type="submit" aria-label="Close" title="Close. You can load sample data later in Settings → Sample Data." className="rounded-full p-1 text-muted hover:bg-surface hover:text-foreground" data-testid="sample-data-close"><X aria-hidden className="h-4 w-4" /></button>
             </form>
           )}
-          <p>{data.sample ? <><strong>Sample data is loaded.</strong> The clients and case marked &ldquo;(sample)&rdquo; are made up, so you can try everything safely. Remove them before you add real clients.</> : <><strong>New here?</strong> Load sample data to see how the app works: made-up clients, a company with owners, and a case with payments that raise red flags.</>}</p>
+          <p>{data.sample ? <><strong>Sample data is loaded.</strong> The clients and cases are made up and marked &ldquo;sample&rdquo;, so you can safely try the app out. We recommend removing them before adding real clients.</> : <><strong>New here?</strong> Load sample data to see how the app works: made-up clients, a company with owners, and a case with payments that raise red flags.</>}</p>
           {data.sample ? <ActionButton action={removeSampleAction}>Remove sample data</ActionButton> : <ActionButton action={loadSampleAction} variant="primary">Load sample data</ActionButton>}
         </section>
       )}

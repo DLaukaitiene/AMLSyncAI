@@ -15,7 +15,7 @@ export default async function SampleDataSettingsPage() {
       <section className={`space-y-3 rounded-2xl border p-4 text-sm ${sample ? "border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950" : "border-border"}`} data-testid="settings-sample-data">
         {sample ? (
           <>
-            <p><strong>Sample data is loaded.</strong> The clients and case marked &ldquo;(sample)&rdquo; are made up. Remove them before you add real clients.</p>
+            <p><strong>Sample data is loaded.</strong> The clients and cases are made up and marked &ldquo;sample&rdquo;, so you can safely try the app out. We recommend removing them before adding real clients.</p>
             <ActionButton action={removeSampleAction}>Remove sample data</ActionButton>
           </>
         ) : (
