@@ -17,12 +17,14 @@ const ctxOf = (s: { firm: { id: string }; user: { id: string } }) => ({ firmId: 
 
 export async function appointAction(fn: "compliance-manager" | "compliance-officer", _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  if (!hasRecentMfa(s)) return STEP_UP("/app/firm/governance");
   const userId = String(fd.get("userId") ?? "");
+  if (!userId) return { error: "Choose a person first." };
+  if (!hasRecentMfa(s)) return STEP_UP(fd.get("from") === "dashboard" ? "/app" : "/app/firm/governance");
   const reason = String(fd.get("reason") ?? "").trim();
   try {
     const r = await withTenant(s.firm.id, (tx) => appoint(tx, ctxOf(s), fn, userId, reason || "Change of appointment"));
     revalidatePath("/app/firm/governance");
+    revalidatePath("/app");
     return { message: r.noticeId ? "Appointed. The previous compliance officer's removal must be notified to the supervisor: a draft notice is in Reports." : "Appointed." };
   } catch (e) {
     return { error: (e as Error).message };

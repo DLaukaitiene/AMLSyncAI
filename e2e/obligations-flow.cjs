@@ -12,7 +12,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Obligations on the dashboard: open duties first, settled ones folded away
   const obl = p.getByTestId("obligations");
-  for (const t of ["Appoint a Compliance Officer", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
+  for (const t of ["Appoint a Compliance Officer and Responsible Manager", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
   await p.getByTestId("attention").waitFor();
   for (const box of ["Your company", "Your team", "Clients", "Deals and transactions", "Reporting"]) await p.getByTestId(`box-${box}`).waitFor();
   await p.getByTestId("obligation-staff-integrity").getByText("Not needed for a one-person firm.").waitFor();
