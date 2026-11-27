@@ -118,7 +118,6 @@ export default async function Dashboard() {
     ...(seeStaff && oi.integrityDue ? [{ key: "integrity", tone: "amber" as const, href: "/app/firm/integrity", text: <><strong>{oi.integrityDue} integrity declaration(s)</strong> due</> }] : []),
     ...(can(r, "records.purge") && oi.retentionDue ? [{ key: "retention", tone: "amber" as const, href: "/app/records", text: <><strong>{oi.retentionDue} client file(s)</strong> past the 5-year retention period: review for deletion</> }] : []),
     ...(!data.setup.billing && seeStaff ? [{ key: "billing", tone: "amber" as const, href: "/app/billing#invoice-details", text: <>Add your invoice details before your first invoice</> }] : []),
-    ...(!data.setup.team && seeStaff ? [{ key: "team", tone: "amber" as const, href: "/app/team", text: <>Invite your colleagues so each has their own sign-in</> }] : []),
   ];
 
   return (
