@@ -204,7 +204,9 @@ export const obligation = (id: ObligationId) => OBLIGATIONS.find((o) => o.id ===
 
 /** Dashboard boxes [24 Nov 2026]: the duties grouped the way a firm thinks about them. */
 export const OBLIGATION_BOXES: { id: string; title: string; ids: ObligationId[] }[] = [
-  { id: "company", title: "Your company", ids: ["compliance-officer", "risk-assessment", "policies", "national-rules", "records"] },
+  { id: "company", title: "Your company", ids: ["compliance-officer", "risk-assessment", "policies", "national-rules"] },
+  // "records" (keep records for 5 years) is not on the dashboard: the app does it for the firm. Files due for deletion
+  // still show in Needs your attention; the AML Program covers retention.
   { id: "team", title: "Your team", ids: ["training", "staff-integrity", "whistleblowing"] },
   { id: "clients", title: "Clients", ids: ["client-checks", "screening", "high-risk", "reviews"] },
   { id: "deals", title: "Deals and transactions", ids: ["deals"] },

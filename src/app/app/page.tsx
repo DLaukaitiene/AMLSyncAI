@@ -86,7 +86,8 @@ export default async function Dashboard() {
   const card = "rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow)]";
   const me = await adminDb.user.findUnique({ where: { id: s.user.id }, select: { newsConsent: true, sampleHintHiddenAt: true } });
   const ob = data.obligations;
-  const sum = obligationSummary(ob.statuses);
+  const onDashboard = new Set(OBLIGATION_BOXES.flatMap((b) => b.ids));
+  const sum = obligationSummary(ob.statuses.filter((x) => onDashboard.has(x.id)));
   const statusOf = new Map(ob.statuses.map((x) => [x.id, x]));
   const canAppoint = can(r, "approve.management");
   // Everything that needs a person now, in one list: red = overdue or a possible breach, amber = waiting

@@ -71,8 +71,9 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
   return (
     <li className="py-3" data-testid={`obligation-${o.id}`} data-state={status.state}>
       <div className="flex items-start justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="font-semibold">{o.title}</span>
+        {/* The (?) flows right after the title's last word, also when the title wraps. */}
+        <span className="min-w-0 font-semibold">
+          {o.title}{"\u00a0"}
           <Help label="What does this mean?">
             <p>{o.duty}</p>
             <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link></p>
