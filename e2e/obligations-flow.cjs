@@ -12,7 +12,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Obligations on the dashboard: open duties first, settled ones folded away
   const obl = p.getByTestId("obligations");
-  for (const t of ["Appoint Compliance Officer and Responsible Manager", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
+  for (const t of ["Appoint Compliance Officer and Compliance Manager", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
   await p.getByTestId("attention").waitFor();
   for (const box of ["Your company", "Your team", "Clients", "Deals and transactions", "Reporting"]) await p.getByTestId(`box-${box}`).waitFor();
   await p.getByTestId("obligation-staff-integrity").getByText("Not needed for a one-person firm.").waitFor();
@@ -27,7 +27,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   await co.getByLabel("Compliance Officer", { exact: true }).selectOption({ label: "Owner of Pareigos UAB" });
   await co.getByRole("button", { name: "Appoint" }).first().click();
   await p.reload();
-  await p.getByTestId("obligation-compliance-officer").getByText(/Responsible manager: Owner of Pareigos UAB|Compliance Officer: Owner of Pareigos UAB/).waitFor();
+  await p.getByTestId("obligation-compliance-officer").getByText(/Compliance Manager: Owner of Pareigos UAB|Compliance Officer: Owner of Pareigos UAB/).waitFor();
   log("Compliance Officer appointed from the dashboard box; the name shows");
   await p.getByTestId("obligation-compliance-officer").getByRole("link", { name: /Roles and duties/ }).click();
   await p.getByRole("heading", { name: "Roles and duties" }).waitFor();

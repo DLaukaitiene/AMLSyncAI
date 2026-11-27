@@ -67,7 +67,7 @@ export function buildPolicy(i: PolicyInput, version: number, date: string): Gene
       p.nationalRiskAssessmentReviewed ? "We have taken the national risk assessment into account." : "We will review the national risk assessment and record its findings in our Country Profile.",
     ],
     "risk-management": [
-      `Management is responsible for this policy. ${i.officers.complianceManager} is the compliance manager (member of the management body) and ${i.officers.complianceOfficer} is the Compliance Officer (Art. 11).`,
+      `Management is responsible for this policy. ${i.officers.complianceManager} is the Compliance Manager (the member of management responsible for AML) and ${i.officers.complianceOfficer} is the Compliance Officer (Art. 11).`,
       "We apply measures in proportion to risk. Client risk is calculated from the information we collect and rated Low, Medium or High; the reasons are recorded. Only the Compliance Officer may override a rating, with written reasons.",
       ...(i.riskActions?.length ? [`Open actions from the risk assessment: ${i.riskActions.slice(0, 5).join(" ")}`] : []),
     ],

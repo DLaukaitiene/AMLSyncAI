@@ -3,7 +3,7 @@
 import { ActionForm, Submit, type ActionState } from "@/components/form";
 import { Help } from "@/components/help";
 
-/** Appoint the Compliance Officer / responsible manager straight from the dashboard box. */
+/** Appoint the Compliance Officer / Compliance Manager straight from the dashboard box. */
 export function AppointInline({ staff, action, label, current, help }: { staff: { id: string; name: string }[]; action: (s: ActionState, fd: FormData) => Promise<ActionState>; label: string; current: string | null; help?: React.ReactNode }) {
   return (
     <ActionForm action={action} className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface p-2 text-sm [&>[role=alert]]:order-last [&>[role=alert]]:basis-full [&>[role=status]]:order-last [&>[role=status]]:basis-full">

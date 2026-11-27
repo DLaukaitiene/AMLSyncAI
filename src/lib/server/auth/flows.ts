@@ -390,7 +390,7 @@ export async function acceptInvitation(token: string, password: string): Promise
         },
       });
       await tx.auditEvent.create({ data: { firmId: inv.firmId, userId: user.id, action: "create", objectType: "User", objectId: user.id, fields: ["roles"] } });
-      // Appointed as Compliance Officer / responsible manager before they had an account: link it to them now.
+      // Appointed as Compliance Officer / Compliance Manager before they had an account: link it to them now.
       await tx.appointment.updateMany({ where: { firmId: inv.firmId, userId: null, email: inv.email }, data: { userId: user.id } });
       return user;
     });

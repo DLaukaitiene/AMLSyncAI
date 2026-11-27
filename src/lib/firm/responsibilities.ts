@@ -4,7 +4,7 @@
  * so the supervisor can see who is accountable for what.
  */
 export const RESPONSIBILITIES = [
-  { key: "management-body", label: "Management body member responsible for AML (Art. 11(1))", hint: "Senior person accountable for compliance with the AML rules" },
+  { key: "management-body", label: "Compliance Manager (Art. 11(1))", hint: "Senior person accountable for compliance with the AML rules" },
   { key: "compliance-officer", label: "Compliance Officer (Art. 11(2))", hint: "Day-to-day AML compliance; usually also the FIU contact" },
   { key: "fiu-contact", label: "FIU and supervisor contact", hint: "Receives and answers FIU requests (Art. 69(1)(b))" },
   { key: "suspicious-reports", label: "Decides on suspicious activity reports (Art. 69)", hint: "Reviews internal reports and decides whether to report to the FIU" },
@@ -23,3 +23,8 @@ export type ResponsibilityKey = (typeof RESPONSIBILITIES)[number]["key"];
 
 /** External training types (Team → Training Register). */
 export const TRAINING_TYPES = [["workshop", "Workshop"], ["seminar", "Seminar"], ["online-course", "Online course"], ["internal-session", "Internal session"], ["conference", "Conference"], ["other", "Other"]] as const;
+
+/** A duty label or hint without its legal reference, e.g. "Staff training (Art. 12)" → "Staff training". For on-screen use; the review pack keeps the references. */
+export function withoutArticles(s: string): string {
+  return s.replace(/\s*\([^()]*\bArt\.[^()]*(\([^()]*\)[^()]*)*\)/g, "").trim();
+}

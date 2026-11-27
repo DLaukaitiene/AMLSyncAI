@@ -32,7 +32,7 @@ export function annualReportDoc(s: AnnualStats, version: number, date: string): 
   return {
     title: "Annual compliance report",
     subtitle: `${s.firm.name} · ${s.period.from} to ${s.period.to}`,
-    meta: [`Version ${version} · ${date}`, "To the management body (AMLR Art. 11)", `Compliance manager: ${s.officers.manager} · Compliance officer: ${s.officers.officer}`],
+    meta: [`Version ${version} · ${date}`, "To the management body (AMLR Art. 11)", `Compliance Manager: ${s.officers.manager} · Compliance Officer: ${s.officers.officer}`],
     sections: [
       { id: "summary", heading: "1. Summary", blocks: [findings.length ? { list: findings } : { p: "No significant weaknesses were identified in the period." }] },
       {

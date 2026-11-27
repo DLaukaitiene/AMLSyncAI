@@ -1,12 +1,12 @@
 /**
  * The email a firm sends its AML supervisor when it appoints or changes its Compliance Officer
- * or the responsible member of management (AMLR Art. 11). Plain text, ready to copy.
+ * or the Compliance Manager (AMLR Art. 11). Plain text, ready to copy.
  */
 export type AppointmentFn = "compliance-officer" | "compliance-manager";
 
 export const ROLE_NAME: Record<AppointmentFn, string> = {
   "compliance-officer": "Compliance Officer",
-  "compliance-manager": "member of the management body responsible for AML compliance",
+  "compliance-manager": "Compliance Manager (the member of management responsible for AML compliance)",
 };
 
 export interface NoticeInput {
@@ -21,7 +21,7 @@ export interface NoticeInput {
 
 export function regulatorNotice(i: NoticeInput): { subject: string; body: string } {
   const role = ROLE_NAME[i.fn];
-  const short = i.fn === "compliance-officer" ? "Compliance Officer" : "responsible member of management";
+  const short = i.fn === "compliance-officer" ? "Compliance Officer" : "Compliance Manager";
   const subject = `${i.firm.name}: ${i.previous ? "change of" : "appointment of"} ${short}`;
   const lines = [
     "Dear Sir or Madam,",
@@ -43,7 +43,7 @@ export function regulatorNotice(i: NoticeInput): { subject: string; body: string
   }
   if (i.other) {
     lines.push(
-      `For completeness: our ${i.fn === "compliance-officer" ? "responsible member of management" : "Compliance Officer"} is ${i.other.name} (${i.other.email}).`,
+      `For completeness: our ${i.fn === "compliance-officer" ? "Compliance Manager" : "Compliance Officer"} is ${i.other.name} (${i.other.email}).`,
       "",
     );
   }

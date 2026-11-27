@@ -10,11 +10,11 @@ import { StepUpLink } from "@/components/step-up";
 import { DocView } from "@/components/doc-view";
 import { annualReportAction, appointAction, approveAnnualReportAction, inviteAndAppointAction } from "../records-actions";
 import { InviteAppoint } from "@/components/invite-appoint";
-import { RESPONSIBILITIES } from "@/lib/firm/responsibilities";
+import { RESPONSIBILITIES, withoutArticles } from "@/lib/firm/responsibilities";
 import { saveResponsibilitiesAction } from "../../team/training-register/actions";
 import { PageTitle } from "@/components/help";
 
-const FN = { "compliance-manager": "Compliance manager (member of the management body)", "compliance-officer": "Compliance officer" } as const;
+const FN = { "compliance-manager": "Compliance Manager", "compliance-officer": "Compliance Officer" } as const;
 
 export default async function GovernancePage() {
   const s = await requireUser();
@@ -35,7 +35,7 @@ export default async function GovernancePage() {
   return (
     <div className="max-w-5xl space-y-8">
       <div>
-        <PageTitle className="text-3xl" help={<>Who is responsible for AML in your firm: the two appointments the law requires (AMLR Art. 11; in a small firm one person may hold both), and a named person for every AML duty. Supervisors check both.</>}>Roles and duties</PageTitle>
+        <PageTitle className="text-3xl" help={<>Who is responsible for AML in your firm: the two appointments the law requires (in a small firm one person may hold both), and a named person for every AML duty. Supervisors check both.</>}>Roles and duties</PageTitle>
       </div>
       <h2 className="text-xl font-semibold" id="appointments">Appointments</h2>
       {(Object.keys(FN) as (keyof typeof FN)[]).map((fn) => {
@@ -78,10 +78,10 @@ export default async function GovernancePage() {
                   const ids = data.duties[r.key] ?? [];
                   return (
                     <tr key={r.key} data-testid="responsibility">
-                      <td className="px-3 py-2"><span className="block font-medium">{r.label}</span><span className="block text-xs text-muted">{r.hint}</span></td>
+                      <td className="px-3 py-2"><span className="block font-medium">{withoutArticles(r.label)}</span><span className="block text-xs text-muted">{withoutArticles(r.hint)}</span></td>
                       {data.active.map((u) => (
                         <td key={u.id} className="px-3 py-2 text-center">
-                          <input type="checkbox" name={`${r.key}`} value={u.id} defaultChecked={ids.includes(u.id)} disabled={!manageDuties} aria-label={`${u.name}: ${r.label}`} />
+                          <input type="checkbox" name={`${r.key}`} value={u.id} defaultChecked={ids.includes(u.id)} disabled={!manageDuties} aria-label={`${u.name}: ${withoutArticles(r.label)}`} />
                         </td>
                       ))}
                     </tr>
@@ -103,7 +103,7 @@ export default async function GovernancePage() {
           <div key={r.id} className={`space-y-3 rounded-md border p-4 ${r.status === "DRAFT" ? "border-amber-400" : "border-border"}`}>
             <div className="flex items-center justify-between"><strong className="text-sm">{r.status === "DRAFT" ? "Draft" : "Approved"} v{r.version}</strong><a className="text-sm text-accent underline" href={`/api/docs/policy/${r.id}`}>Download PDF</a></div>
             <DocView doc={r.content as unknown as GeneratedDoc} />
-            {r.status === "DRAFT" && mgmt && <ActionButton action={approveAnnualReportAction.bind(null, r.id)} variant="primary">Approve (compliance manager)</ActionButton>}
+            {r.status === "DRAFT" && mgmt && <ActionButton action={approveAnnualReportAction.bind(null, r.id)} variant="primary">Approve (Compliance Manager)</ActionButton>}
           </div>
         ))}
       </section>

@@ -119,7 +119,7 @@ export async function editPolicySection(tx: Tx, ctx: Ctx, id: string, sectionId:
   await audit(tx, { firmId: ctx.firmId, userId: ctx.userId, action: "update", objectType: "PolicyDocument", objectId: id, fields: [sectionId] });
 }
 
-/** Policy: management approval. Procedures: compliance manager (Owner role). Staff must re-acknowledge. */
+/** Policy: management approval. Procedures: Compliance Manager (Owner role). Staff must re-acknowledge. */
 export async function approvePolicy(tx: Tx, ctx: Ctx, id: string) {
   const d = await tx.policyDocument.findUniqueOrThrow({ where: { id } });
   if (d.status !== "DRAFT") throw new Error("Only a draft can be approved.");

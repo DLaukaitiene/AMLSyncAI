@@ -23,7 +23,7 @@ export async function appointAction(fn: "compliance-manager" | "compliance-offic
   const s = await requireUser("approve.management");
   const userId = String(fd.get("userId") ?? "");
   if (!userId) return { error: "Choose a person first." };
-  // No 2FA step here: owners asked to appoint or change the Compliance Officer and responsible manager
+  // No 2FA step here: owners asked to appoint or change the Compliance Officer and Compliance Manager
   // without confirming it's them [27 Nov 2026]. The change is still audited and only management can make it.
   const reason = String(fd.get("reason") ?? "").trim();
   try {
@@ -37,7 +37,7 @@ export async function appointAction(fn: "compliance-manager" | "compliance-offic
 }
 
 /**
- * Invite and appoint: for a Compliance Officer or responsible manager who isn't on the app yet.
+ * Invite and appoint: for a Compliance Officer or Compliance Manager who isn't on the app yet.
  * Sends the invitation and records the appointment at once; it is linked to them when they accept.
  */
 export async function inviteAndAppointAction(fn: "compliance-manager" | "compliance-officer", _: ActionState, fd: FormData): Promise<ActionState> {
