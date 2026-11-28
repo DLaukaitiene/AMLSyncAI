@@ -54,7 +54,7 @@ export function ActionForm({
           </p>
         )}
         {state?.message && (
-          <p role="status" className="col-span-full w-full basis-full rounded border border-border px-3 py-2 text-sm">
+          <p role="status" className="col-span-full w-full basis-full rounded border border-border bg-background px-3 py-2 text-sm">
             {state.message}
           </p>
         )}

@@ -17,12 +17,15 @@ export function Help({ children, label = "What is this?", align = "left" }: { ch
   );
 }
 
-/** Page title with its explanation behind a (?). */
+/**
+ * Page title with a short intro shown under it. A (?) is only for explaining a difficult or new term,
+ * never for what a page is about [28 Nov 2026].
+ */
 export function PageTitle({ children, help, className = "text-3xl" }: { children: React.ReactNode; help?: React.ReactNode; className?: string }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="space-y-1">
       <h1 className={className}>{children}</h1>
-      {help ? <Help label="About this page">{help}</Help> : null}
+      {help ? <p className="max-w-3xl text-muted" data-testid="page-intro">{help}</p> : null}
     </div>
   );
 }

@@ -23,7 +23,7 @@ export default async function PoliciesPage() {
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
         <h1 className="text-3xl">AML Program</h1>
-        <p className="text-muted">Your firm&apos;s written rules against money laundering: a policy (what you commit to) and procedures (how you do it day to day). AMLSync writes both from your firm profile, risk assessment and Country Profile. The Compliance Manager approves them, and everyone in the firm follows them.</p>
+        <p className="text-muted">A policy (what you commit to) and procedures (how you do it day to day). AMLSync writes both from your firm profile, risk assessment and Country Profile; the Compliance Manager approves them. Review it every year: staff confirm they&apos;ve read each new version.</p>
       </div>
       {edit && <ActionButton action={generatePoliciesAction} variant="primary">{drafts.length ? "Regenerate drafts" : "Generate new version"}</ActionButton>}
 

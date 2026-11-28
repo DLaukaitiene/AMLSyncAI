@@ -116,11 +116,7 @@ export function DutyNote({ id, extra }: { id: ObligationId; extra?: React.ReactN
     <aside className="flex items-center gap-2 rounded-xl border border-accent/30 bg-brand/10 px-3 py-2 text-sm" aria-label="Your duty" data-testid="duty-note">
       <BookOpen aria-hidden className="h-4 w-4 shrink-0 text-accent" />
       <p className="min-w-0"><strong>Your duty: </strong>{o.duty}</p>
-      <Help label="When and how" align="right">
-        <p><span className="font-medium text-foreground">When: </span>{o.when}</p>
-        {extra}
-        <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link></p>
-      </Help>
+      {extra}
     </aside>
   );
 }
