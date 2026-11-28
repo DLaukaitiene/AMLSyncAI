@@ -10,17 +10,6 @@ import Link from "next/link";
 
 const NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const STATUS_LABEL = { filled: "Filled", default: "Default", "required-missing": "Required — missing", "not-yet-reviewed": "Not yet reviewed" };
-
-function Section({ title, children, note }: { title: string; children: React.ReactNode; note?: string }) {
-  return (
-    <fieldset className="space-y-4 rounded-xl border border-border p-4">
-      <legend className="px-1 font-semibold">{title}</legend>
-      {note && <p className="text-sm text-muted">{note}</p>}
-      {children}
-    </fieldset>
-  );
-}
 
 const area = "w-full rounded border border-border bg-transparent px-3 py-2 text-sm";
 
@@ -42,163 +31,226 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
   const checklist = setupChecklist(p);
   const weaker = belowNationalDefaults(p);
 
+  const missing = checklist.filter((c) => c.status === "required-missing");
+  const country = NAMES.of(p.memberState) ?? p.memberState;
+  const has = { supervisor: p.supervisors.length > 0, fiu: p.fiu !== null, sanctions: p.sanctionsAuthority !== null, bo: p.boRegister !== null };
+
   return (
-    <div className="space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-3xl">Country Profile · {NAMES.of(p.memberState)}{office ? ` · ${office.name} (host state)` : " · home state"}</h1>
-        <nav className="flex flex-wrap gap-3 text-sm">
-          <Link className={office ? "text-accent underline" : "font-semibold"} href="/app/settings/country-profile">Home state</Link>
-          {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
-        </nav>
-        <div className="max-w-3xl space-y-1 text-muted" data-testid="country-intro">
-          <p>The anti-money-laundering rules are the same across the EU, but each country adds its own details: who your supervisor and FIU (the authority that receives suspicious activity reports) are and how to reach them, reporting deadlines and formats, cash limits, and extra cases that need enhanced checks. Fill them in for {NAMES.of(p.memberState)} so the app applies your national rules.</p>
-          <p>These details can only add to or tighten the EU rules, never relax them. Each change is saved as a new version and logged; earlier decisions keep the version that applied at the time. You&apos;re on <strong className="text-foreground">version {cur.version}</strong>, saved on {cur.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}{cur.source ? ` (${cur.source})` : ""}.</p>
-        </div>
+    <div className="max-w-3xl space-y-8">
+      {/* 1. What this page is, in two sentences */}
+      <div className="space-y-2">
+        <h1 className="text-3xl">Country Profile · {country}{office ? ` · ${office.name} (host state)` : " · home state"}</h1>
+        <p className="text-muted">The anti-money-laundering rules are the same across the EU, but each country adds its own details: which authorities you report to, cash limits and local deadlines. Fill them in once for {country}; the app then uses them for your reports, deadlines and client checks.</p>
+        {offices.length > 0 && (
+          <nav className="flex flex-wrap gap-3 text-sm" aria-label="Offices">
+            <Link className={office ? "text-accent underline" : "font-semibold"} href="/app/settings/country-profile">Home state</Link>
+            {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
+          </nav>
+        )}
       </div>
 
-      {weaker.length > 0 && (
-        <section className="space-y-1 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-50" data-testid="below-national">
-          <p className="font-semibold">Check these against national law</p>
-          <ul className="list-disc pl-5">{weaker.map((w) => <li key={w}>{w}</li>)}</ul>
-          <p className="text-xs">Update them below if they apply to your firm, and ask your lawyer if unsure.</p>
-        </section>
-      )}
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Setup checklist</h2>
-        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
-          {checklist.map((c) => (
-            <li key={c.parameter} className="flex justify-between gap-4 px-4 py-2">
-              <span>{c.label}</span>
-              <span className={c.status === "required-missing" ? "text-red-700 dark:text-red-300" : "text-muted"}>
-                {STATUS_LABEL[c.status]}{c.blocks ? ` · blocks: ${c.blocks}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {/* 2. Where you stand */}
+      <section className={`space-y-2 rounded-2xl border p-4 text-sm ${missing.length ? "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100" : "border-green-300 bg-green-50 text-green-950 dark:border-green-800 dark:bg-green-950 dark:text-green-100"}`} data-testid="country-status">
+        {missing.length ? (
+          <>
+            <p className="font-semibold">{missing.length} thing{missing.length === 1 ? "" : "s"} to fill in</p>
+            <ul className="list-disc space-y-0.5 pl-5">{missing.map((c) => <li key={c.parameter}>{PLAIN[c.parameter] ?? c.label}: without it you can draft and download reports, but not record them as sent.</li>)}</ul>
+          </>
+        ) : <p className="font-semibold">Everything required is filled in ✓</p>}
+        {weaker.length > 0 && (
+          <div data-testid="below-national">
+            <p className="mt-2 font-semibold">Check these against {country}&apos;s law</p>
+            <ul className="list-disc pl-5">{weaker.map((w) => <li key={w}>{w}</li>)}</ul>
+          </div>
+        )}
       </section>
 
       {!edit && <p className="text-sm text-muted">Only a Compliance Officer can change the Country Profile.</p>}
 
-      <ActionForm key={office?.id ?? "home"} action={saveProfileAction} className="max-w-3xl space-y-6">
+      <ActionForm key={office?.id ?? "home"} action={saveProfileAction} className="space-y-6">
         <input type="hidden" name="officeId" value={office?.id ?? ""} />
         <fieldset disabled={!edit} className="space-y-6">
-          <Section title="Authorities" note="Required. Without them, reports can be drafted and exported but not marked as submitted.">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Supervisor" name="supervisor.name" defaultValue={p.supervisors[0]?.name} hint="Your AML supervisor or self-regulatory body (e.g. bar, chamber of auditors)." />
-              <Field label="Supervisor channel" name="supervisor.channel" defaultValue={p.supervisors[0]?.channel} hint="Portal, email or address for notifications." />
-              <Field label="Sector supervised" name="supervisor.sector" defaultValue={p.supervisors[0]?.sector} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="FIU name" name="fiu.name" defaultValue={p.fiu?.name ?? ""} hint="Financial intelligence unit, e.g. LT: FNTT." />
-              <Field label="FIU reporting channel" name="fiu.channel" defaultValue={p.fiu?.channel ?? ""} hint="Portal URL, goAML or other." />
-              <Field label="Sanctions authority" name="sanctionsAuthority.name" defaultValue={p.sanctionsAuthority?.name ?? ""} hint="Where freezes are reported." />
-              <Field label="Sanctions authority channel" name="sanctionsAuthority.channel" defaultValue={p.sanctionsAuthority?.channel ?? ""} />
-              <Field label="Central BO register" name="boRegister.name" defaultValue={p.boRegister?.name ?? ""} hint="e.g. LT: JANGIS." />
-              <Field label="BO register discrepancy channel" name="boRegister.channel" defaultValue={p.boRegister?.channel ?? ""} />
-              <Field label="Business register" name="businessRegister.name" defaultValue={p.businessRegister?.name ?? ""} />
-              <Field label="Business register link" name="businessRegister.channel" defaultValue={p.businessRegister?.channel ?? ""} />
-              <Field label="Data protection authority" name="dataProtectionAuthority.name" defaultValue={p.dataProtectionAuthority?.name ?? ""} />
-              <Field label="DPA contact" name="dataProtectionAuthority.channel" defaultValue={p.dataProtectionAuthority?.channel ?? ""} />
-            </div>
-            <Field label="External whistleblowing channel" name="whistleblowing" defaultValue={p.whistleblowing?.externalChannel ?? ""} hint="National authority under Directive 2019/1937." />
-          </Section>
+          {/* 3. Required: who you report to */}
+          <Step n={1} title="Who you report to" note="Required. Ask your supervisor or professional body if you're not sure; their website usually lists these.">
+            <Authority title="Your AML supervisor" filled={has.supervisor} why="The authority that checks your firm follows the anti-money-laundering rules (for some professions, a professional body such as the bar or chamber of auditors). You inform them, for example, when your Compliance Officer changes.">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Supervisor: name" name="supervisor.name" defaultValue={p.supervisors[0]?.name} />
+                <Field label="Supervisor: how to contact them" name="supervisor.channel" defaultValue={p.supervisors[0]?.channel} />
+                <Field label="Supervisor: for which sector" name="supervisor.sector" defaultValue={p.supervisors[0]?.sector} />
+              </div>
+            </Authority>
+            <Authority title="Financial intelligence unit (FIU)" filled={has.fiu} why={`The authority that receives reports of suspicious clients or payments${p.memberState === "LT" ? " (in Lithuania: FNTT)" : ""}. Enter how reports are sent: usually a web portal or the goAML system.`}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="FIU name" name="fiu.name" defaultValue={p.fiu?.name ?? ""} />
+                <Field label="FIU reporting channel" name="fiu.channel" defaultValue={p.fiu?.channel ?? ""} />
+              </div>
+            </Authority>
+            <Authority title="Sanctions authority" filled={has.sanctions} why="Where you report if you have to freeze a client's money or assets because they are on a sanctions list.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Sanctions authority: name" name="sanctionsAuthority.name" defaultValue={p.sanctionsAuthority?.name ?? ""} />
+                <Field label="Sanctions authority: how to contact them" name="sanctionsAuthority.channel" defaultValue={p.sanctionsAuthority?.channel ?? ""} />
+              </div>
+            </Authority>
+            <Authority title="Register of company owners" filled={has.bo} why={`The official register of who really owns companies (beneficial owners)${p.memberState === "LT" ? ", in Lithuania JANGIS" : ""}. If what a client tells you doesn't match the register, you must report the difference there.`}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Owners register: name" name="boRegister.name" defaultValue={p.boRegister?.name ?? ""} />
+                <Field label="Owners register: where to report differences" name="boRegister.channel" defaultValue={p.boRegister?.channel ?? ""} />
+              </div>
+            </Authority>
+          </Step>
 
-          <Section title="Cash and reports">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Cash cap (EUR)" name="cashCapEUR" type="number" defaultValue={p.cashCapEUR} hint={`EU cap €${EU_CORE.cash.capEUR.toLocaleString("en")}. Enter a lower national cap if your state has one (e.g. LT €5,000).`} />
-              <Field label="FIU request deadline (working days)" name="fiuRequestWorkingDays" type="number" defaultValue={p.fiuRequestWorkingDays} hint="5 under AMLR; enter a shorter one if your FIU sets it." />
-              <Field label="Threshold report deadline (working days)" name="thresholdReportDeadlineWorkingDays" type="number" defaultValue={p.thresholdReportDeadlineWorkingDays ?? ""} hint="Set by your FIU for Art. 74 reports." />
-            </div>
+          {/* 4. Cash */}
+          <Step n={2} title="Cash rules" note={`The EU allows cash payments up to €${EU_CORE.cash.capEUR.toLocaleString("en")}. Many countries set a lower limit, and some require you to report large cash payments.`}>
+            <Field label="Cash cap (EUR)" name="cashCapEUR" type="number" defaultValue={p.cashCapEUR} />
+            <p className="-mt-2 text-xs text-muted">The largest cash payment allowed in {country}{p.memberState === "LT" ? " (Lithuania: €5,000)" : ""}. Payments above it are flagged.</p>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="cashReport.enabled" defaultChecked={p.nationalCashReport.enabled} /> National cash-transaction reports apply
+              <input type="checkbox" name="cashReport.enabled" defaultChecked={p.nationalCashReport.enabled} /> Large cash payments must be reported to the FIU in {country}
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Cash report threshold (EUR)" name="cashReport.thresholdEUR" type="number" defaultValue={p.nationalCashReport.thresholdEUR ?? ""} />
-              <Field label="Cash report deadline (working days)" name="cashReport.deadlineWorkingDays" type="number" defaultValue={p.nationalCashReport.deadlineWorkingDays ?? ""} />
+              <Field label="Report cash payments from (EUR)" name="cashReport.thresholdEUR" type="number" defaultValue={p.nationalCashReport.thresholdEUR ?? ""} />
+              <Field label="Report within (working days)" name="cashReport.deadlineWorkingDays" type="number" defaultValue={p.nationalCashReport.deadlineWorkingDays ?? ""} />
             </div>
-          </Section>
+          </Step>
 
-          <Section title="Reporting options">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="sro.enabled" defaultChecked={p.sroReportingRoute.enabled} /> Professionals report suspicions through a self-regulatory body (Art. 70(1))
+          {/* 5. National risk assessment */}
+          <Step n={3} title="Your country's risk assessment" note={`Each country publishes a national risk assessment: which businesses, clients and countries it sees as risky. Read the summary for ${country} once a year.`}>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" name="nraReviewed" defaultChecked={p.nationalRiskAssessmentReviewed} className="mt-0.5" /> <span>We have read the national risk assessment <span className="block text-xs text-muted">Your Business Risk Assessment and AML Program take it into account.</span></span>
             </label>
-            <Field label="Self-regulatory body" name="sro.body" defaultValue={p.sroReportingRoute.body ?? ""} />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="privilege.enabled" defaultChecked={p.privilegeNarrowing.enabled} /> Privilege exemption is narrowed for some transactions (Art. 70(3))
-            </label>
-            <Field label="Transaction types where privilege doesn't apply (one per line)" name="privilege.types">
-              <textarea name="privilege.types" rows={2} className={area} defaultValue={p.privilegeNarrowing.transactionTypes.join("\n")} aria-label="Privilege transaction types" />
+            <Field label="Extra cases that need enhanced checks (one per line, as id: description)" name="additionalEddCases">
+              <textarea name="additionalEddCases" rows={3} className={area} defaultValue={p.additionalEddCases.map((c) => `${c.id}: ${c.description}`).join("\n")} aria-label="Additional EDD cases" placeholder="e.g. shell-companies: Companies with no real business activity" />
             </Field>
-          </Section>
-
-          <Section title="Risk">
-            <Field label="Additional EDD cases (one per line, as id: description)" name="additionalEddCases" hint="From your national risk assessment (Art. 34(6)). Each forces at least High risk / EDD.">
-              <textarea name="additionalEddCases" rows={3} className={area} defaultValue={p.additionalEddCases.map((c) => `${c.id}: ${c.description}`).join("\n")} aria-label="Additional EDD cases" />
-            </Field>
+            <p className="-mt-2 text-xs text-muted">If the national risk assessment names situations that are always high risk, list them here: clients in them always get enhanced checks (extra questions about where their money comes from, and management approval).</p>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="nraReviewed" defaultChecked={p.nationalRiskAssessmentReviewed} /> We have reviewed the national risk assessment
+              <input type="checkbox" name="raWaiver" defaultChecked={p.riskAssessmentWaiver} /> Our supervisor told us in writing that we don&apos;t need our own documented risk assessment
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="raWaiver" defaultChecked={p.riskAssessmentWaiver} /> Our supervisor waived an individual documented business-wide risk assessment
-            </label>
-          </Section>
+          </Step>
 
-          <Section title="Records, calendar and identity">
-            <Field label="Record retention (years)" name="retentionYears" type="number" defaultValue={p.retentionYears} hint="5 under AMLR; enter more only if national law requires it." />
-            <div className="space-y-1">
-              <span className="block text-sm font-medium">Working days</span>
-              <div className="flex flex-wrap gap-3 text-sm">
-                {WEEKDAYS.map((d, i) => (
-                  <label key={d} className="flex items-center gap-1">
-                    <input type="checkbox" name={`wd.${i + 1}`} defaultChecked={p.workingWeekdays.includes(i + 1)} /> {d}
-                  </label>
-                ))}
+          {/* 6. Rarely changed: pre-filled with the EU defaults */}
+          <details className="rounded-xl border border-border p-4" data-testid="advanced">
+            <summary className="cursor-pointer font-semibold">Other national details <span className="font-normal text-muted">· pre-filled with the EU rules; change only if {country} differs</span></summary>
+            <div className="mt-4 space-y-6">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold">Other authorities</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Business register: name" name="businessRegister.name" defaultValue={p.businessRegister?.name ?? ""} />
+                  <Field label="Business register: website" name="businessRegister.channel" defaultValue={p.businessRegister?.channel ?? ""} />
+                  <Field label="Data protection authority: name" name="dataProtectionAuthority.name" defaultValue={p.dataProtectionAuthority?.name ?? ""} />
+                  <Field label="Data protection authority: contact" name="dataProtectionAuthority.channel" defaultValue={p.dataProtectionAuthority?.channel ?? ""} />
+                </div>
+                <Field label="Where staff can report wrongdoing outside the firm (whistleblowing authority)" name="whistleblowing" defaultValue={p.whistleblowing?.externalChannel ?? ""} />
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold">Deadlines and record keeping</h3>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Answer FIU requests within (working days)" name="fiuRequestWorkingDays" type="number" defaultValue={p.fiuRequestWorkingDays} />
+                  <Field label="Large-transaction report within (working days)" name="thresholdReportDeadlineWorkingDays" type="number" defaultValue={p.thresholdReportDeadlineWorkingDays ?? ""} />
+                  <Field label="Keep records for (years)" name="retentionYears" type="number" defaultValue={p.retentionYears} />
+                </div>
+                <p className="text-xs text-muted">EU rules: answer the FIU within 5 working days and keep records for 5 years. Enter other values only if {country}&apos;s law sets them.</p>
+                <div className="space-y-1">
+                  <span className="block text-sm font-medium">Working days</span>
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    {WEEKDAYS.map((d, i) => (
+                      <label key={d} className="flex items-center gap-1">
+                        <input type="checkbox" name={`wd.${i + 1}`} defaultChecked={p.workingWeekdays.includes(i + 1)} /> {d}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <Field label="Public holidays (YYYY-MM-DD, one per line)" name="holidays">
+                  <textarea name="holidays" rows={4} className={area} defaultValue={p.holidays.join("\n")} aria-label="Public holidays" />
+                </Field>
+                <p className="-mt-2 text-xs text-muted">Deadlines skip weekends and these holidays. Without holidays, deadlines can only come out shorter, never longer.</p>
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold">How suspicions are reported</h3>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="sro.enabled" defaultChecked={p.sroReportingRoute.enabled} /> In {country}, professionals like us report suspicions through our professional body, not directly to the FIU
+                </label>
+                <Field label="Professional body" name="sro.body" defaultValue={p.sroReportingRoute.body ?? ""} />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="privilege.enabled" defaultChecked={p.privilegeNarrowing.enabled} /> Lawyers&apos; client confidentiality does not cover some transactions in {country}
+                </label>
+                <Field label="Those transactions (one per line)" name="privilege.types">
+                  <textarea name="privilege.types" rows={2} className={area} defaultValue={p.privilegeNarrowing.transactionTypes.join("\n")} aria-label="Privilege transaction types" />
+                </Field>
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold">Identity documents</h3>
+                <Field label="Accepted ID document types (one per line)" name="idDocumentTypes">
+                  <textarea name="idDocumentTypes" rows={2} className={area} defaultValue={p.idDocumentTypes.join("\n")} aria-label="ID document types" placeholder="e.g. Passport" />
+                </Field>
+                <Field label="Accepted electronic IDs (one per line)" name="acceptedEidSchemes">
+                  <textarea name="acceptedEidSchemes" rows={2} className={area} defaultValue={p.acceptedEidSchemes.join("\n")} aria-label="eID schemes" placeholder="e.g. Smart-ID" />
+                </Field>
               </div>
             </div>
-            <Field label="Public holidays (YYYY-MM-DD, one per line)" name="holidays" hint="Used for every deadline. Without holidays, deadlines may be shorter than necessary, never longer.">
-              <textarea name="holidays" rows={4} className={area} defaultValue={p.holidays.join("\n")} aria-label="Public holidays" />
-            </Field>
-            <Field label="Accepted ID document types (one per line)" name="idDocumentTypes">
-              <textarea name="idDocumentTypes" rows={2} className={area} defaultValue={p.idDocumentTypes.join("\n")} aria-label="ID document types" />
-            </Field>
-            <Field label="Accepted eID schemes (one per line)" name="acceptedEidSchemes">
-              <textarea name="acceptedEidSchemes" rows={2} className={area} defaultValue={p.acceptedEidSchemes.join("\n")} aria-label="eID schemes" />
-            </Field>
-          </Section>
+          </details>
 
-          <Field label="Source of these values" name="source" hint="e.g. FNTT guidance of 1 Sept 2027; national AML law art. 15." />
+          <Field label="Where these details come from (optional)" name="source" />
+          <p className="-mt-4 text-xs text-muted">For your records, e.g. &ldquo;FNTT website, checked 1 Sept 2027&rdquo;.</p>
         </fieldset>
-        {edit && (
-          <div className="space-y-2">
-            <Submit>Save new version</Submit>
-          </div>
-        )}
+        {edit && <Submit>Save new version</Submit>}
+        <p className="text-xs text-muted">Each save creates a new version, kept with the date and who saved it. Decisions made earlier keep the version that applied at the time. Details here can only add to or tighten the EU rules, never relax them. You&apos;re on version {cur.version} from {cur.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}.</p>
       </ActionForm>
 
-      {edit && !office && (
-        <section className="max-w-xl space-y-2">
-          <h2 className="text-lg font-semibold">Office in another member state</h2>
-          <p className="text-sm text-muted">Branches or activity in another member state use that state&apos;s Country Profile for their matters (Art. 8) [verify scope with counsel].</p>
-          <ActionForm action={addOfficeAction} className="grid gap-3 sm:grid-cols-3">
-            <Field label="Office name" name="name" required />
-            <CountryField label="Country of the office" name="memberState" required euFirst hint="EU countries are listed first." />
-            <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit></div>
-          </ActionForm>
-        </section>
-      )}
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Version history</h2>
-        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
+      {/* 7. Less used */}
+      <details className="rounded-xl border border-border p-4 text-sm">
+        <summary className="cursor-pointer font-semibold">Version history ({versions.length})</summary>
+        <ul className="mt-2 divide-y divide-border">
           {versions.map((v) => (
-            <li key={v.version} className="flex justify-between px-4 py-2">
+            <li key={v.version} className="flex justify-between py-2">
               <span>Version {v.version}{v.source ? ` · ${v.source}` : ""}</span>
               <span className="text-muted">{v.createdAt.toISOString().slice(0, 10)}</span>
             </li>
           ))}
         </ul>
-      </section>
+      </details>
+
+      {edit && !office && (
+        <details className="rounded-xl border border-border p-4 text-sm">
+          <summary className="cursor-pointer font-semibold">Office in another EU country</summary>
+          <p className="mt-2 text-muted">If you have a branch or work in another EU country, add it: work there follows that country&apos;s details, with its own Country Profile.</p>
+          <ActionForm action={addOfficeAction} className="mt-3 grid gap-3 sm:grid-cols-3">
+            <Field label="Office name" name="name" required />
+            <CountryField label="Country of the office" name="memberState" required euFirst />
+            <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit></div>
+          </ActionForm>
+        </details>
+      )}
+    </div>
+  );
+}
+
+const PLAIN: Partial<Record<string, string>> = {
+  supervisors: "Your AML supervisor",
+  fiu: "Financial intelligence unit (FIU)",
+  sanctionsAuthority: "Sanctions authority",
+  boRegister: "Register of company owners",
+};
+
+function Step({ n, title, note, children }: { n: number; title: string; note?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-xl border border-border p-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold"><span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand text-sm text-brand-ink">{n}</span>{title}</h2>
+        {note && <p className="text-sm text-muted">{note}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Authority({ title, filled, why, children }: { title: string; filled: boolean; why: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2 rounded-lg bg-surface p-3">
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-semibold">{title}</h3>
+        <span className={`shrink-0 text-xs font-semibold ${filled ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-300"}`}>{filled ? "Filled ✓" : "Missing"}</span>
+      </div>
+      <p className="text-xs text-muted">{why}</p>
+      {children}
     </div>
   );
 }

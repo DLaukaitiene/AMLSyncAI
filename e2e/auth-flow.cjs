@@ -9,6 +9,7 @@ function b32d(s){let bits=0,v=0,o=[];for(const c of s.replace(/\s/g,'')){v=(v<<5
 function totp(secret, offset=0){const ctr=Math.floor(Date.now()/30000)+offset;const b=Buffer.alloc(8);b.writeBigUInt64BE(BigInt(ctr));const h=crypto.createHmac('sha1',b32d(secret)).update(b).digest();const o=h[h.length-1]&15;return String((h.readUInt32BE(o)&0x7fffffff)%1e6).padStart(6,'0');}
 async function lastMail(page, to){await page.goto(BASE+'/dev/mailbox');const t=await page.locator(`article[data-to="${to}"] pre`).first().innerText();return t.match(/http\S+/)[0];}
 const log=(...a)=>console.log('✔',...a);
+const { submit } = require('./helpers.cjs');
 
 (async()=>{
   const b = await chromium.launch();
@@ -67,14 +68,13 @@ const log=(...a)=>console.log('✔',...a);
   // 6. Country profile: relaxing rejected, tightening saved
   await p.goto(BASE+'/app/settings/country-profile');
   await p.getByLabel('Cash cap (EUR)').fill('15000');
-  await p.getByRole('button',{name:'Save new version'}).click();
-  await p.getByText('cannot exceed the EU cap').first().waitFor(); log('cash cap 15,000 rejected');
+  await submit(p, 'Save new version', 'cannot exceed the EU cap'); log('cash cap 15,000 rejected');
   await p.getByLabel('Cash cap (EUR)').fill('5000');
   await p.getByLabel('FIU name').fill('FNTT');
   await p.getByLabel('FIU reporting channel').fill('https://www.fntt.lt');
+  await p.getByTestId('advanced').evaluate((el) => { el.open = true; });
   await p.getByLabel('Public holidays').fill('2027-12-24\n2027-12-25');
-  await p.getByRole('button',{name:'Save new version'}).click();
-  await p.getByText('Saved as version 2').first().waitFor();
+  await submit(p, 'Save new version', 'Saved as version 2');
   log('country profile v2:', await p.getByText('Saved as version 2').first().innerText());
   
 
