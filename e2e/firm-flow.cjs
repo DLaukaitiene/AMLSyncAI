@@ -20,7 +20,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Risk assessment
   await p.goto(BASE + "/app/firm/risk-assessment");
-  await p.getByRole("heading", { name: /Draft version 1/ }).waitFor();
+  await p.getByRole("heading", { name: /Questions about/ }).waitFor();
   for (const name of await p.locator("input[type=radio]").evaluateAll((els) => [...new Set(els.map((e) => e.name))])) {
     const opts = p.locator(`input[type=radio][name="${name}"]`);
     // risk questions: second option; controls: last option (fully in place)

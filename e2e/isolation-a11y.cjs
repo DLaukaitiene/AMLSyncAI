@@ -34,7 +34,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await v.getByRole("heading", { name: "Victim matter" }).waitFor();
   const matterUrl = v.url();
   await v.goto(BASE + "/app/firm/policies"); await submit(v, "Generate new version", /Draft: AML\/CTF policy v1/);
-  await v.goto(BASE + "/app/firm/risk-assessment"); await v.getByRole("heading", { name: /Draft version 1/ }).waitFor();
+  await v.goto(BASE + "/app/firm/risk-assessment"); await v.getByRole("heading", { name: /Questions about/ }).waitFor();
   await v.goto(BASE + "/app/feature-requests/new"); await v.getByLabel("Title *").fill("Victim feature idea"); await v.getByLabel("What problem does it solve? *").fill("Something long enough here."); await v.getByRole("button", { name: "Submit request" }).click(); await v.waitForURL(/feature-requests\/[0-9a-f-]{36}$/);
 
   const firmB = sql(`SELECT id FROM "Firm" WHERE name = 'Victim Firm UAB'`);

@@ -50,14 +50,15 @@ export default async function RiskAssessmentPage() {
       {data.draft && (
         <>
           <ActionForm action={saveAnswersAction.bind(null, data.draft.id)} className="space-y-6">
-            <h2 className="text-lg font-semibold">Draft version {data.draft.version}</h2>
+            <h2 className="text-lg font-semibold">Questions about {s.firm.name}:</h2>
             <fieldset disabled={!edit} className="space-y-6">
               {groups.map((g) => (
                 <fieldset key={g} className="space-y-4 rounded-xl border border-border p-4">
                   <legend className="px-1 font-semibold">{g}</legend>
                   {RISK_QUESTIONS.filter((q) => q.group === g).map((q) => (
                     <fieldset key={q.id} className="space-y-1 text-sm">
-                      <legend className="font-medium">{q.text} <span className="text-xs font-normal text-muted">({q.threats.join(", ")} · {q.annex})</span></legend>
+                      <legend className="font-medium">{q.text}</legend>
+                      {q.hint && <p className="text-xs text-muted">{q.hint}</p>}
                       <div className="flex flex-wrap gap-x-4 gap-y-1">
                         {q.options.map((o, i) => <label key={o} className="flex items-center gap-1"><input type="radio" name={q.id} value={i} defaultChecked={a[q.id] === i} /> {o}</label>)}
                       </div>
@@ -69,7 +70,7 @@ export default async function RiskAssessmentPage() {
                 <legend className="px-1 font-semibold">Controls</legend>
                 {CONTROL_QUESTIONS.map((q) => (
                   <fieldset key={q.id} className="space-y-1 text-sm">
-                    <legend className="font-medium">{q.text} <span className="text-xs font-normal text-muted">({q.article})</span></legend>
+                    <legend className="font-medium">{q.text}</legend>
                     <div className="flex flex-wrap gap-x-4">
                       {CONTROL_OPTIONS.map((o, i) => <label key={o} className="flex items-center gap-1"><input type="radio" name={q.id} value={i} defaultChecked={a[q.id] === i} /> {o}</label>)}
                     </div>
