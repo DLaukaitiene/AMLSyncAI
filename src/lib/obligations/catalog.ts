@@ -36,7 +36,7 @@ export interface Obligation {
 export const OBLIGATIONS: Obligation[] = [
   {
     id: "compliance-officer", group: "Set up your firm",
-    title: "Appoint Compliance Officer and Compliance Manager",
+    title: "Appointment of Compliance Officer and Compliance Manager",
     what: "Name one person who runs AML compliance day to day (the Compliance Officer) and one member of management who is responsible for it. In a one-person firm you can hold both roles.",
     when: "Before you take on clients. Tell your supervisor when the Compliance Officer changes.",
     how: ["Team → Members: invite colleagues if needed.", "Compliance Hub → Governance: appoint the Compliance Officer and the Compliance Manager.", "Team → Responsibilities: tick who does each AML duty."],
