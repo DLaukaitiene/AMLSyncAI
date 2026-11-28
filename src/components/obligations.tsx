@@ -7,7 +7,7 @@ const STATE: Record<ObligationState, { label: string; cls: string; icon: typeof 
   done: { label: "In order", cls: "bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200", icon: CircleCheck },
   todo: { label: "To do", cls: "bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200", icon: CircleDot },
   pending: { label: "Awaiting approval", cls: "bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200", icon: Clock3 },
-  blocked: { label: "Pending on Other Tasks", cls: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200", icon: Clock3 },
+  blocked: { label: "Dependency", cls: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200", icon: Clock3 },
   overdue: { label: "Act now", cls: "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200", icon: CircleAlert },
   na: { label: "Not needed", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300", icon: CircleMinus },
 };
@@ -61,7 +61,7 @@ const MARK: Record<ObligationState, { label: string; cls: string; icon: typeof C
   done: { label: "Done", cls: "text-green-700 dark:text-green-400", icon: CircleCheck },
   todo: { label: "To do", cls: "text-yellow-700 dark:text-yellow-300", icon: CircleDot },
   pending: { label: "Awaiting approval", cls: "text-orange-700 dark:text-orange-300", icon: Clock3 },
-  blocked: { label: "Pending on\nOther Tasks", cls: "text-red-700 dark:text-red-300", icon: Clock3 },
+  blocked: { label: "Dependency", cls: "text-red-700 dark:text-red-300", icon: Clock3 },
   overdue: { label: "Act now", cls: "text-red-700 dark:text-red-300", icon: CircleAlert },
   na: { label: "Not needed", cls: "text-slate-500 dark:text-slate-400", icon: CircleMinus },
 };
