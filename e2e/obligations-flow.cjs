@@ -13,14 +13,13 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Obligations on the dashboard: open duties first, settled ones folded away
   const obl = p.getByTestId("obligations");
-  for (const t of ["Appointment of Compliance Officer and Compliance Manager", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
+  for (const t of ["Appoint Compliance Officer and Compliance Manager", "Assess your firm's risks", "Check every client before you start", "Train your staff every year"]) await obl.getByText(t, { exact: true }).waitFor();
   await p.getByTestId("attention").waitFor();
   for (const box of ["Your company", "Your team", "Clients", "Deals and transactions", "Reporting"]) await p.getByTestId(`box-${box}`).waitFor();
   await p.getByTestId("obligation-staff-integrity").getByText("Not needed for a one-person firm.").waitFor();
   if ((await p.getByTestId("obligation-staff-integrity").getAttribute("data-state")) !== "na") throw new Error("✘ staff integrity should be 'not needed'");
-  await p.getByTestId("obligation-risk-assessment").getByTestId("help").locator("summary").click();
-  await p.getByTestId("obligation-risk-assessment").getByText(/decides how strict your client checks must be/).waitFor();
-  log("dashboard: 5 boxes (company, team, clients, deals, reporting); (?) opens the explanation; status per duty");
+  if (await p.getByTestId("obligation-risk-assessment").getByTestId("help").count()) throw new Error("✘ no (?) on dashboard duties");
+  log("dashboard: 5 boxes (company, team, clients, deals, reporting); status per duty; no (?) on duties");
 
   // Appoint the Compliance Officer from the box (fresh sign-in, so no step-up needed)
   const co = p.getByTestId("obligation-compliance-officer");
@@ -37,9 +36,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Explainer page
   await p.goto(BASE + "/app");
-  await p.getByTestId("obligation-reporting").getByTestId("help").locator("summary").click();
-  await p.getByTestId("obligation-reporting").getByRole("link", { name: "Step by step" }).click();
-  await p.waitForURL(/\/app\/obligations#reporting/);
+  await p.goto(BASE + "/app/obligations#reporting");
   await p.getByTestId("reporting-guide").getByText(/Never tell the client/).waitFor();
   await p.getByTestId("reporting-guide").getByText(/not recorded yet/).waitFor();
   if ((await p.getByTestId("obligation-explained").count()) !== 14) throw new Error("✘ expected 14 obligations explained");

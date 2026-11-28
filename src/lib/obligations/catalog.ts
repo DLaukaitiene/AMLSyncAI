@@ -36,7 +36,7 @@ export interface Obligation {
 export const OBLIGATIONS: Obligation[] = [
   {
     id: "compliance-officer", group: "Set up your firm",
-    title: "Appointment of Compliance Officer and Compliance Manager",
+    title: "Appoint Compliance Officer and Compliance Manager",
     what: "Name one person who runs AML compliance day to day (the Compliance Officer) and one member of management who is responsible for it. In a one-person firm you can hold both roles.",
     when: "Before you take on clients. Inform your supervisor when the Compliance Officer changes.",
     how: ["Team → Members: invite colleagues if needed.", "Compliance Hub → Governance: appoint the Compliance Officer and the Compliance Manager.", "Team → Responsibilities: tick who does each AML duty."],
@@ -66,7 +66,7 @@ export const OBLIGATIONS: Obligation[] = [
   },
   {
     id: "national-rules", group: "Set up your firm",
-    title: "Know your supervisor and FIU",
+    title: "Know your supervisor",
     what: "The EU rules are built in. Add your country's details: who supervises your firm, your Financial Intelligence Unit (FIU) and how to send it reports, and any stricter national limits.",
     when: "At the start, and when your national rules change.",
     how: ["Settings → Country Profile: fill in the required items."],

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { BookOpen, CircleCheck, CircleAlert, CircleDot, CircleMinus, Clock3 } from "lucide-react";
 import { obligation, type Obligation, type ObligationId } from "@/lib/obligations/catalog";
-import { Help } from "./help";
 import type { ObligationState, ObligationStatus } from "@/lib/obligations/evaluate";
 
 const STATE: Record<ObligationState, { label: string; cls: string; icon: typeof CircleCheck }> = {
@@ -73,17 +72,8 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
   return (
     <li className="py-3" data-testid={`obligation-${o.id}`} data-state={status.state}>
       <div className="flex items-start justify-between gap-3">
-        {/* The (?) stays glued to the title's last word, also when the title wraps. */}
-        <span className="min-w-0 font-semibold">
-          {o.title.split(" ").slice(0, -1).join(" ")}{" "}
-          <span className="whitespace-nowrap">
-            {o.title.split(" ").at(-1)}{" "}
-            <Help label="What does this mean?">
-              <p>{o.duty}</p>
-              <p><Link href={`/app/obligations#${o.id}`} className="text-accent underline">Step by step</Link></p>
-            </Help>
-          </span>
-        </span>
+        {/* No (?) here: the link below leads to the page that explains and does it [28 Nov 2026]. */}
+        <span className="min-w-0 font-semibold">{o.title}</span>
         <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
       </div>
       <p className={`mt-1 whitespace-pre-line text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</p>
