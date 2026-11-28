@@ -393,6 +393,11 @@ export async function acceptInvitation(token: string, password: string): Promise
       await tx.auditEvent.create({ data: { firmId: inv.firmId, userId: user.id, action: "create", objectType: "User", objectId: user.id, fields: ["roles"] } });
       // Appointed as Compliance Officer / Compliance Manager before they had an account: link it to them now.
       await tx.appointment.updateMany({ where: { firmId: inv.firmId, userId: null, email: inv.email }, data: { userId: user.id } });
+      const fns = (await tx.appointment.findMany({ where: { userId: user.id, toDate: null }, select: { function: true } })).map((a) => a.function);
+      const roles = new Set<Role>(user.roles);
+      if (fns.includes("compliance-manager")) roles.add("OWNER");
+      if (fns.includes("compliance-officer")) roles.add("COMPLIANCE_OFFICER");
+      if (roles.size !== user.roles.length) await tx.user.update({ where: { id: user.id }, data: { roles: [...roles] } });
       return user;
     });
     return { ok: true, user };

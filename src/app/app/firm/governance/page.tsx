@@ -7,9 +7,8 @@ import type { GeneratedDoc } from "@/lib/docs/model";
 import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
-import { annualReportAction, approveAnnualReportAction, inviteAndAppointAction } from "../records-actions";
+import { annualReportAction, approveAnnualReportAction } from "../records-actions";
 import { reassignDutyAction, saveAppointmentsAction, setDeputyAction } from "./actions";
-import { InviteAppoint } from "@/components/invite-appoint";
 import { AppointmentsForm } from "@/components/appointments-form";
 import { resolveDuties, withoutArticles, type DutyRole, type Holder } from "@/lib/firm/responsibilities";
 import { Help, PageTitle } from "@/components/help";
@@ -47,14 +46,25 @@ export default async function GovernancePage() {
   const history = data.appts.filter((a) => a.toDate);
   const roleName = (fn: DutyRole) => (samePerson ? "Compliance Manager & Compliance Officer" : FN[fn]);
 
-  const table = (editable: boolean) => (
+  // One table per role, side by side (Compliance Manager | Compliance Officer).
+  const tables = (editable: boolean) => (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      {(["compliance-manager", "compliance-officer"] as const).map((fn) => (
+        <div key={fn} className="space-y-2" data-testid={`duties-${fn}`}>
+          <h3 className="flex flex-wrap items-center gap-1.5 font-semibold">{FN[fn]}<Help label={`What does the ${FN[fn]} do?`}>{ROLE_HELP[fn]}</Help><span className="font-normal text-muted">· {holder(fn)?.name ?? "not appointed"}</span></h3>
+          {table(editable, rows.filter((r) => r.role === fn))}
+        </div>
+      ))}
+    </div>
+  );
+  const table = (editable: boolean, list: typeof rows) => (
     <div className="overflow-x-auto rounded-2xl border border-border">
       <table className="w-full text-sm">
         <thead className="bg-surface text-left text-muted">
           <tr><th className="px-3 py-2 font-medium">Duty</th><th className="px-3 py-2 font-medium">Who</th>{editable && <th className="px-3 py-2"><span className="sr-only">Change</span></th>}</tr>
         </thead>
         <tbody className="divide-y divide-border">
-          {rows.map((r) => (
+          {list.map((r) => (
             <tr key={r.key} data-testid="responsibility" className="align-top">
               <td className="px-3 py-2.5"><span className="block font-medium">{withoutArticles(r.label)}</span><span className="block text-xs text-muted">{withoutArticles(r.hint)}</span></td>
               <td className="px-3 py-2.5">
@@ -125,7 +135,7 @@ export default async function GovernancePage() {
 
         {pendingNotice.length > 0 && manageDuties && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
-            <span>Change saved. Tell your supervisor:</span>
+            <span>Change saved. Inform your supervisor:</span>
             {pendingNotice.map((fn) => (
               <Link key={fn} href={`/app/firm/governance/notify/${current[fn]!.id}`} className="inline-flex rounded-full bg-brand px-4 py-1.5 font-semibold text-brand-ink hover:brightness-105" data-testid={`inform-regulator-${fn}`}>
                 Inform the Regulator{pendingNotice.length > 1 ? ` (${FN[fn]})` : ""}
@@ -142,8 +152,6 @@ export default async function GovernancePage() {
             <summary className="inline-flex cursor-pointer list-none rounded-full border border-border px-4 py-1.5 font-semibold hover:border-accent [&::-webkit-details-marker]:hidden" data-testid="appointments-change">Change</summary>
             <div className="mt-3 space-y-3">
               <AppointmentsForm action={saveAppointmentsAction} users={data.users} managerId={cm?.userId ?? null} officerId={co?.userId ?? null} />
-              <InviteAppoint action={inviteAndAppointAction.bind(null, "compliance-manager")} label="Compliance Manager" withReason={!!cm} title="Compliance Manager not on the app yet? Invite and appoint" />
-              <InviteAppoint action={inviteAndAppointAction.bind(null, "compliance-officer")} label="Compliance Officer" withReason={!!co} title="Compliance Officer not on the app yet? Invite and appoint" />
             </div>
           </details>
         )}
@@ -168,12 +176,12 @@ export default async function GovernancePage() {
         {data.onePerson && !uncovered ? (
           <>
             <p className="text-sm text-muted">They&apos;re all with you as Compliance Manager &amp; Compliance Officer. Nothing to do here.</p>
-            <details className="text-sm"><summary className="cursor-pointer text-accent underline">See the list</summary><div className="mt-2">{table(false)}</div></details>
+            <details className="text-sm"><summary className="cursor-pointer text-accent underline">See the list</summary><div className="mt-2">{tables(false)}</div></details>
           </>
         ) : (
           <>
             <p className="text-sm text-muted">Each duty follows its role. Hand training or alert review to a colleague with Reassign; if a provider does it, choose &ldquo;An outside provider&rdquo; and record them on the <Link href="/app/firm/outsourcing" className="text-accent underline">Outsourcing</Link> page. Deciding on suspicious activity reports and approving high-risk clients stay with their role; you can add a deputy. Data protection is assigned on the <Link href="/app/firm/privacy" className="text-accent underline">Data Protection</Link> page.</p>
-            {table(manageDuties)}
+            {tables(manageDuties)}
           </>
         )}
       </section>
