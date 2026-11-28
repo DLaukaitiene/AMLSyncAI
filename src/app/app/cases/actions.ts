@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { draftText } from "@/lib/server/ai";
 import { decryptField, encryptField } from "@/lib/server/crypto";
@@ -12,7 +12,6 @@ import {
   resolveDiscrepancy, updateReportNarrative, ensureSanctionsNotice, type CaseDecision,
 } from "@/lib/server/cases";
 
-const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 
 /** Any user can raise an internal report. Afterwards only the Compliance Officer sees it (§11.10). */
 export async function raiseSuspicionAction(ref: { partyIds: string[]; matterIds: string[] }, _: ActionState, fd: FormData): Promise<ActionState> {
@@ -30,7 +29,7 @@ export async function raiseSuspicionAction(ref: { partyIds: string[]; matterIds:
 
 export async function decideAction(caseId: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("case.view");
-  if (!hasRecentMfa(s)) return STEP_UP(`/app/cases/${caseId}`);
+  { const c = confirmFirst(fd, "This records your decision on the suspicious activity report. The decision and its time are locked and can't be edited afterwards."); if (c) return c; }
   const decision = String(fd.get("decision")) as CaseDecision;
   const reasons = String(fd.get("reasons") ?? "").trim();
   if (!["report", "no-report", "privilege"].includes(decision)) return { error: "Choose a decision.", fieldErrors: { decision: ["Required."] } };
@@ -106,7 +105,7 @@ export async function narrativeAction(reportId: string, back: string, _: ActionS
 
 export async function submittedAction(reportId: string, back: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("case.view");
-  if (!hasRecentMfa(s)) return STEP_UP(back);
+  { const c = confirmFirst(fd, "This marks the report as submitted to the authority with this reference. It can't be undone."); if (c) return c; }
   if (fd.get("aiDrafted") === "1" && fd.get("reviewedAi") !== "on") return { error: "Confirm that you reviewed and corrected the AI-drafted narrative." };
   const r = await withTenant(s.firm.id, (tx) => markReportSubmitted(tx, { firmId: s.firm.id, userId: s.user.id }, reportId, String(fd.get("reference") ?? "")));
   if (!r.ok) return { error: r.error };

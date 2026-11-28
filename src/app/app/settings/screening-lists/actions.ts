@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { audit } from "@/lib/server/audit";
 import { importList, rescreenFirm } from "@/lib/server/screening-lists";
@@ -12,7 +12,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function uploadListAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("countryProfile.edit");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/screening-lists" } };
+  { const c = confirmFirst(fd, "This replaces the screening list used for everyone in your firm. All clients will be screened against the new list."); if (c) return c; }
   const file = fd.get("file");
   const name = String(fd.get("name") ?? "").trim();
   const kind = fd.get("kind") === "PEP" ? "PEP" : "SANCTIONS";
@@ -40,7 +40,7 @@ export async function uploadListAction(_: ActionState, fd: FormData): Promise<Ac
 /** Auto-clear threshold for non-sanctions provider hits (competitor finding: hidden thresholds). Off by default. */
 export async function autoClearAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("countryProfile.edit");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/screening-lists" } };
+  { const c = confirmFirst(fd, "This changes which possible matches are cleared automatically for the whole firm."); if (c) return c; }
   const raw = String(fd.get("threshold") ?? "").trim();
   const value = raw === "" ? null : Number(raw);
   if (value !== null && !(Number.isInteger(value) && value >= 1 && value <= 99)) return { error: "Enter a whole number from 1 to 99, or leave it empty to switch auto-clear off." };

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { Sector } from "@prisma/client";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { audit, changedFields } from "@/lib/server/audit";
 import { upsertTask } from "@/lib/server/cdd";
@@ -15,7 +15,6 @@ import { draftText } from "@/lib/server/ai";
 import type { GeneratedDoc } from "@/lib/docs/model";
 import type { Prisma } from "@prisma/client";
 
-const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 
 /** Firm profile. Adding a sector or service triggers a risk-assessment review (Art. 10). */
 export async function saveFirmProfileAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -63,9 +62,9 @@ export async function saveAnswersAction(id: string, _: ActionState, fd: FormData
   return { message: r.unanswered.length ? `Saved. ${r.unanswered.length} question(s) still open.` : `Saved. Residual risk: ${r.overallResidual}. Ready for management approval.` };
 }
 
-export async function approveRiskAssessmentAction(id: string): Promise<ActionState> {
+export async function approveRiskAssessmentAction(id: string, fd?: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  if (!hasRecentMfa(s)) return STEP_UP("/app/firm/risk-assessment");
+  { const c = confirmFirst(fd, "This approves the risk assessment on behalf of management and puts it in force. It replaces the current version."); if (c) return c; }
   const r = await withTenant(s.firm.id, (tx) => approveRiskAssessment(tx, { firmId: s.firm.id, userId: s.user.id }, id));
   if (!r.ok) return { error: r.error };
   revalidatePath("/app/firm/risk-assessment");
@@ -86,9 +85,9 @@ export async function editSectionAction(id: string, sectionId: string, _: Action
   return { message: "Section saved." };
 }
 
-export async function approvePolicyAction(id: string): Promise<ActionState> {
+export async function approvePolicyAction(id: string, fd?: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  if (!hasRecentMfa(s)) return STEP_UP("/app/firm/policies");
+  { const c = confirmFirst(fd, "This approves the document on behalf of management and puts it in force. Staff will be asked to read and acknowledge it."); if (c) return c; }
   await withTenant(s.firm.id, (tx) => approvePolicy(tx, { firmId: s.firm.id, userId: s.user.id }, id));
   revalidatePath("/app/firm/policies");
   return { message: "Approved and in force. Staff are asked to read and acknowledge it." };

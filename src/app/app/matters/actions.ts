@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant, type Tx } from "@/lib/server/db";
 import { audit } from "@/lib/server/audit";
 import { formToObject, zodErrors } from "@/lib/server/form";
@@ -216,7 +216,7 @@ export async function completeMatterAction(matterId: string, step: "transfer" | 
   const s = await requireUser("client.accept");
   const reason = String(fd.get("overrideReason") ?? "").trim();
   const override = reason ? { byRole: s.user.roles.includes("COMPLIANCE_OFFICER") ? "compliance-officer" : "staff", reason } : undefined;
-  if (override && !hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: `/app/matters/${matterId}` } };
+  { const c = override && confirmFirst(fd, "This overrides the missing checks and lets the case go ahead. Your name and reason are recorded for the supervisor."); if (c) return c; }
   return withTenant(s.firm.id, async (tx) => {
     const st = await matterState(tx, s.firm.id, matterId);
     const d = step === "transfer" ? canTransferFundsOrProperty(st, override) : canCompleteMatter(st, override);

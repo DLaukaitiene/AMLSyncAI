@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa, revokeAllSessions } from "@/lib/server/session";
+import { requireUser, revokeAllSessions, confirmFirst } from "@/lib/server/session";
 import { createInvitation, inviteSchema, resetUserMfa } from "@/lib/server/auth/flows";
 import { adminDb } from "@/lib/server/db";
 import { withTenant } from "@/lib/server/db";
@@ -10,11 +10,9 @@ import { audit, securityEvent } from "@/lib/server/audit";
 import { formToObject, zodErrors } from "@/lib/server/form";
 import { EMAIL_FAILED, EmailDeliveryError } from "@/lib/server/email";
 
-const STEP_UP = { error: "For security, confirm it's you first.", data: { stepUp: "/app/team" } };
 
 export async function inviteAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("team.invite");
-  if (!hasRecentMfa(s)) return STEP_UP;
   const raw = formToObject(fd);
   const parsed = inviteSchema.safeParse({ ...raw, allowExternal: true });
   if (!parsed.success) return zodErrors(parsed.error);
@@ -31,9 +29,9 @@ export async function inviteAction(_: ActionState, fd: FormData): Promise<Action
   return { message: `Invitation sent to ${parsed.data.email}. It expires in 72 hours.` };
 }
 
-export async function removeUserAction(userId: string): Promise<ActionState> {
+export async function removeUserAction(userId: string, fd?: FormData): Promise<ActionState> {
   const s = await requireUser("team.remove");
-  if (!hasRecentMfa(s)) return STEP_UP;
+  { const c = confirmFirst(fd, "This removes the person from your firm: they're signed out everywhere and can no longer sign in. Their past work stays in the records."); if (c) return c; }
   if (userId === s.user.id) return { error: "You can't remove yourself." };
   await withTenant(s.firm.id, async (tx) => {
     const target = await tx.user.findUniqueOrThrow({ where: { id: userId } });
@@ -67,9 +65,9 @@ export async function signOutEverywhereAction(): Promise<ActionState> {
   return { message: "All your other sessions were signed out." };
 }
 
-export async function resetMfaAction(userId: string): Promise<ActionState> {
+export async function resetMfaAction(userId: string, fd?: FormData): Promise<ActionState> {
   const s = await requireUser("team.remove");
-  if (!hasRecentMfa(s)) return STEP_UP;
+  { const c = confirmFirst(fd, "This resets the person's two-factor authentication and signs them out everywhere. They'll set it up again at their next sign-in."); if (c) return c; }
   try {
     await resetUserMfa(s.firm.id, s.user.id, userId);
   } catch (e) {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { currentProfile } from "@/lib/server/country-profile";
 import { audit } from "@/lib/server/audit";
@@ -58,7 +58,7 @@ function readForm(fd: FormData, memberState: string): CountryProfileInput {
 
 export async function saveProfileAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("countryProfile.edit");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/country-profile" } };
+  { const c = confirmFirst(fd, "This changes your Country Profile: deadlines, thresholds and reporting rules for the whole firm follow the new values from now on."); if (c) return c; }
 
   const officeId = String(fd.get("officeId") ?? "") || null;
   return withTenant(s.firm.id, async (tx) => {
@@ -96,7 +96,7 @@ export async function saveProfileAction(_: ActionState, fd: FormData): Promise<A
 /** An office or branch in another member state gets its own (host-state) Country Profile (§3A.3 rule 2). */
 export async function addOfficeAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("countryProfile.edit");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/settings/country-profile" } };
+  { const c = confirmFirst(fd, "This adds an office with its own Country Profile for the whole firm."); if (c) return c; }
   const name = String(fd.get("name") ?? "").trim();
   const memberState = normalizeCountry(String(fd.get("memberState") ?? "")) ?? "";
   if (name.length < 2) return { error: "Name the office.", fieldErrors: { name: ["Required."] } };

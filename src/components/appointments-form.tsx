@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ActionForm, Submit, type ActionState } from "@/components/form";
+import { Help } from "@/components/help";
 
 type Person = { id: string; name: string };
 
@@ -22,10 +23,17 @@ export function AppointmentsForm({ action, users, managerId, officerId }: {
   );
   return (
     <ActionForm action={action} className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-3 text-sm [&>[role=alert]]:order-last [&>[role=alert]]:basis-full [&>[role=status]]:order-last [&>[role=status]]:basis-full">
-      <label className="flex basis-full items-center gap-2">
-        <input type="checkbox" role="switch" name="same" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-4 w-4" />
-        <span><strong>Same person</strong> holds both roles <span className="text-muted">(allowed for small firms)</span></span>
-      </label>
+      <div className="flex basis-full flex-wrap items-center gap-1.5">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" role="switch" name="same" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-4 w-4" />
+          <span><strong>Same person</strong> holds both roles <span className="text-muted">(allowed for small firms)</span></span>
+        </label>
+        <Help label="What is a small firm?">
+          <p>The AML rules set no fixed number. One person may be both Compliance Manager and Compliance Officer when the firm&apos;s size and the nature of its business justify it.</p>
+          <p>That usually means a sole practitioner or a firm with only a few staff, a simple business, no branches and mostly lower-risk clients.</p>
+          <p>As the firm grows or takes on higher-risk work, your supervisor may expect two different people.</p>
+        </Help>
+      </div>
       {same ? select("manager", "Compliance Manager & Compliance Officer", managerId) : <>{select("manager", "Compliance Manager", managerId)}{select("officer", "Compliance Officer", officerId)}</>}
       <label className="min-w-48 flex-1 space-y-1">
         <span className="block text-xs font-medium">Reason for the change</span>

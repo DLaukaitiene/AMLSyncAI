@@ -4,7 +4,7 @@ import { can } from "@/lib/auth/permissions";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { audit } from "@/lib/server/audit";
 import { encryptField } from "@/lib/server/crypto";
@@ -28,7 +28,6 @@ import { sendEmail } from "@/lib/server/email";
 import { draftOwnershipFromDocument } from "@/lib/server/ai";
 import { DOCUMENT_KINDS, storeDocument } from "@/lib/server/storage";
 
-const STEP_UP = (path: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: path } });
 
 function readParty(fd: FormData, prefix = "") {
   const o = formToObject(fd);
@@ -323,7 +322,7 @@ export async function eddChecklistAction(fileId: string, _: ActionState, fd: For
 /** Senior management approval (Owner = member of the management body) for EDD or a PEP relationship. */
 export async function seniorApprovalAction(fileId: string, kind: "edd" | "pep", _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  if (!hasRecentMfa(s)) return STEP_UP(`/app/clients/${fileId}`);
+  { const c = confirmFirst(fd, "This gives senior management approval for this client. Your name and the time are recorded."); if (c) return c; }
   const reason = String(fd.get("reason") ?? "").trim();
   if (reason.length < 10) return { error: "Record the reasons for approving.", fieldErrors: { reason: ["At least 10 characters."] } };
   await withTenant(s.firm.id, async (tx) => {
@@ -355,7 +354,7 @@ export async function riskOverrideAction(fileId: string, _: ActionState, fd: For
 
 export async function acceptAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("client.accept");
-  if (!hasRecentMfa(s)) return STEP_UP(`/app/clients/${fileId}`);
+  { const c = confirmFirst(fd, "This accepts the client: you can start work for them. Your decision is recorded for the supervisor."); if (c) return c; }
   const overrideReason = String(fd.get("overrideReason") ?? "").trim();
   const override = overrideReason ? { byRole: s.user.roles.includes("COMPLIANCE_OFFICER") ? "compliance-officer" : "staff", reason: overrideReason } : undefined;
   const r = await withTenant(s.firm.id, (tx) =>
@@ -368,7 +367,7 @@ export async function acceptAction(fileId: string, _: ActionState, fd: FormData)
 
 export async function endAction(fileId: string, _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("client.accept");
-  if (!hasRecentMfa(s)) return STEP_UP(`/app/clients/${fileId}`);
+  { const c = confirmFirst(fd, "This ends the relationship with the client. The file is closed and kept for the retention period."); if (c) return c; }
   const kind = fd.get("kind") === "TERMINATED" ? "TERMINATED" : "REFUSED";
   const reason = String(fd.get("reason") ?? "").trim();
   const suspicion = String(fd.get("suspicion") ?? "");

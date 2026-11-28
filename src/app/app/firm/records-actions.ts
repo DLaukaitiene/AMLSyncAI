@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import {
   addOutsourcing, appoint, assignTraining, completeTraining, declareIntegrity, ensureBuiltInModules, generateAnnualReport, INTEGRITY_QUESTIONS,
@@ -16,7 +16,6 @@ import { adminDb } from "@/lib/server/db";
 import { createInvitation, inviteSchema } from "@/lib/server/auth/flows";
 import { EmailDeliveryError } from "@/lib/server/email";
 
-const STEP_UP = (p: string): ActionState => ({ error: "For security, confirm it's you first.", data: { stepUp: p } });
 const ctxOf = (s: { firm: { id: string }; user: { id: string } }) => ({ firmId: s.firm.id, userId: s.user.id });
 
 export async function appointAction(fn: "compliance-manager" | "compliance-officer", _: ActionState, fd: FormData): Promise<ActionState> {
@@ -84,9 +83,9 @@ export async function annualReportAction(): Promise<ActionState> {
   return { message: "Annual report generated from the system data." };
 }
 
-export async function approveAnnualReportAction(id: string): Promise<ActionState> {
+export async function approveAnnualReportAction(id: string, fd?: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  if (!hasRecentMfa(s)) return STEP_UP("/app/firm/governance");
+  { const c = confirmFirst(fd, "This approves the annual compliance report on behalf of management."); if (c) return c; }
   await withTenant(s.firm.id, (tx) => approvePolicy(tx, ctxOf(s), id));
   revalidatePath("/app/firm/governance");
   return { message: "Annual report approved." };

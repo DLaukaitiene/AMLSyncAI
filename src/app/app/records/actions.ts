@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { ActionState } from "@/components/form";
-import { requireUser, hasRecentMfa } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { purgeParties } from "@/lib/server/retention";
 import { securityEvent } from "@/lib/server/audit";
 
 export async function purgeAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("records.purge");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/records" } };
+  { const c = confirmFirst(fd, "This permanently deletes the selected client records. It can't be undone."); if (c) return c; }
   const ids = fd.getAll("partyId").map(String);
   if (ids.length === 0) return { error: "Select at least one record." };
   if (fd.get("confirm") !== "on") return { error: "Tick the box to confirm that the data will be permanently deleted." };

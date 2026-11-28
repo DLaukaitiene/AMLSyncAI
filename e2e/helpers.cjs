@@ -43,6 +43,10 @@ async function signupFirm(browser, { code, company, email, sector, state = "LT" 
 /** Submits the form containing `buttonName` and waits for its status/alert message. */
 async function submit(p, buttonName, expect) {
   await p.getByRole("button", { name: buttonName, exact: true }).first().click();
+  // Actions with consequences show a warning first: confirm it (the app no longer asks to re-authenticate).
+  const box = p.getByTestId("confirm-box").first();
+  const shown = await box.waitFor({ timeout: 4000 }).then(() => true, () => false);
+  if (shown) await box.getByRole("button", { name: "Confirm" }).click();
   if (!expect) return;
   try {
     await p.getByText(expect).first().waitFor({ timeout: 15000 });

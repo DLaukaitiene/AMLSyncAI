@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { hasRecentMfa, requireUser } from "@/lib/server/session";
+import { requireUser, confirmFirst } from "@/lib/server/session";
 import { audit, securityEvent } from "@/lib/server/audit";
 import { notify } from "@/lib/server/email";
 import { currentProfile } from "@/lib/server/country-profile";
@@ -49,7 +49,7 @@ export async function saveBillingDetails(_: ActionState, fd: FormData): Promise<
  */
 export async function cancelSubscriptionAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  if (!hasRecentMfa(s)) return { error: "For security, confirm it's you first.", data: { stepUp: "/app/billing" } };
+  { const c = confirmFirst(fd, "This cancels your subscription. Your records become a read-only archive until the end of the retention period."); if (c) return c; }
   if (String(fd.get("confirm") ?? "").trim() !== "CANCEL") return { error: "Type CANCEL to confirm.", fieldErrors: { confirm: ["Type CANCEL"] } };
   const today = new Date().toISOString().slice(0, 10);
   const archiveUntil = await withTenant(s.firm.id, async (tx) => {
