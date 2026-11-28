@@ -137,9 +137,9 @@ export const RISK_FLAGS: RiskFlag[] = [
   },
   {
     id: "cash-over-limit", group: "product", appliesTo: "both", article: "Art. 80",
-    block: "Cash payments above the legal limit can't be accepted. In Lithuania the limit is EUR 5,000, including linked payments that add up past it. Agree payment by bank transfer, then untick this.",
+    block: "Cash payments above the legal limit can't be accepted. The limit is the one in your Country Profile, and it includes linked payments that add up past it. Agree payment by bank transfer, then untick this.",
     label: "Wants to pay cash above the legal limit",
-    help: "The client wants to pay in cash above the legal limit (Lithuania EUR 5,000; EU maximum EUR 10,000), in one go or in linked payments. Recorded cash transactions are also checked automatically.",
+    help: "The client wants to pay in cash above the legal limit (your country's limit; the EU maximum is EUR 10,000), in one go or in linked payments. Recorded cash transactions are also checked automatically.",
   },
   {
     id: "anonymous-prepaid-cards", group: "product", appliesTo: "both", article: "Art. 79",

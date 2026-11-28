@@ -22,7 +22,7 @@ const { submit } = require('./helpers.cjs');
   await p.goto(BASE+'/signup');
   const fill = async (data) => { for (const [l,v] of Object.entries(data)) await p.getByLabel(l, {exact:true}).fill(v); };
   await fill({'Invitation code *':process.env.CODE,'Company name *':'Jonaitis ir partneriai','Your name *':'Anna Jonaitė','Company email *':'anna@gmail.com','Password *':'correct horse battery staple'});
-  await p.getByLabel('Country where your firm is established').fill('LT'); await p.locator('select[name=sector]').selectOption('ACCOUNTANT');
+  await p.getByLabel('EU country where your firm is established').fill('LT'); await p.locator('select[name=sector]').selectOption('ACCOUNTANT');
   await p.getByRole('button',{name:'Create account'}).click();
   await p.getByText('Free email providers are not accepted').first().waitFor();
   log('free email refused');

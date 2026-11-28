@@ -8,7 +8,7 @@ import { currentProfile } from "@/lib/server/country-profile";
 import { audit } from "@/lib/server/audit";
 import { defaultCountryProfile, diffProfiles, parseCountryProfile, type CountryProfileInput } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
-import { isKnownCountry, normalizeCountry } from "@/lib/geo/countries";
+import { isKnownCountry, normalizeCountry, EU_CODES } from "@/lib/geo/countries";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const num = (fd: FormData, k: string) => (str(fd, k) === "" ? undefined : Number(str(fd, k)));
@@ -101,6 +101,7 @@ export async function addOfficeAction(_: ActionState, fd: FormData): Promise<Act
   const memberState = normalizeCountry(String(fd.get("memberState") ?? "")) ?? "";
   if (name.length < 2) return { error: "Name the office.", fieldErrors: { name: ["Required."] } };
   if (!isKnownCountry(memberState)) return { error: "Choose the country from the list.", fieldErrors: { memberState: ["Choose from the list"] } };
+  if (!EU_CODES.includes(memberState)) return { error: "Offices must be in an EU country.", fieldErrors: { memberState: ["Choose an EU country"] } };
   await withTenant(s.firm.id, async (tx) => {
     const o = await tx.office.create({ data: { firmId: s.firm.id, name, memberState } });
     const row = await tx.countryProfileVersion.create({

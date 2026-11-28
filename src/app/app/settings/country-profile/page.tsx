@@ -7,6 +7,7 @@ import { can } from "@/lib/auth/permissions";
 import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { addOfficeAction, saveProfileAction } from "./actions";
 import Link from "next/link";
+import { nationalSuggestions } from "@/lib/rules/national-suggestions";
 
 const NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -17,13 +18,14 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
   const s = await requireUser("countryProfile.view");
   const edit = can(s.user.roles, "countryProfile.edit");
   const sp = await searchParams;
-  const { cur, versions, offices, office } = await withTenant(s.firm.id, async (tx) => {
+  const { cur, versions, offices, office, sectors } = await withTenant(s.firm.id, async (tx) => {
     const offices = await tx.office.findMany({ where: { isHome: false }, orderBy: { name: "asc" } });
     const office = offices.find((o) => o.id === sp.office) ?? null;
     return {
       offices,
       office,
       cur: await currentProfile(tx, s.firm.id, office?.id ?? null),
+      sectors: (await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { sectors: true } })).sectors as string[],
       versions: await tx.countryProfileVersion.findMany({ where: { officeId: office?.id ?? null }, orderBy: { version: "desc" }, take: 20, select: { version: true, createdAt: true, source: true } }),
     };
   });
@@ -33,6 +35,11 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
   const missing = checklist.filter((c) => c.status === "required-missing");
   const country = NAMES.of(p.memberState) ?? p.memberState;
+  // Suggested national details (pre-filled, marked, saved only when the person saves).
+  const sug = nationalSuggestions(p.memberState, sectors);
+  const v = (stored: string | undefined | null, suggested: string | undefined) => stored || suggested || "";
+  const suggestedFor = { supervisor: !p.supervisors.length && !!sug.supervisor, fiu: !p.fiu && !!sug.fiu, sanctions: !p.sanctionsAuthority && !!sug.sanctionsAuthority, bo: !p.boRegister && !!sug.boRegister };
+  const anySuggested = Object.values(suggestedFor).some(Boolean) || (!p.holidays.length && !!sug.holidays) || (!p.dataProtectionAuthority && !!sug.dataProtectionAuthority) || (!p.whistleblowing && !!sug.whistleblowing);
   const has = { supervisor: p.supervisors.length > 0, fiu: p.fiu !== null, sanctions: p.sanctionsAuthority !== null, bo: p.boRegister !== null };
 
   return (
@@ -55,6 +62,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           <>
             <p className="font-semibold">{missing.length} thing{missing.length === 1 ? "" : "s"} to fill in</p>
             <ul className="list-disc space-y-0.5 pl-5">{missing.map((c) => <li key={c.parameter}>{PLAIN[c.parameter] ?? c.label}: without it you can draft and download reports, but not record them as sent.</li>)}</ul>
+            {anySuggested && <p className="font-semibold" data-testid="suggested-note">AMLSync has pre-filled them for {country}. Check each one below (marked &ldquo;Suggested&rdquo;) and press Save.</p>}
           </>
         ) : <p className="font-semibold">Everything required is filled in ✓</p>}
         {weaker.length > 0 && (
@@ -72,30 +80,30 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
         <fieldset disabled={!edit} className="space-y-6">
           {/* 3. Required: who you report to */}
           <Step n={1} title="Who you report to" note="Required. Ask your supervisor or professional body if you're not sure; their website usually lists these.">
-            <Authority title="Your AML supervisor" filled={has.supervisor} why="The authority that checks your firm follows the anti-money-laundering rules (for some professions, a professional body such as the bar or chamber of auditors). You inform them, for example, when your Compliance Officer changes.">
+            <Authority title="Your AML supervisor" filled={has.supervisor} suggested={suggestedFor.supervisor} why="The authority that checks your firm follows the anti-money-laundering rules (for some professions, a professional body such as the bar or chamber of auditors). You inform them, for example, when your Compliance Officer changes.">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Supervisor: name" name="supervisor.name" defaultValue={p.supervisors[0]?.name} />
-                <Field label="Supervisor: how to contact them" name="supervisor.channel" defaultValue={p.supervisors[0]?.channel} />
+                <Field label="Supervisor: name" name="supervisor.name" defaultValue={v(p.supervisors[0]?.name, sug.supervisor?.name)} />
+                <Field label="Supervisor: how to contact them" name="supervisor.channel" defaultValue={v(p.supervisors[0]?.channel, sug.supervisor?.channel)} />
               </div>
               {/* Not asked any more (the app doesn't need it); kept as it was. */}
               <input type="hidden" name="supervisor.sector" value={p.supervisors[0]?.sector ?? ""} />
             </Authority>
-            <Authority title="Financial intelligence unit (FIU)" filled={has.fiu} why={`The authority that receives reports of suspicious clients or payments${p.memberState === "LT" ? " (in Lithuania: FNTT)" : ""}. Enter how reports are sent: usually a web portal or the goAML system.`}>
+            <Authority title="Financial intelligence unit (FIU)" filled={has.fiu} suggested={suggestedFor.fiu} why={`The authority that receives reports of suspicious clients or payments. Enter how reports are sent: usually a web portal or the goAML system.`}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="FIU name" name="fiu.name" defaultValue={p.fiu?.name ?? ""} />
-                <Field label="FIU reporting channel" name="fiu.channel" defaultValue={p.fiu?.channel ?? ""} />
+                <Field label="FIU name" name="fiu.name" defaultValue={v(p.fiu?.name, sug.fiu?.name)} />
+                <Field label="FIU reporting channel" name="fiu.channel" defaultValue={v(p.fiu?.channel, sug.fiu?.channel)} />
               </div>
             </Authority>
-            <Authority title="Sanctions authority" filled={has.sanctions} why="Where you report if you have to freeze a client's money or assets because they are on a sanctions list.">
+            <Authority title="Sanctions authority" filled={has.sanctions} suggested={suggestedFor.sanctions} why="Where you report if you have to freeze a client's money or assets because they are on a sanctions list.">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Sanctions authority: name" name="sanctionsAuthority.name" defaultValue={p.sanctionsAuthority?.name ?? ""} />
-                <Field label="Sanctions authority: how to contact them" name="sanctionsAuthority.channel" defaultValue={p.sanctionsAuthority?.channel ?? ""} />
+                <Field label="Sanctions authority: name" name="sanctionsAuthority.name" defaultValue={v(p.sanctionsAuthority?.name, sug.sanctionsAuthority?.name)} />
+                <Field label="Sanctions authority: how to contact them" name="sanctionsAuthority.channel" defaultValue={v(p.sanctionsAuthority?.channel, sug.sanctionsAuthority?.channel)} />
               </div>
             </Authority>
-            <Authority title="Register of company owners" filled={has.bo} why={`The official register of who really owns companies (beneficial owners)${p.memberState === "LT" ? ", in Lithuania JANGIS" : ""}. If what a client tells you doesn't match the register, you must report the difference there.`}>
+            <Authority title="Register of company owners" filled={has.bo} suggested={suggestedFor.bo} why={`The official register of who really owns companies (beneficial owners). If what a client tells you doesn't match the register, you must report the difference there.`}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Owners register: name" name="boRegister.name" defaultValue={p.boRegister?.name ?? ""} />
-                <Field label="Owners register: where to report differences" name="boRegister.channel" defaultValue={p.boRegister?.channel ?? ""} />
+                <Field label="Owners register: name" name="boRegister.name" defaultValue={v(p.boRegister?.name, sug.boRegister?.name)} />
+                <Field label="Owners register: where to report differences" name="boRegister.channel" defaultValue={v(p.boRegister?.channel, sug.boRegister?.channel)} />
               </div>
             </Authority>
           </Step>
@@ -103,7 +111,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           {/* 4. Cash */}
           <Step n={2} title="Cash rules" note={`The EU allows cash payments up to €${EU_CORE.cash.capEUR.toLocaleString("en")}. Many countries set a lower limit, and some require you to report large cash payments.`}>
             <Field label="Cash cap (EUR)" name="cashCapEUR" type="number" defaultValue={p.cashCapEUR} />
-            <p className="-mt-2 text-xs text-muted">The largest cash payment allowed in {country}{p.memberState === "LT" ? " (Lithuania: €5,000)" : ""}. Payments above it are flagged.</p>
+            <p className="-mt-2 text-xs text-muted">The largest cash payment allowed in {country}. Payments above it are flagged.</p>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="cashReport.enabled" defaultChecked={p.nationalCashReport.enabled} /> Large cash payments must be reported to the FIU in {country}
             </label>
@@ -132,10 +140,10 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold">Other authorities</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Data protection authority: name" name="dataProtectionAuthority.name" defaultValue={p.dataProtectionAuthority?.name ?? ""} />
-                  <Field label="Data protection authority: contact" name="dataProtectionAuthority.channel" defaultValue={p.dataProtectionAuthority?.channel ?? ""} />
+                  <Field label="Data protection authority: name" name="dataProtectionAuthority.name" defaultValue={v(p.dataProtectionAuthority?.name, sug.dataProtectionAuthority?.name)} />
+                  <Field label="Data protection authority: contact" name="dataProtectionAuthority.channel" defaultValue={v(p.dataProtectionAuthority?.channel, sug.dataProtectionAuthority?.channel)} />
                 </div>
-                <Field label="Where staff can report wrongdoing outside the firm (whistleblowing authority)" name="whistleblowing" defaultValue={p.whistleblowing?.externalChannel ?? ""} />
+                <Field label="Where staff can report wrongdoing outside the firm (whistleblowing authority)" name="whistleblowing" defaultValue={v(p.whistleblowing?.externalChannel, sug.whistleblowing)} />
               </div>
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold">Deadlines and record keeping</h3>
@@ -156,7 +164,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
                   </div>
                 </div>
                 <Field label="Public holidays (YYYY-MM-DD, one per line)" name="holidays">
-                  <textarea name="holidays" rows={4} className={area} defaultValue={p.holidays.join("\n")} aria-label="Public holidays" />
+                  <textarea name="holidays" rows={4} className={area} defaultValue={(p.holidays.length ? p.holidays : sug.holidays ?? []).join("\n")} aria-label="Public holidays" />
                 </Field>
                 <p className="-mt-2 text-xs text-muted">Deadlines skip weekends and these holidays. Without holidays, deadlines can only come out shorter, never longer.</p>
               </div>
@@ -182,7 +190,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           </details>
 
           <Field label="Where these details come from (optional)" name="source" />
-          <p className="-mt-4 text-xs text-muted">For your records, e.g. &ldquo;FNTT website, checked 1 Sept 2027&rdquo;.</p>
+          <p className="-mt-4 text-xs text-muted">For your records, e.g. &ldquo;supervisor&apos;s website, checked 1 Sept 2027&rdquo;.</p>
         </fieldset>
         {edit && <Submit>Save new version</Submit>}
         <p className="text-xs text-muted">Each save creates a new version, kept with the date and who saved it. Decisions made earlier keep the version that applied at the time. Details here can only add to or tighten the EU rules, never relax them. You&apos;re on version {cur.version} from {cur.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}.</p>
@@ -207,7 +215,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           <p className="mt-2 text-muted">If you have a branch or work in another EU country, add it: work there follows that country&apos;s details, with its own Country Profile.</p>
           <ActionForm action={addOfficeAction} className="mt-3 grid gap-3 sm:grid-cols-3">
             <Field label="Office name" name="name" required />
-            <CountryField label="Country of the office" name="memberState" required euFirst />
+            <CountryField label="Country of the office" name="memberState" required euOnly />
             <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit></div>
           </ActionForm>
         </details>
@@ -235,12 +243,12 @@ function Step({ n, title, note, children }: { n: number; title: string; note?: s
   );
 }
 
-function Authority({ title, filled, why, children }: { title: string; filled: boolean; why: string; children: React.ReactNode }) {
+function Authority({ title, filled, suggested, why, children }: { title: string; filled: boolean; suggested?: boolean; why: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2 rounded-lg bg-surface p-3">
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold">{title}</h3>
-        <span className={`shrink-0 text-xs font-semibold ${filled ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-300"}`}>{filled ? "Filled ✓" : "Missing"}</span>
+        <span className={`shrink-0 text-xs font-semibold ${filled ? "text-green-700 dark:text-green-400" : suggested ? "text-amber-700 dark:text-amber-300" : "text-red-700 dark:text-red-300"}`}>{filled ? "Filled ✓" : suggested ? "Suggested: check and save" : "Missing"}</span>
       </div>
       <p className="text-xs text-muted">{why}</p>
       {children}

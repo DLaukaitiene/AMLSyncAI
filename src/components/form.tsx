@@ -217,6 +217,7 @@ export function CountryField({
   required,
   multiple,
   euFirst,
+  euOnly,
 }: {
   label: string;
   name: string;
@@ -225,6 +226,8 @@ export function CountryField({
   required?: boolean;
   multiple?: boolean;
   euFirst?: boolean;
+  /** Only the 27 EU member states in the list. */
+  euOnly?: boolean;
 }) {
   const id = useId();
   const listId = `${id}-countries`;
@@ -251,7 +254,7 @@ export function CountryField({
         <HintButton open={hintOpen} onToggle={() => setHintOpen((o) => !o)} controls={`${id}-hint`} label={text} />
       </div>
       <datalist id={listId}>
-        {countryOptions(euFirst).map((c) => <option key={c.code} value={c.name} />)}
+        {countryOptions(euFirst).filter((c) => !euOnly || c.eu).map((c) => <option key={c.code} value={c.name} />)}
       </datalist>
       {multiple ? (
         <>

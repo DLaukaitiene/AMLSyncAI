@@ -15,7 +15,7 @@ async function signupFirm(browser, { code, company, email, sector, state = "LT" 
   await p.goto(BASE + "/signup");
   await p.getByLabel("Invitation code *", { exact: true }).fill(code);
   await p.getByLabel("Company name *", { exact: true }).fill(company);
-  await p.getByLabel("Country where your firm is established").fill(state);
+  await p.getByLabel("EU country where your firm is established").fill(state);
   await p.locator("select[name=sector]").selectOption(sector);
   if (sector === "OTHER") await p.locator("input[name=sectorOther]").fill("Compliance software provider");
   await p.getByLabel("Your name *", { exact: true }).fill("Owner of " + company);

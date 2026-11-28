@@ -13,7 +13,7 @@ import { defaultCountryProfile } from "@/lib/rules/country-profile";
 import { EU_CORE_VERSION } from "@/lib/rules/eu-core";
 import { TRIAL_CREDIT_CENTS } from "@/lib/didit/map";
 import { CONTACT_EMAIL, planOf, TRIAL_DAYS } from "@/lib/billing/plans";
-import { isKnownCountry, normalizeCountry } from "@/lib/geo/countries";
+import { EU_CODES, isKnownCountry, normalizeCountry } from "@/lib/geo/countries";
 import type { Role, Sector } from "@prisma/client";
 
 export const EU_MEMBER_STATES = [
@@ -53,11 +53,15 @@ export const signupSchema = z.object({
   companyName: z.string().trim().min(2, "Enter the company name").max(200),
   name: z.string().trim().min(2, "Enter your name").max(200),
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
-  // Any country; firms outside the EU are told AMLSync App follows EU rules (AMLR).
+  // EU member states only [28 Nov 2026]: AMLSync App applies the EU anti-money-laundering rules.
   memberState: z.string().transform((v, ctx) => {
     const c = normalizeCountry(v);
     if (!c || !isKnownCountry(c)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose your country from the list" });
+      return z.NEVER;
+    }
+    if (!EU_CODES.includes(c)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "AMLSync App is for firms established in an EU country." });
       return z.NEVER;
     }
     return c;

@@ -6,14 +6,14 @@ import { FLAG_GROUPS, RISK_FLAGS, type FlagGroup, type RiskFlag } from "@/lib/cd
 
 /** CDD data set fields for a natural person or legal entity (spec §4.2). */
 /** "What are you adding?" options on Add Client (ClearAML's wording). */
-/** Common legal forms (EU / Lithuania); users can type any other. */
+/** Common legal forms across the EU; users can type any other. */
 const LEGAL_FORMS = [
-  "Private limited company (UAB / Ltd / GmbH)",
-  "Public limited company (AB / plc / AG)",
-  "Small partnership (MB)",
+  "Private limited company (Ltd / GmbH / SARL / BV / Sp. z o.o. / SL / SRL / UAB / OÜ / SIA)",
+  "Public limited company (plc / AG / SA / NV / AB / AS)",
+  "Small partnership (e.g. MB)",
   "General partnership",
   "Limited partnership",
-  "Sole proprietorship (IĮ)",
+  "Sole proprietorship",
   "Public institution (VšĮ)",
   "Association",
   "Foundation / charity",
@@ -85,11 +85,11 @@ export function PartyFields({ prefix = "", allowLegal = true, compact = false, c
           <Field label="Legal form" name={n("legalForm")} options={LEGAL_FORMS} hint="Pick from the list or type another legal form." />
           <Field label="Registration number" name={n("registrationNumber")} />
           {!compact && <Field label="Registered office address" name={n("registeredOffice")} hint="Official address in the business register." />}
-          <CountryField label="Registered office country" name={n("countryOfCreation")} hint="Type the country name, e.g. Lithuania. Usually the country the company was set up in." />
+          <CountryField label="Registered office country" name={n("countryOfCreation")} hint="Type the country name. Usually the country the company was set up in." />
           {!compact && (
             <>
               <Field label="Principal place of business address" name={n("principalPlaceOfBusiness")} hint="Where the company actually operates, if different from the registered office." />
-              <CountryField label="Principal place of business country" name={n("principalPlaceOfBusinessCountry")} hint="Type the country name, e.g. Lithuania." />
+              <CountryField label="Principal place of business country" name={n("principalPlaceOfBusinessCountry")} hint="Type the country name." />
             </>
           )}
           {chooser && <Field label="Tax ID" name="taxId" hint="Company tax or VAT number. Stored encrypted." autoComplete="off" />}
