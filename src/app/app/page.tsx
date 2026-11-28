@@ -11,7 +11,7 @@ import { RiskChip, StatusChip } from "@/components/chips";
 import { adminDb } from "@/lib/server/db";
 import { firmObligations } from "@/lib/server/obligations";
 import { OBLIGATION_BOXES, OBLIGATIONS } from "@/lib/obligations/catalog";
-import { obligationSummary } from "@/lib/obligations/evaluate";
+import { byCompletion, obligationSummary } from "@/lib/obligations/evaluate";
 import { ObligationBox, ObligationItem } from "@/components/obligations";
 import { AppointInline } from "@/components/appoint-inline";
 import { appointAction, inviteAndAppointAction } from "@/app/app/firm/records-actions";
@@ -213,8 +213,8 @@ export default async function Dashboard() {
         </div>
         {(() => {
           const box = (b: (typeof OBLIGATION_BOXES)[number]) => (
-            <ObligationBox key={b.id} title={b.title} open={b.ids.filter((id) => ["todo", "overdue", "pending"].includes(statusOf.get(id)!.state)).length}>
-              {b.ids.map((id) => {
+            <ObligationBox key={b.id} title={b.title} open={b.ids.filter((id) => ["todo", "overdue", "pending", "blocked"].includes(statusOf.get(id)!.state)).length}>
+              {b.ids.map((id) => statusOf.get(id)!).sort(byCompletion).map(({ id }) => {
                 const o = OBLIGATIONS.find((x) => x.id === id)!;
                 return (
                   <ObligationItem key={id} o={o} status={statusOf.get(id)!}>

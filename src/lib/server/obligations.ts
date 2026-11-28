@@ -49,6 +49,7 @@ export async function obligationInput(tx: Tx, firmId: string, opts: { seeCases: 
     sectors: firm.sectors,
     staff: staff.map((u) => ({ id: u.id, name: u.name })),
     onePerson,
+    firmProfileComplete: (await tx.firm.findUniqueOrThrow({ where: { id: firmId }, select: { sectors: true, size: true } })).sectors.length > 0 && staffUnknown === false,
     staffUnknown,
     complianceOfficer: appointed("compliance-officer"),
     responsibleManager: appointed("compliance-manager"),

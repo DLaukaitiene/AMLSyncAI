@@ -19,7 +19,7 @@ export async function summaryText(firmId: string, seeCases: boolean): Promise<{ 
   const firm = await adminDb.firm.findUniqueOrThrow({ where: { id: firmId }, select: { name: true } });
   const title = new Map(OBLIGATIONS.map((o) => [o.id, o.title]));
   const act = ob.statuses.filter((s) => s.state === "overdue");
-  const todo = ob.statuses.filter((s) => s.state === "todo");
+  const todo = ob.statuses.filter((s) => s.state === "todo" || s.state === "pending" || s.state === "blocked");
   const lines = [
     `${firm.name}: ${sum.done} of ${sum.total} AML obligations in order${sum.overdue ? `, ${sum.overdue} need action now` : ""}.`,
     ...(act.length ? ["Act now:", ...act.map((s) => `- ${title.get(s.id)}: ${s.detail.replace(/\n/g, " · ")}`)] : []),

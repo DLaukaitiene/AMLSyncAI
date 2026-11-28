@@ -17,7 +17,7 @@ describe("obligation status", () => {
     expect(s["compliance-officer"].state).toBe("todo");
     expect(s["compliance-officer"].detail).toBe("Nobody is appointed yet.");
     expect(s["risk-assessment"].state).toBe("todo");
-    expect(s.policies.detail).toMatch(/risk assessment first/);
+    expect(s.policies).toMatchObject({ state: "blocked", detail: "First: the Business Risk Assessment and your Country Profile." });
     expect(s["client-checks"].detail).toMatch(/No clients yet/);
     expect(s["staff-integrity"].state).toBe("na");
     expect(s.whistleblowing.state).toBe("na");
@@ -50,5 +50,16 @@ describe("obligation status", () => {
     }
     expect(sectorNote(obligation("client-checks"), ["ESTATE_AGENT"])).toMatch(/buyer and the seller/);
     expect(sectorNote(obligation("client-checks"), ["GAMBLING"])).toBeNull();
+  });
+});
+
+describe("duties that wait for others", () => {
+  it("the AML Program waits for the firm profile, risk assessment and Country Profile", () => {
+    const s = by({ ...fresh, firmProfileComplete: false, countryProfileMissing: 2 });
+    expect(s.policies.state).toBe("blocked");
+    expect(s.policies.detail).toBe("First: your firm profile, the Business Risk Assessment and your Country Profile.");
+    expect(s["risk-assessment"].state).toBe("blocked");
+    const ready = by({ ...fresh, firmProfileComplete: true, countryProfileMissing: 0, riskAssessmentInForce: true });
+    expect(ready.policies.state).toBe("todo");
   });
 });

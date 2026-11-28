@@ -3,6 +3,7 @@ import { OBLIGATIONS, type Obligation, type ObligationId } from "./catalog";
 /** What the dashboard knows about the firm, gathered on the server. */
 export interface ObligationInput {
   onePerson: boolean;
+  firmProfileComplete?: boolean; // sectors and number of staff given (Compliance Hub → Overview)
   staffUnknown?: boolean; // the firm hasn't said how many staff it has yet
   complianceOfficer: string | null; // name
   responsibleManager: string | null; // name
@@ -36,7 +37,7 @@ export interface ObligationInput {
   retentionDue: number; // files past their retention date
 }
 
-export type ObligationState = "done" | "todo" | "pending" | "overdue" | "na";
+export type ObligationState = "done" | "todo" | "pending" | "blocked" | "overdue" | "na";
 export interface ObligationStatus { id: ObligationId; state: ObligationState; detail: string }
 
 const n = (k: number, one: string, many = one + "s") => `${k} ${k === 1 ? one : many}`;
@@ -85,13 +86,46 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
       : s("whistleblowing", "done", "The confidential channel is open to staff."),
     records: i.retentionDue ? s("records", "todo", `${n(i.retentionDue, "file")} past the 5-year period: review for deletion.`) : s("records", "done", "Everything is recorded automatically."),
   };
+  // A duty that can't be done yet waits for the ones before it ("Pending on Other Tasks"); overdue items always show.
+  const isDone = (d: Prereq) => (d === "firm-profile" ? i.firmProfileComplete !== false : ["done", "na"].includes(out[d].state));
+  for (const [id, deps] of Object.entries(DEPENDS) as [ObligationId, Prereq[]][]) {
+    const st = out[id];
+    if (st.state !== "todo" && st.state !== "pending") continue;
+    const waiting = deps.filter((d) => !isDone(d));
+    if (waiting.length) out[id] = { id, state: "blocked", detail: `First: ${list(waiting.map((d) => PREREQ_NAME[d]))}.` };
+  }
   return OBLIGATIONS.map((o) => out[o.id]);
+}
+
+type Prereq = ObligationId | "firm-profile";
+/** What has to be done before each duty can be done. */
+export const DEPENDS: Partial<Record<ObligationId, Prereq[]>> = {
+  // Only the set-up chain waits. Work in front of you (suspicion reports, approvals, alerts) never waits.
+  "risk-assessment": ["firm-profile"],
+  policies: ["firm-profile", "risk-assessment", "national-rules"],
+};
+const PREREQ_NAME: Record<Prereq, string> = {
+  "firm-profile": "your firm profile", "compliance-officer": "appointing the Compliance Officer and Compliance Manager", "risk-assessment": "the Business Risk Assessment",
+  "national-rules": "your Country Profile", policies: "the AML Program", "client-checks": "client checks", screening: "screening", "high-risk": "high-risk approvals",
+  deals: "cases", reviews: "client reviews", reporting: "reporting", training: "training", "staff-integrity": "staff checks", whistleblowing: "whistleblowing", records: "records",
+};
+const list = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}`);
+
+/** The order duties should be done in: set-up first, then the team, then clients and deals. */
+export const COMPLETION_ORDER: ObligationId[] = [
+  "compliance-officer", "national-rules", "risk-assessment", "policies", "training", "staff-integrity", "whistleblowing",
+  "client-checks", "screening", "high-risk", "reviews", "deals", "reporting", "records",
+];
+/** Dashboard order inside a box: open duties first, in the order they should be done; settled ones last. */
+export function byCompletion(a: ObligationStatus, b: ObligationStatus): number {
+  const settled = (x: ObligationStatus) => (x.state === "done" || x.state === "na" ? 1 : 0);
+  return settled(a) - settled(b) || COMPLETION_ORDER.indexOf(a.id) - COMPLETION_ORDER.indexOf(b.id);
 }
 
 /** Totals for the dashboard headline. */
 export function obligationSummary(st: ObligationStatus[]) {
   const live = st.filter((x) => x.state !== "na");
-  return { total: live.length, done: live.filter((x) => x.state === "done").length, overdue: live.filter((x) => x.state === "overdue").length, todo: live.filter((x) => x.state === "todo" || x.state === "pending").length };
+  return { total: live.length, done: live.filter((x) => x.state === "done").length, overdue: live.filter((x) => x.state === "overdue").length, todo: live.filter((x) => x.state === "todo" || x.state === "pending" || x.state === "blocked").length };
 }
 
 /** Sector note for a firm (first sector that has one). */
