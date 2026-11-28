@@ -31,16 +31,18 @@ export default async function IntegrityPage() {
       <PageTitle className="text-3xl" help={<>Integrity and conflict-of-interest declarations, on joining and every year, and screening of staff against sanctions and PEP lists.</>}>Staff Checks</PageTitle>
       <p className="text-sm">{data.mine ? `Your last declaration: ${data.mine.declaredAt.toISOString().slice(0, 10)}.` : "You haven't made a declaration yet."}</p>
       <ActionForm action={integrityAction} className="space-y-4">
+        <h2 className="text-lg font-semibold" data-testid="declaration-for">Your declaration: {s.user.name}</h2>
+        <p className="text-sm text-muted">These questions are about you personally. Each person in the firm makes their own declaration when they join and every year.</p>
         {INTEGRITY_QUESTIONS.map((q) => (
           <fieldset key={q.id} className="space-y-1 text-sm">
-            <legend className="font-medium">{q.text}</legend>
+            <legend className="font-medium">{q.text.replace("{name}", s.user.name)}</legend>
             <div className="flex gap-6">
               <label className="flex items-center gap-2"><input type="radio" name={q.id} value="yes" /> Yes</label>
               <label className="flex items-center gap-2"><input type="radio" name={q.id} value="no" /> No</label>
             </div>
           </fieldset>
         ))}
-        <Field label="Conflicts of interest (clients, family, financial interests)" name="conflicts" hint="Leave empty if none. Conflicted staff are excluded from that client." />
+        <Field label={`Your conflicts of interest, ${s.user.name} (clients, family, financial interests)`} name="conflicts" hint="Leave empty if none. Conflicted staff are excluded from that client." />
         <Submit>Make declaration</Submit>
       </ActionForm>
       {manage && (

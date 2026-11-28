@@ -41,7 +41,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await q.goto(BASE + "/app/firm/integrity");
   for (const n of ["convictions", "aml-sanctions", "pep"]) await q.locator(`input[name=${n}][value=no]`).check();
   await q.locator("input[name=understood][value=yes]").check();
-  await q.getByLabel(/Conflicts of interest/).fill("My brother is a director of client Baltic Trade UAB");
+  await q.getByLabel(/conflicts of interest/i).fill("My brother is a director of client Baltic Trade UAB");
   await submit(q, "Make declaration", "The Compliance Officer will follow up");
   await p.goto(BASE + "/app/firm/integrity"); await p.getByText(/conflict: My brother/).waitFor();
   log("integrity declaration with a conflict is flagged to the CO");

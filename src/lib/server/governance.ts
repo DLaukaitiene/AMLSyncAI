@@ -184,10 +184,11 @@ export async function completeTraining(tx: Tx, ctx: Ctx & { userName: string }, 
 // ---------------------------------------------------------------------------
 
 export const INTEGRITY_QUESTIONS = [
-  { id: "convictions", text: "Have you been convicted of, or are you being prosecuted for, a financial crime, fraud, corruption or money laundering?" },
-  { id: "aml-sanctions", text: "Have you been subject to sanctions by a supervisor or professional body?" },
-  { id: "pep", text: "Are you, or a close family member, a politically exposed person?" },
-  { id: "understood", text: "Have you read and understood the firm's AML/CTF policy and procedures?", expect: "yes" },
+  // {name} is the person making the declaration: each colleague answers about themselves.
+  { id: "convictions", text: "Have you ({name}) ever been convicted of, or are you being prosecuted for, a financial crime, fraud, corruption or money laundering?" },
+  { id: "aml-sanctions", text: "Have you ({name}) ever been sanctioned by a supervisor or a professional body (for example fined, suspended or struck off)?" },
+  { id: "pep", text: "Are you ({name}), or a close family member, a politically exposed person (someone with an important public job, such as a minister, member of parliament or senior judge)?" },
+  { id: "understood", text: "Have you ({name}) read and understood the firm's AML Program?", expect: "yes" },
 ] as const;
 
 export async function declareIntegrity(tx: Tx, ctx: Ctx, kind: "joining" | "annual", answers: Record<string, string>, conflicts: string) {
