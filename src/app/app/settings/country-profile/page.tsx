@@ -73,11 +73,12 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           {/* 3. Required: who you report to */}
           <Step n={1} title="Who you report to" note="Required. Ask your supervisor or professional body if you're not sure; their website usually lists these.">
             <Authority title="Your AML supervisor" filled={has.supervisor} why="The authority that checks your firm follows the anti-money-laundering rules (for some professions, a professional body such as the bar or chamber of auditors). You inform them, for example, when your Compliance Officer changes.">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Supervisor: name" name="supervisor.name" defaultValue={p.supervisors[0]?.name} />
                 <Field label="Supervisor: how to contact them" name="supervisor.channel" defaultValue={p.supervisors[0]?.channel} />
-                <Field label="Supervisor: for which sector" name="supervisor.sector" defaultValue={p.supervisors[0]?.sector} />
               </div>
+              {/* Not asked any more (the app doesn't need it); kept as it was. */}
+              <input type="hidden" name="supervisor.sector" value={p.supervisors[0]?.sector ?? ""} />
             </Authority>
             <Authority title="Financial intelligence unit (FIU)" filled={has.fiu} why={`The authority that receives reports of suspicious clients or payments${p.memberState === "LT" ? " (in Lithuania: FNTT)" : ""}. Enter how reports are sent: usually a web portal or the goAML system.`}>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -121,9 +122,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
               <textarea name="additionalEddCases" rows={3} className={area} defaultValue={p.additionalEddCases.map((c) => `${c.id}: ${c.description}`).join("\n")} aria-label="Additional EDD cases" placeholder="e.g. shell-companies: Companies with no real business activity" />
             </Field>
             <p className="-mt-2 text-xs text-muted">If the national risk assessment names situations that are always high risk, list them here: clients in them always get enhanced checks (extra questions about where their money comes from, and management approval).</p>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="raWaiver" defaultChecked={p.riskAssessmentWaiver} /> Our supervisor told us in writing that we don&apos;t need our own documented risk assessment
-            </label>
+            {p.riskAssessmentWaiver && <input type="hidden" name="raWaiver" value="on" />}
           </Step>
 
           {/* 6. Rarely changed: pre-filled with the EU defaults */}
@@ -133,8 +132,6 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold">Other authorities</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Business register: name" name="businessRegister.name" defaultValue={p.businessRegister?.name ?? ""} />
-                  <Field label="Business register: website" name="businessRegister.channel" defaultValue={p.businessRegister?.channel ?? ""} />
                   <Field label="Data protection authority: name" name="dataProtectionAuthority.name" defaultValue={p.dataProtectionAuthority?.name ?? ""} />
                   <Field label="Data protection authority: contact" name="dataProtectionAuthority.channel" defaultValue={p.dataProtectionAuthority?.channel ?? ""} />
                 </div>
@@ -176,15 +173,11 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
                   <textarea name="privilege.types" rows={2} className={area} defaultValue={p.privilegeNarrowing.transactionTypes.join("\n")} aria-label="Privilege transaction types" />
                 </Field>
               </div>
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold">Identity documents</h3>
-                <Field label="Accepted ID document types (one per line)" name="idDocumentTypes">
-                  <textarea name="idDocumentTypes" rows={2} className={area} defaultValue={p.idDocumentTypes.join("\n")} aria-label="ID document types" placeholder="e.g. Passport" />
-                </Field>
-                <Field label="Accepted electronic IDs (one per line)" name="acceptedEidSchemes">
-                  <textarea name="acceptedEidSchemes" rows={2} className={area} defaultValue={p.acceptedEidSchemes.join("\n")} aria-label="eID schemes" placeholder="e.g. Smart-ID" />
-                </Field>
-              </div>
+              {/* Not asked any more (nothing in the app uses them yet); kept as they were. */}
+              <input type="hidden" name="businessRegister.name" value={p.businessRegister?.name ?? ""} />
+              <input type="hidden" name="businessRegister.channel" value={p.businessRegister?.channel ?? ""} />
+              <input type="hidden" name="idDocumentTypes" value={p.idDocumentTypes.join("\n")} />
+              <input type="hidden" name="acceptedEidSchemes" value={p.acceptedEidSchemes.join("\n")} />
             </div>
           </details>
 

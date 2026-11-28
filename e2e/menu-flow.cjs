@@ -11,7 +11,7 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
 
   const nav = p.getByRole("navigation", { name: "Main" });
   const top = await nav.locator(":scope > ul > li").allInnerTexts().catch(() => []);
-  for (const label of ["Dashboard", "Clients", "Alerts", "Cases & Payments", "Reporting", "Compliance Hub", "Team", "Settings", "Help"]) {
+  for (const label of ["Dashboard", "Clients", "Alerts", "Cases & Payments", "Reporting", "Compliance Hub", "Team", "Compliance Settings", "Settings", "Help"]) {
     await nav.getByText(label, { exact: true }).first().waitFor();
   }
   for (const gone of ["Identity Verification", "Risk Assessments", "Monitoring Alerts", "FIU Reporting", "My Compliance"]) {

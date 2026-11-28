@@ -77,16 +77,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ],
     },
     {
-      href: "/app/settings", label: "Settings", icon: "settings",
+      // The rules the app applies to your compliance work [28 Nov 2026]; app/account settings stay under Settings.
+      href: "/app/settings/country-profile", label: "Compliance Settings", icon: "obligations",
       children: [
         { href: "/app/settings/country-profile", label: "Country Profile", icon: "country", show: can(r, "countryProfile.view") },
-        { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
         { href: "/app/settings/screening-lists", label: "Screening Lists", icon: "screening", show: can(r, "countryProfile.view") },
+        { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
+        { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },
+      ],
+    },
+    {
+      href: "/app/settings", label: "Settings", icon: "settings",
+      children: [
         { href: "/app/billing", label: "Billing", icon: "billing", show: can(r, "approve.compliance") },
         { href: "/app/security", label: "Security", icon: "security" },
         { href: "/app/settings/email", label: "Email Settings", icon: "mail" },
         { href: "/app/settings/sample-data", label: "Sample Data", icon: "folder", show: can(r, "approve.compliance") },
-        { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },
       ],
     },
     {
