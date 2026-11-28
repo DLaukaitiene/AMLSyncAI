@@ -10,7 +10,6 @@ import { CONTACT_EMAIL, monthlyFeeFor, planOf } from "@/lib/billing/plans";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { cancelSubscriptionAction, saveBillingDetails } from "./actions";
 import { can } from "@/lib/auth/permissions";
-import { StepUpLink } from "@/components/step-up";
 import { Help } from "@/components/help";
 
 export default async function BillingPage() {
@@ -106,7 +105,6 @@ export default async function BillingPage() {
             <ActionForm action={cancelSubscriptionAction} className="mt-3 space-y-3">
               <Field label="Type CANCEL to confirm" name="confirm" required autoComplete="off" />
               <Submit variant="danger">End subscription</Submit>
-              <StepUpLink />
             </ActionForm>
           </details>
         </section>

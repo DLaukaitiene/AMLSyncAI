@@ -3,7 +3,6 @@ import { withTenant } from "@/lib/server/db";
 import { can, ROLE_LABELS, type AppRole } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
-import { StepUpLink } from "@/components/step-up";
 import { inviteAction, removeUserAction, resetMfaAction, revokeInviteAction } from "./actions";
 import { Help } from "@/components/help";
 
@@ -72,7 +71,6 @@ export default async function TeamPage() {
                 </select>
               </Field>
               <Submit>Send invitation</Submit>
-              <StepUpLink />
             </ActionForm>
           </section>
         </>

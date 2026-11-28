@@ -2,7 +2,6 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { partiesDueForDeletion } from "@/lib/server/retention";
 import { ActionForm, Submit } from "@/components/form";
-import { StepUpLink } from "@/components/step-up";
 import { purgeAction } from "./actions";
 import { PageTitle } from "@/components/help";
 
@@ -41,7 +40,6 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             <input type="checkbox" name="confirm" /> I understand the selected records will be permanently deleted
           </label>
           <Submit variant="danger">Delete selected records</Submit>
-          <StepUpLink />
         </ActionForm>
       )}
     </div>

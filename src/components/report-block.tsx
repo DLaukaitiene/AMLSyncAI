@@ -1,6 +1,5 @@
 import type { ReportType } from "@prisma/client";
 import { ActionForm, Field, Submit } from "./form";
-import { StepUpLink } from "./step-up";
 import { REPORT_LABELS } from "@/lib/server/cases";
 import { canMarkSubmitted, type CountryProfile } from "@/lib/rules/country-profile";
 import { aiNarrativeAction, narrativeAction, submittedAction } from "@/app/app/cases/actions";
@@ -56,7 +55,6 @@ export function ReportBlock({
                 </>
               )}
               <Submit>Mark as submitted</Submit>
-              <StepUpLink />
             </ActionForm>
           ) : (
             <p className="text-amber-800 dark:text-amber-200">{gate.reason}</p>

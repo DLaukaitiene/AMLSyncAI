@@ -5,7 +5,6 @@ import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { openMatterItems, requiredRoles } from "@/lib/rules/gates";
 import { ActionForm, CountryField, Field, SelectWithOther, Submit } from "@/components/form";
-import { StepUpLink } from "@/components/step-up";
 import { PartyFields } from "@/components/party-fields";
 import { addPartyAction, addTransactionAction, completeMatterAction, matterState } from "../actions";
 import { raiseSuspicionAction } from "../../cases/actions";
@@ -122,13 +121,11 @@ export default async function MatterPage({ params }: { params: Promise<{ matterI
                   <p className="text-sm text-muted">Estate agents: both parties must be verified after the offer is accepted and before funds or property move (Art. 23).</p>
                   {can(s.user.roles, "gate.override") && items.length > 0 && <Field label="Override reason (Compliance Officer)" name="overrideReason" />}
                   <Submit variant="secondary">Allow funds / property transfer</Submit>
-                  <StepUpLink />
                 </ActionForm>
               )}
               <ActionForm action={completeMatterAction.bind(null, matterId, "complete")} className="space-y-2">
                 {can(s.user.roles, "gate.override") && items.length > 0 && <Field label="Override reason (Compliance Officer)" name="overrideReason" />}
                 <Submit>Mark case completed</Submit>
-                <StepUpLink />
               </ActionForm>
             </div>
           )}

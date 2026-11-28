@@ -8,7 +8,6 @@ import { decryptField } from "@/lib/server/crypto";
 import { CASE_LABELS, readContent } from "@/lib/server/cases";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
-import { StepUpLink } from "@/components/step-up";
 import { ReportBlock } from "@/components/report-block";
 import { toIsoDate } from "@/lib/rules/dates";
 import { answerFiuAction, decideAction, fiuInstructionAction, noteAction, resolveDiscrepancyAction, sanctionsNoticeAction } from "../actions";
@@ -102,7 +101,6 @@ export default async function CasePage({ params }: { params: Promise<{ caseId: s
             )}
             <Field label="Reasons" name="reasons" required hint="Kept for the supervisor, whatever the decision." />
             <Submit>Record decision</Submit>
-            <StepUpLink />
           </ActionForm>
         </section>
       )}

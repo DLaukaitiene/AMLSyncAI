@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSession, hasRecentMfa } from "@/lib/server/session";
+import { getSession } from "@/lib/server/session";
+import { confirmDownload } from "@/lib/server/export-guard";
 import { withTenant } from "@/lib/server/db";
 import { decryptField } from "@/lib/server/crypto";
 import { audit, securityEvent } from "@/lib/server/audit";
@@ -15,7 +16,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const s = await getSession();
   if (!s || s.stage !== "ACTIVE" || !can(s.user.roles, "case.view")) return new NextResponse("Not found", { status: 404 });
-  if (!hasRecentMfa(s)) return NextResponse.redirect(new URL(`/reauth?next=${encodeURIComponent("/app/reports")}`, req.url));
+  const c = confirmDownload(req, "report");
+  if (c) return c;
   const out = await withTenant(s.firm.id, async (tx) => {
     const r = await tx.report.findUnique({ where: { id } });
     if (!r) return null;

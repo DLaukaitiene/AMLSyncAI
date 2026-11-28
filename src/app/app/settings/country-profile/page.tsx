@@ -5,7 +5,6 @@ import { setupChecklist, belowNationalDefaults } from "@/lib/rules/country-profi
 import { EU_CORE } from "@/lib/rules/eu-core";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, CountryField, Field, Submit } from "@/components/form";
-import { StepUpLink } from "@/components/step-up";
 import { addOfficeAction, saveProfileAction } from "./actions";
 import Link from "next/link";
 import { Help } from "@/components/help";
@@ -171,7 +170,6 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
         {edit && (
           <div className="space-y-2">
             <Submit>Save new version</Submit>
-            <StepUpLink />
           </div>
         )}
       </ActionForm>
@@ -183,7 +181,7 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           <ActionForm action={addOfficeAction} className="grid gap-3 sm:grid-cols-3">
             <Field label="Office name" name="name" required />
             <CountryField label="Country of the office" name="memberState" required euFirst hint="EU countries are listed first." />
-            <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit><StepUpLink /></div>
+            <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit></div>
           </ActionForm>
         </section>
       )}

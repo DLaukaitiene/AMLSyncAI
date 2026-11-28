@@ -113,7 +113,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   if (await p.getByTestId("rule-toggles").getByLabel(/^R8 /).isChecked()) throw new Error("✘ R8 still on");
   log("settings: cash fields only with cash; €10,000 cap enforced; legal limit with 'last checked'; R8 switched off");
 
-  const csv = await (await ctx.request.get(BASE + "/api/registers/transactions", { maxRedirects: 0 })).text();
+  const csv = await (await ctx.request.get(BASE + "/api/registers/transactions?confirmed=1", { maxRedirects: 0 })).text();
   if (!csv.includes("Reservation fee") || !csv.includes("investigated") || !csv.includes("Paid in crypto-assets")) throw new Error("✘ transaction log CSV: " + csv.slice(0, 300));
   log("Reports: Transaction Log CSV with flags and reviews");
 

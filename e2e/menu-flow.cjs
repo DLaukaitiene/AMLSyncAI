@@ -102,10 +102,10 @@ const { BASE, log, signupFirm } = require("./helpers.cjs");
 
   await p.goto(BASE + "/app/registers");
   await p.getByRole("heading", { name: "Registers & Exports" }).waitFor();
-  const res = await ctx.request.get(BASE + "/api/registers/clients", { maxRedirects: 0 });
+  const res = await ctx.request.get(BASE + "/api/registers/clients?confirmed=1", { maxRedirects: 0 });
   const csv = await res.text();
   if (res.status() !== 200 || !csv.includes("Viktor Malenko") || !csv.includes("Client,Type,Status,Risk")) throw new Error("✘ client register CSV: " + res.status() + " " + csv.slice(0, 200));
-  const audit = await (await ctx.request.get(BASE + "/api/registers/audit", { maxRedirects: 0 })).text();
+  const audit = await (await ctx.request.get(BASE + "/api/registers/audit?confirmed=1", { maxRedirects: 0 })).text();
   if (!audit.includes("When (UTC)")) throw new Error("✘ audit CSV");
   const bad = await ctx.request.get(BASE + "/api/registers/nope", { maxRedirects: 0 });
   if (bad.status() !== 404) throw new Error("✘ unknown register should 404");

@@ -9,7 +9,6 @@ import { EDD_CHECKLIST } from "@/lib/rules/risk-scoring";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
-import { StepUpLink } from "@/components/step-up";
 import { PartyFields } from "@/components/party-fields";
 import {
   acceptAction, addOwnerAction, decideMatchAction, eddChecklistAction, endAction, recordExtractAction, recordVerificationAction,
@@ -864,7 +863,6 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                   <ActionForm action={seniorApprovalAction.bind(null, fileId, "edd")}>
                     <Field label="Reasons" name="reason" required />
                     <Submit variant="secondary">Approve</Submit>
-                    <StepUpLink />
                   </ActionForm>
                 ) : <p className="text-muted">Needs an Owner (management body).</p>}
               </div>
@@ -876,7 +874,6 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                   <ActionForm action={seniorApprovalAction.bind(null, fileId, "pep")}>
                     <Field label="Reasons, incl. source of wealth and funds" name="reason" required />
                     <Submit variant="secondary">Approve PEP relationship</Submit>
-                    <StepUpLink />
                   </ActionForm>
                 ) : <p className="text-muted">Needs an Owner (management body).</p>}
               </div>
@@ -933,7 +930,6 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                 <Field label="Override open items — written reason (Compliance Officer only)" name="overrideReason" hint="Sanctions, anonymity and bearer shares can never be overridden." />
               )}
               <Submit>Accept client</Submit>
-              <StepUpLink />
             </ActionForm>
             <ActionForm action={endAction.bind(null, fileId)} className="space-y-3">
               <h3 className="text-sm font-semibold">Refuse (CDD can&apos;t be completed, Art. 21)</h3>
@@ -945,7 +941,6 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                 <label className="flex items-center gap-2"><input type="radio" name="suspicion" value="raise" /> Yes — report internally to the Compliance Officer</label>
               </fieldset>
               <Submit variant="danger">Refuse client</Submit>
-              <StepUpLink />
             </ActionForm>
           </div>
         </Card>
@@ -969,7 +964,6 @@ export default async function ClientFilePage({ params, searchParams }: { params:
               <label className="flex items-center gap-2"><input type="radio" name="suspicion" value="raise" /> Yes — report internally</label>
             </fieldset>
             <Submit variant="danger">End relationship</Submit>
-            <StepUpLink />
           </ActionForm>
         </Card>
       )}

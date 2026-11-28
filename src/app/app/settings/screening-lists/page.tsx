@@ -2,7 +2,6 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
-import { StepUpLink } from "@/components/step-up";
 import { autoClearAction, uploadListAction } from "./actions";
 
 export default async function ScreeningListsPage() {
@@ -34,7 +33,6 @@ export default async function ScreeningListsPage() {
           <ActionForm action={autoClearAction} className="flex flex-wrap items-end gap-2">
             <Field label="Auto-clear below match score (1–99, empty = off)" name="threshold" type="number" defaultValue={autoClearBelow ?? ""} />
             <Submit variant="secondary">Save</Submit>
-            <StepUpLink />
           </ActionForm>
         )}
       </section>
@@ -59,7 +57,6 @@ export default async function ScreeningListsPage() {
               <input type="file" name="file" accept=".csv,text/csv" aria-label="CSV file" className="text-sm" />
             </Field>
             <Submit>Upload and re-screen</Submit>
-            <StepUpLink />
           </ActionForm>
         </section>
       )}

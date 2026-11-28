@@ -44,7 +44,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   await submit(p, "Record training", "Training recorded.");
   await p.reload();
   await p.getByTestId("training-row").getByText("1 h 30 min").waitFor();
-  const csv = await (await ctx.request.get(BASE + "/api/registers/training", { maxRedirects: 0 })).text();
+  const csv = await (await ctx.request.get(BASE + "/api/registers/training?confirmed=1", { maxRedirects: 0 })).text();
   if (!csv.includes("AMLR changes for accountants") || !csv.includes("External: workshop")) throw new Error("✘ training CSV: " + csv.slice(0, 300));
   log("Training Register: external training recorded and in the Staff Training CSV");
 

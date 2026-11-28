@@ -53,6 +53,8 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
     `/app/clients/${ids.file}`, `/app/matters/${ids.matter}`, `/app/cases/${ids.case}`,
     `/api/files/${ids.doc}`, `/api/reports/${ids.report}`, `/api/docs/policy/${ids.policy}`, `/api/docs/risk-assessment/${ids.ra}`,
     `/api/supervisor-file/client/${ids.file}`, `/api/explain/${ids.file}`,
+    // past the download confirmation too
+    `/api/reports/${ids.report}?confirmed=1`, `/api/supervisor-file/client/${ids.file}?confirmed=1`,
   ];
   for (const t of targets) {
     const r = await a.request.get(BASE + t, { maxRedirects: 0 });
