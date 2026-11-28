@@ -61,7 +61,7 @@ export const OBLIGATIONS: Obligation[] = [
     when: "After your risk assessment; review every year. Staff confirm they have read it.",
     how: ["Compliance Hub → AML Program: generate it from your risk assessment.", "Edit where needed, approve, and ask staff to acknowledge it.", "Compliance Hub → Review Pack: give your lawyer or accountant the list of rules the app applies, to confirm they fit your firm."],
     article: "AMLR Art. 9",
-    duty: "Everyone in the firm must follow the approved AML Program.",
+    duty: "Your AML Program is your firm's written rulebook against money laundering: how you check clients, spot and report anything suspicious, train staff and keep records. AMLSync writes it from your risk assessment; the Compliance Manager approves it and everyone in the firm follows it.",
     action: { href: "/app/firm/policies", label: "AML Program" },
   },
   {
