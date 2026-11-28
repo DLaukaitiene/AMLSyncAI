@@ -9,12 +9,12 @@ export function ActionButton({
   children,
   variant = "secondary",
 }: {
-  action: () => Promise<ActionState>;
+  action: (fd?: FormData) => Promise<ActionState>; // gets the form data so it can ask to confirm (confirmed=yes)
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "danger";
 }) {
   return (
-    <ActionForm action={async () => action()} className="inline-flex flex-col items-end gap-1">
+    <ActionForm action={async (_s, fd) => action(fd)} className="inline-flex flex-col items-end gap-1">
       <Submit variant={variant}>{children}</Submit>
       <StepUpLink />
     </ActionForm>

@@ -118,6 +118,14 @@ export class Forbidden extends Error {
   }
 }
 
+/**
+ * Instead of re-authentication, actions with consequences ask the person to confirm [28 Nov 2026]:
+ * returns the warning to show unless the form came back with confirmed=yes.
+ */
+export function confirmFirst(fd: FormData | undefined | null, warning: string): { data: { confirm: string } } | null {
+  return fd?.get("confirmed") === "yes" ? null : { data: { confirm: warning } };
+}
+
 /** Step-up re-authentication (spec §8C.3): fresh MFA within the last 5 minutes. */
 export function hasRecentMfa(s: CurrentSession): boolean {
   return !!s.mfaAt && Date.now() - s.mfaAt.getTime() < STEP_UP_MS;

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, startTransition, useActionState, useContext, useId, useState, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, useId, useRef, useState, type ReactNode } from "react";
 import { CircleHelp } from "lucide-react";
 import { countryName, countryOptions, normalizeCountries, normalizeCountry } from "@/lib/geo/countries";
 
@@ -23,6 +23,11 @@ export function ActionForm({
   render?: (state: ActionState) => ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
+  // Actions with consequences answer { data: { confirm: "what will happen" } } first: we show that warning and
+  // send the same form again with confirmed=yes when the person confirms (no re-authentication anywhere) [28 Nov 2026].
+  const last = useRef<FormData | null>(null);
+  const [dismissed, setDismissed] = useState<ActionState>(null);
+  const confirm = state && state !== dismissed ? (state.data as { confirm?: string } | undefined)?.confirm : undefined;
   return (
     <Ctx.Provider value={state}>
      <PendingCtx.Provider value={pending}>
@@ -34,6 +39,7 @@ export function ActionForm({
           e.preventDefault();
           // Include the clicked button's name/value (e.g. intent=save vs intent=submit).
           const fd = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
+          last.current = fd;
           startTransition(() => formAction(fd));
         }}
         className={className ?? "space-y-4"}
@@ -51,6 +57,21 @@ export function ActionForm({
         )}
         {children}
         {render?.(state)}
+        {confirm && (
+          <div role="alertdialog" aria-label="Please confirm" className="basis-full space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100" data-testid="confirm-box">
+            <p>{confirm}</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={pending} className="rounded-full bg-brand px-4 py-1.5 font-semibold text-brand-ink hover:brightness-105 disabled:opacity-60"
+                onClick={() => {
+                  const fd = new FormData();
+                  for (const [k, v] of last.current?.entries() ?? []) fd.append(k, v);
+                  fd.set("confirmed", "yes");
+                  startTransition(() => formAction(fd));
+                }}>{pending ? "Working…" : "Confirm"}</button>
+              <button type="button" className="rounded-full border border-current/30 px-4 py-1.5" onClick={() => setDismissed(state)}>Cancel</button>
+            </div>
+          </div>
+        )}
       </form>
      </PendingCtx.Provider>
     </Ctx.Provider>

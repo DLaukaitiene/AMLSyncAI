@@ -368,7 +368,7 @@ export default async function ClientFilePage({ params, searchParams }: { params:
                   </div>
                 ))}
                 {mismatches?.length ? <p className="text-sm text-red-700 dark:text-red-300">ID check differs from the file: {mismatches.join("; ")}. Correct the file or ask the client.</p> : null}
-                {edit && <ActionButton action={diditIdvAction.bind(null, fileId)} variant="primary">{`Send identity check (${priceOf(pr?.idv)})`}</ActionButton>}
+                {edit && <ActionButton action={diditIdvAction.bind(null, fileId, undefined)} variant="primary">{`Send identity check (${priceOf(pr?.idv)})`}</ActionButton>}
               </div>
             ) : (
               <p className="text-xs text-muted">Remote identity checks aren&apos;t set up for this installation. Record the result of the check here.</p>
