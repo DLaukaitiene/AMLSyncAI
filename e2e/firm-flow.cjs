@@ -2,7 +2,7 @@
 // Firm risk assessment and Policy Builder end-to-end (spec §4.1, §4.8, §11.2, §11.3).   CODE=… node e2e/firm-flow.cjs
 const { chromium } = require("playwright");
 const fs = require("fs");
-const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
+const { BASE, log, signupFirm, submit, generateProgram } = require("./helpers.cjs");
 
 (async () => {
   const b = await chromium.launch();
@@ -41,7 +41,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
 
   // Policies
   await p.goto(BASE + "/app/firm/policies");
-  await submit(p, "Generate new version", /Draft: AML\/CTF policy v1/);
+  await generateProgram(p, /Draft: AML\/CTF policy v1/);
   const draft = await p.locator("section", { hasText: "Draft: AML/CTF policy v1" }).innerText();
   for (const h of ["Risk assessment", "Customer due diligence", "Targeted financial sanctions", "Reporting of suspicions", "Outsourcing and reliance", "Record retention", "Compliance monitoring", "Employee integrity", "Internal communication", "Training"]) {
     if (!draft.includes(h)) throw new Error("policy missing " + h);
@@ -79,7 +79,7 @@ const { BASE, log, signupFirm, submit } = require("./helpers.cjs");
   log("policy PDF:", pdf2.length, "bytes");
 
   // New version: regenerating creates v2 draft while v1 stays in force
-  await submit(p, "Generate new version", /Draft: AML\/CTF policy v2/);
+  await generateProgram(p, /Draft: AML\/CTF policy v2/);
   log("new version v2 drafted; v1 stays in force until approved");
 
   console.log("page errors:", errors);

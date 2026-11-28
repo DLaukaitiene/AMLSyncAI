@@ -56,10 +56,17 @@ async function submit(p, buttonName, expect) {
   }
 }
 
+/** AML Program: open the generate panel, confirm the three sources are up to date, generate. */
+async function generateProgram(p, expect) {
+  await p.getByTestId("generate-program").click();
+  for (const l of ["Firm profile", "Business Risk Assessment", "Country Profile"]) await p.getByRole("checkbox", { name: new RegExp(l) }).check();
+  await submit(p, "Generate", expect);
+}
+
 /** Opens a <details> section by its summary text. Clicking the summary would close a section that is already open. */
 async function openSection(p, summaryText) {
   const d = p.locator("details", { has: p.getByText(summaryText, { exact: true }) });
   if (await d.count()) await d.first().evaluate((el) => { el.open = true; });
 }
 
-module.exports = { BASE, totp, lastMail, log, openSection, signupFirm, submit };
+module.exports = { BASE, totp, lastMail, log, openSection, signupFirm, submit, generateProgram };

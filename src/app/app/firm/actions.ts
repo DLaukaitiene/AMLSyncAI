@@ -71,8 +71,9 @@ export async function approveRiskAssessmentAction(id: string, fd?: FormData): Pr
   return { message: "Approved. A review is scheduled in 12 months." };
 }
 
-export async function generatePoliciesAction(): Promise<ActionState> {
+export async function generatePoliciesAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.compliance");
+  if (!["firm", "ra", "country"].every((k) => fd.get(`ok-${k}`) === "on")) return { error: "Confirm that your firm profile, risk assessment and Country Profile are up to date, or update them first." };
   await withTenant(s.firm.id, (tx) => generatePolicies(tx, { firmId: s.firm.id, userId: s.user.id }));
   revalidatePath("/app/firm/policies");
   return { message: "New drafts generated from your firm profile, risk assessment and Country Profile." };

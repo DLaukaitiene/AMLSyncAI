@@ -7,6 +7,9 @@ import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { acknowledgeAction, aiSectionAction, approvePolicyAction, editSectionAction, generatePoliciesAction } from "../actions";
 import { aiForFirm } from "@/lib/server/ai";
+import { GenerateProgram, type SourceCheck } from "@/components/generate-program";
+import { currentProfile } from "@/lib/server/country-profile";
+import { setupChecklist } from "@/lib/rules/country-profile";
 
 export default async function PoliciesPage() {
   const s = await requireUser();
@@ -17,6 +20,21 @@ export default async function PoliciesPage() {
     return rows.map((r) => ({ ...r, doc: r.content as unknown as GeneratedDoc, missingAck: users.filter((u) => !r.acknowledgements.some((a) => a.userId === u.id)).map((u) => u.name), mine: r.acknowledgements.some((a) => a.userId === s.user.id) }));
   });
   const edit = can(s.user.roles, "approve.compliance");
+  // What the AML Program is written from, with a quick status for each (shown before generating).
+  const sources: SourceCheck[] = await withTenant(s.firm.id, async (tx) => {
+    const firm = await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { sectors: true, services: true, size: true } });
+    const ra = await tx.firmRiskAssessment.findFirst({ where: { status: "IN_FORCE" }, orderBy: { version: "desc" } });
+    let missing = 0;
+    try { missing = setupChecklist((await currentProfile(tx, s.firm.id)).profile).filter((c) => c.status === "required-missing").length; } catch { missing = 1; }
+    return [
+      { key: "firm", label: "Firm profile", href: "/app/firm", linkText: "Compliance Hub → Overview", warn: !firm.sectors.length || firm.size == null,
+        detail: `Sectors: ${firm.sectors.length ? firm.sectors.length : "none"} · services: ${firm.services.length || "none"} · staff: ${firm.size ?? "not given"}` },
+      { key: "ra", label: "Business Risk Assessment", href: "/app/firm/risk-assessment", linkText: "Business Risk Assessment", warn: !ra,
+        detail: ra ? `Version ${ra.version} in force` : "Not approved yet: the AML Program will use default answers" },
+      { key: "country", label: "Country Profile", href: "/app/settings/country-profile", linkText: "Settings → Country Profile", warn: missing > 0,
+        detail: missing ? `${missing} required item(s) missing` : "Complete" },
+    ];
+  });
   const inForce = docs.filter((d) => d.status === "IN_FORCE");
   const drafts = docs.filter((d) => d.status === "DRAFT");
   return (
@@ -25,7 +43,7 @@ export default async function PoliciesPage() {
         <h1 className="text-3xl">AML Program</h1>
         <p className="text-muted">A policy (what you commit to) and procedures (how you do it day to day). AMLSync writes both from your firm profile, risk assessment and Country Profile; the Compliance Manager approves them. Review it every year: staff confirm they&apos;ve read each new version.</p>
       </div>
-      {edit && <ActionButton action={generatePoliciesAction} variant="primary">{drafts.length ? "Regenerate drafts" : "Generate new version"}</ActionButton>}
+      {edit && <GenerateProgram action={generatePoliciesAction} label={drafts.length ? "Regenerate drafts" : "Generate new version"} sources={sources} />}
 
       {inForce.map((d) => (
         <section key={d.id} className="space-y-3 rounded-xl border border-border p-4">
