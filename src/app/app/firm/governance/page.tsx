@@ -3,11 +3,7 @@ import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
 import { appointeeName, ensureAppointments, isOnePersonFirm } from "@/lib/server/governance";
-import type { GeneratedDoc } from "@/lib/docs/model";
 import { ActionForm, Submit } from "@/components/form";
-import { ActionButton } from "@/components/action-button";
-import { DocView } from "@/components/doc-view";
-import { annualReportAction, approveAnnualReportAction } from "../records-actions";
 import { reassignDutyAction, saveAppointmentsAction } from "./actions";
 import { AppointmentsForm } from "@/components/appointments-form";
 import { resolveDuties, withoutArticles, type DutyRole, type Holder } from "@/lib/firm/responsibilities";
@@ -26,7 +22,6 @@ export default async function GovernancePage() {
       appts: await tx.appointment.findMany({ orderBy: { fromDate: "desc" } }),
       users: await tx.user.findMany({ where: { deactivatedAt: null, external: false }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
       allUsers: new Map((await tx.user.findMany()).map((u) => [u.id, u.name])),
-      reports: await tx.policyDocument.findMany({ where: { kind: "annual-report", status: { in: ["DRAFT", "IN_FORCE"] } }, orderBy: { version: "desc" } }),
       duties: ((await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id }, select: { responsibilities: true } })).responsibilities ?? {}) as Record<string, unknown>,
       onePerson: await isOnePersonFirm(tx, s.firm.id),
     };
@@ -173,19 +168,6 @@ export default async function GovernancePage() {
         )}
       </section>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xl font-semibold">Annual compliance report</h2>
-          {can(s.user.roles, "approve.compliance") && <ActionButton action={annualReportAction} variant="primary">Generate from system data</ActionButton>}
-        </div>
-        {data.reports.map((r) => (
-          <div key={r.id} className={`space-y-3 rounded-md border p-4 ${r.status === "DRAFT" ? "border-amber-400" : "border-border"}`}>
-            <div className="flex items-center justify-between"><strong className="text-sm">{r.status === "DRAFT" ? "Draft" : "Approved"} v{r.version}</strong><a className="text-sm text-accent underline" href={`/api/docs/policy/${r.id}`}>Download PDF</a></div>
-            <DocView doc={r.content as unknown as GeneratedDoc} />
-            {r.status === "DRAFT" && mgmt && <ActionButton action={approveAnnualReportAction.bind(null, r.id)} variant="primary">Approve (Compliance Manager)</ActionButton>}
-          </div>
-        ))}
-      </section>
     </div>
   );
 }

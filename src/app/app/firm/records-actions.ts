@@ -79,7 +79,7 @@ export async function markRegulatorInformedAction(appointmentId: string, informe
 export async function annualReportAction(): Promise<ActionState> {
   const s = await requireUser("approve.compliance");
   await withTenant(s.firm.id, (tx) => generateAnnualReport(tx, ctxOf(s)));
-  revalidatePath("/app/firm/governance");
+  revalidatePath("/app/firm/annual-report");
   return { message: "Annual report generated from the system data." };
 }
 
@@ -87,7 +87,7 @@ export async function approveAnnualReportAction(id: string, fd?: FormData): Prom
   const s = await requireUser("approve.management");
   { const c = confirmFirst(fd, "This approves the annual compliance report on behalf of management."); if (c) return c; }
   await withTenant(s.firm.id, (tx) => approvePolicy(tx, ctxOf(s), id));
-  revalidatePath("/app/firm/governance");
+  revalidatePath("/app/firm/annual-report");
   return { message: "Annual report approved." };
 }
 

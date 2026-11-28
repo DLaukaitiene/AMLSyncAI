@@ -58,6 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/firm/risk-assessment", label: "Business Risk Assessment", icon: "risk" },
         { href: "/app/firm/policies", label: "AML Program", icon: "policies" },
         { href: "/app/firm/governance", label: "Roles and Duties", icon: "firm" },
+        { href: "/app/firm/annual-report", label: "Annual Report", icon: "report" },
         { href: "/app/firm/outsourcing", label: "Outsourcing", icon: "outsourcing" },
         { href: "/app/firm/whistleblowing", label: "Whistleblowing", icon: "whistle" },
         { href: "/app/firm/privacy", label: "Data Protection", icon: "privacy" },

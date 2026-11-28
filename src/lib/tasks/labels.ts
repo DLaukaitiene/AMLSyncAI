@@ -7,6 +7,6 @@ export const TASK_KIND: Record<string, string> = {
 
 export function taskHref(t: { objectType: string; objectId: string; kind: string }): string {
   return t.objectType === "CddFile" ? `/app/clients/${t.objectId}` : t.objectType === "Matter" ? `/app/matters/${t.objectId}` : t.objectType === "Case" ? `/app/cases/${t.objectId}`
-    : t.objectType === "FirmRiskAssessment" || t.objectType === "Firm" ? "/app/firm/risk-assessment" : t.objectType === "PolicyDocument" ? (t.kind === "annual-report" ? "/app/firm/governance" : "/app/firm/policies")
+    : t.objectType === "FirmRiskAssessment" || t.objectType === "Firm" ? "/app/firm/risk-assessment" : t.objectType === "PolicyDocument" ? (t.kind === "annual-report" ? "/app/firm/annual-report" : "/app/firm/policies")
     : t.objectType === "User" ? "/app/firm/integrity" : t.objectType === "WhistleblowingReport" ? "/app/firm/whistleblowing" : "/app/calendar";
 }

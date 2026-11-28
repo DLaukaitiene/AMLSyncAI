@@ -101,7 +101,7 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
   log("officer change recorded; removal notice drafted (Reports has 2 supervisor notices)");
 
   // Annual report
-  await p.goto(BASE + "/app/firm/governance");
+  await p.goto(BASE + "/app/firm/annual-report");
   await submit(p, "Generate from system data", /Draft v1/);
   const ar = await p.locator("article").first().innerText();
   if (!/Training completed\s*1 of 2|1 of 2/.test(ar) && !/Training completion/.test(ar)) log("annual report training line:", ar.match(/Training[^\n]*/g));
