@@ -64,7 +64,13 @@ export const CONTROL_OPTIONS = ["Not in place", "Partly in place", "Fully in pla
 export const LEVELS = ["Low", "Medium", "High", "Very high"] as const;
 export type Level = (typeof LEVELS)[number];
 
-export type Answers = Record<string, number>; // question id → option index
+export type Answers = Record<string, number>; // question id → option index, or NOT_SURE
+
+/** "I'm not sure": counted on the cautious side, as High (option index 2) [28 Nov 2026]. */
+export const NOT_SURE = -1;
+export const NOT_SURE_LABEL = "I'm not sure";
+export const scoreOf = (v: number) => (v === NOT_SURE ? 2 : v);
+export const answerText = (q: RiskQuestion, v: number | undefined) => (v === undefined ? "Not answered" : v === NOT_SURE ? "Not sure (counted as high)" : q.options[v]);
 
 export interface AssessmentResult {
   groups: { group: FactorGroup; inherent: Level; drivers: string[] }[];
@@ -91,8 +97,8 @@ export function assess(a: Answers, nationalRiskAssessmentReviewed: boolean, nati
     const qs = RISK_QUESTIONS.filter((q) => q.group === g && a[q.id] !== undefined);
     return {
       group: g,
-      inherent: LEVELS[level(qs.map((q) => a[q.id]))],
-      drivers: qs.filter((q) => a[q.id] >= 2).map((q) => `${q.text} — ${q.options[a[q.id]]}`),
+      inherent: LEVELS[level(qs.map((q) => scoreOf(a[q.id])))],
+      drivers: qs.filter((q) => scoreOf(a[q.id]) >= 2).map((q) => `${q.text} — ${answerText(q, a[q.id])}`),
     };
   });
 
@@ -101,7 +107,7 @@ export function assess(a: Answers, nationalRiskAssessmentReviewed: boolean, nati
   const controls = controlAvg >= 1.75 && controlScores.every((s) => s >= 1) ? "Strong" : controlAvg >= 1.1 ? "Adequate" : "Weak";
   const adjust = controls === "Strong" ? -1 : controls === "Weak" ? 1 : 0;
 
-  const threatLevel = (t: Threat) => level(RISK_QUESTIONS.filter((q) => q.threats.includes(t) && a[q.id] !== undefined).map((q) => a[q.id]));
+  const threatLevel = (t: Threat) => level(RISK_QUESTIONS.filter((q) => q.threats.includes(t) && a[q.id] !== undefined).map((q) => scoreOf(a[q.id])));
   const threats = (["ML", "TF", "SE"] as Threat[]).map((t) => {
     const inh = threatLevel(t);
     return { threat: t, inherent: LEVELS[inh], residual: LEVELS[Math.max(0, Math.min(3, inh + adjust))] };
@@ -111,7 +117,7 @@ export function assess(a: Answers, nationalRiskAssessmentReviewed: boolean, nati
 
   const actions = [
     ...controlGaps.map((q) => `${q.action} (${q.article})`),
-    ...RISK_QUESTIONS.filter((q) => (a[q.id] ?? 0) >= 3).map((q) => `High-risk factor: "${q.text}" — apply EDD where it occurs and monitor more often.`),
+    ...RISK_QUESTIONS.filter((q) => scoreOf(a[q.id] ?? 0) >= 3).map((q) => `High-risk factor: "${q.text}" — apply EDD where it occurs and monitor more often.`),
     ...(!nationalRiskAssessmentReviewed ? ["Review the national risk assessment and record any additional EDD cases in your Country Profile (Art. 10(3), 34(6))."] : []),
     ...nationalEddCases.map((c) => `National EDD case applies: ${c}.`),
   ];
@@ -163,7 +169,7 @@ export function riskAssessmentDoc(
       {
         id: "answers",
         heading: "3. Answers",
-        blocks: [{ table: { head: ["Question", "Answer", "Source"], rows: RISK_QUESTIONS.map((q) => [q.text, a[q.id] !== undefined ? q.options[a[q.id]] : "Not answered", q.annex]) } }],
+        blocks: [{ table: { head: ["Question", "Answer", "Source"], rows: RISK_QUESTIONS.map((q) => [q.text, answerText(q, a[q.id]), q.annex]) } }],
       },
       {
         id: "controls",

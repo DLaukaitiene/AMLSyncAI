@@ -1,7 +1,8 @@
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
-import { CONTROL_OPTIONS, CONTROL_QUESTIONS, RISK_QUESTIONS, type Answers } from "@/lib/firm/risk-assessment";
+import { CONTROL_OPTIONS, CONTROL_QUESTIONS, NOT_SURE, NOT_SURE_LABEL, RISK_QUESTIONS, type Answers } from "@/lib/firm/risk-assessment";
+import { suggestRiskAnswers } from "@/lib/server/risk-suggestions";
 import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
@@ -21,10 +22,12 @@ export default async function RiskAssessmentPage() {
       draft,
       current,
       draftDoc: draft ? await riskAssessmentAsDoc(tx, s.firm.id, draft.id) : null,
+      suggested: draft && edit ? await suggestRiskAnswers(tx, s.firm.id) : {},
       currentDoc: current ? await riskAssessmentAsDoc(tx, s.firm.id, current.id) : null,
     };
   });
   const a = (data.draft?.answers ?? {}) as Answers;
+  const suggested = data.suggested;
   const unanswered = (data.draft?.result as { unanswered?: string[] } | undefined)?.unanswered;
   const groups = [...new Set(RISK_QUESTIONS.map((q) => q.group))];
 
@@ -60,8 +63,10 @@ export default async function RiskAssessmentPage() {
                       <legend className="font-medium">{q.text}</legend>
                       {q.hint && <p className="text-xs text-muted">{q.hint}</p>}
                       <div className="flex flex-wrap gap-x-4 gap-y-1">
-                        {q.options.map((o, i) => <label key={o} className="flex items-center gap-1"><input type="radio" name={q.id} value={i} defaultChecked={a[q.id] === i} /> {o}</label>)}
+                        {q.options.map((o, i) => <label key={o} className="flex items-center gap-1"><input type="radio" name={q.id} value={i} defaultChecked={(a[q.id] ?? suggested[q.id]?.value) === i} /> {o}</label>)}
+                        <label className="flex items-center gap-1 text-muted"><input type="radio" name={q.id} value={NOT_SURE} defaultChecked={a[q.id] === NOT_SURE} /> {NOT_SURE_LABEL}</label>
                       </div>
+                      {a[q.id] === undefined && suggested[q.id] && <p className="text-xs text-accent" data-testid="suggested">Suggested from your data: {suggested[q.id].why} Change it if it doesn&apos;t fit.</p>}
                     </fieldset>
                   ))}
                 </fieldset>

@@ -47,3 +47,14 @@ describe("firm risk assessment (§11.2)", () => {
     expect(doc.meta[0]).toMatch(/Version 3 · 2027-07-01/);
   });
 });
+
+describe("I'm not sure", () => {
+  it("counts on the cautious side (as high) and is named in the document", async () => {
+    const { assess, NOT_SURE, answerText, RISK_QUESTIONS } = await import("./risk-assessment");
+    const none = Object.fromEntries(RISK_QUESTIONS.map((q) => [q.id, 0]));
+    const unsure = { ...none, "c-pep": NOT_SURE };
+    expect(assess(none, true).groups.find((g) => g.group === "Customers")!.inherent).toBe("Low");
+    expect(assess(unsure, true).groups.find((g) => g.group === "Customers")!.inherent).not.toBe("Low");
+    expect(answerText(RISK_QUESTIONS.find((q) => q.id === "c-pep")!, NOT_SURE)).toBe("Not sure (counted as high)");
+  });
+});
