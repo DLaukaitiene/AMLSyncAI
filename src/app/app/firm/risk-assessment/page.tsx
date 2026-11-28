@@ -1,17 +1,20 @@
 import { requireUser } from "@/lib/server/session";
 import { withTenant } from "@/lib/server/db";
 import { can } from "@/lib/auth/permissions";
-import { riskAssessmentAsDoc } from "@/lib/server/firm-docs";
 import { CONTROL_OPTIONS, CONTROL_QUESTIONS, RISK_QUESTIONS, type Answers } from "@/lib/firm/risk-assessment";
 import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { approveRiskAssessmentAction, saveAnswersAction, startRiskAssessmentAction } from "../actions";
-import { PageTitle } from "@/components/help";
+import { Help } from "@/components/help";
+import { draftRiskAssessment, riskAssessmentAsDoc } from "@/lib/server/firm-docs";
 
 export default async function RiskAssessmentPage() {
   const s = await requireUser();
+  const edit = can(s.user.roles, "approve.compliance");
   const data = await withTenant(s.firm.id, async (tx) => {
+    // First visit: open the questionnaire straight away (no "Start" button) [28 Nov 2026].
+    if (edit && !(await tx.firmRiskAssessment.count())) await draftRiskAssessment(tx, { firmId: s.firm.id, userId: s.user.id });
     const draft = await tx.firmRiskAssessment.findFirst({ where: { status: "DRAFT" }, orderBy: { version: "desc" } });
     const current = await tx.firmRiskAssessment.findFirst({ where: { status: "IN_FORCE" }, orderBy: { version: "desc" } });
     return {
@@ -21,7 +24,6 @@ export default async function RiskAssessmentPage() {
       currentDoc: current ? await riskAssessmentAsDoc(tx, s.firm.id, current.id) : null,
     };
   });
-  const edit = can(s.user.roles, "approve.compliance");
   const a = (data.draft?.answers ?? {}) as Answers;
   const unanswered = (data.draft?.result as { unanswered?: string[] } | undefined)?.unanswered;
   const groups = [...new Set(RISK_QUESTIONS.map((q) => q.group))];
@@ -29,7 +31,11 @@ export default async function RiskAssessmentPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div className="space-y-1">
-        <PageTitle className="text-3xl" help={<>The Compliance Officer drafts it; management approves it. Review it every year and before any new service, channel or market.</>}>Business Risk Assessment</PageTitle>
+        <h1 className="text-3xl">Business Risk Assessment</h1>
+        <p className="text-muted">
+          AMLSync drafts it from your answers below. The Compliance Officer checks it and the Compliance Manager approves it.
+          Review it every year and before you start a new service{"\u00a0"}<Help label="What counts as a new service?"><p>Something new you offer clients, for example company formation, acting as a nominee, holding or moving client money, or work for crypto businesses.</p></Help>, channel{"\u00a0"}<Help label="What is a channel?"><p>How you take on and deal with clients, for example onboarding fully online without meeting them, working through agents or introducers, or a new platform or app.</p></Help> or market{"\u00a0"}<Help label="What is a new market?"><p>New countries or client groups, for example clients from outside the EU, from higher-risk countries, or a new type of client such as property developers.</p></Help>.
+        </p>
       </div>
 
       {data.current && data.currentDoc && (
