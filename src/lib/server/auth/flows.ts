@@ -325,7 +325,7 @@ export const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   name: z.string().trim().min(2, "Enter the person's name").max(200),
   role: z.enum(["OWNER", "COMPLIANCE_OFFICER", "STAFF", "EXTERNAL_REVIEWER", "READ_ONLY"]),
-  allowExternal: z.boolean(),
+  allowExternal: z.boolean().default(true), // any email domain is allowed [28 Nov 2026]; kept for older callers
 });
 
 export async function createInvitation(
@@ -336,7 +336,8 @@ export async function createInvitation(
   if (!(await hit(`invite:firm:${firmId}`, LIMITS.invitePerFirm))) return fail("Too many invitations today.");
   const firm = await adminDb.firm.findUniqueOrThrow({ where: { id: firmId } });
   const external = input.role === "EXTERNAL_REVIEWER";
-  const check = checkInviteEmail(input.email, firm.emailDomain, input.allowExternal || external);
+  // Any email address can be invited [28 Nov 2026]; only the External Reviewer role makes someone an external user.
+  const check = checkInviteEmail(input.email, firm.emailDomain, true);
   if (!check.allowed) return fail(check.message!, { email: [check.message!] });
   const seats = planOf(firm.plan).users;
   if (seats !== null && !external) {
@@ -352,7 +353,7 @@ export async function createInvitation(
     await tx.invitation.updateMany({ where: { firmId, email: input.email, acceptedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
     const inv = await tx.invitation.create({
       data: {
-        firmId, email: input.email, name: input.name, roles: [input.role as Role], external: check.external,
+        firmId, email: input.email, name: input.name, roles: [input.role as Role], external,
         invitedById, tokenHash: sha256(token), expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
       },
     });

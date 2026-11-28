@@ -4,20 +4,17 @@ import { can, ROLE_LABELS, type AppRole } from "@/lib/auth/permissions";
 import { ActionForm, Field, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { StepUpLink } from "@/components/step-up";
-import { inviteAction, removeUserAction, resetMfaAction, revokeInviteAction, revokeSessionAction, signOutEverywhereAction } from "./actions";
-import { adminDb } from "@/lib/server/db";
+import { inviteAction, removeUserAction, resetMfaAction, revokeInviteAction } from "./actions";
 import { Help } from "@/components/help";
 
 export default async function TeamPage() {
   const s = await requireUser();
   const manage = can(s.user.roles, "team.invite");
-  const { users, invites, domain } = await withTenant(s.firm.id, async (tx) => ({
+  const { users, invites } = await withTenant(s.firm.id, async (tx) => ({
     users: await tx.user.findMany({ where: { deactivatedAt: null }, orderBy: { createdAt: "asc" } }),
     invites: manage ? await tx.invitation.findMany({ where: { acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } }) : [],
-    domain: (await tx.firm.findUniqueOrThrow({ where: { id: s.firm.id } })).emailDomain,
   }));
 
-  const sessions = await adminDb.session.findMany({ where: { userId: s.user.id, revokedAt: null, stage: "ACTIVE", expiresAt: { gt: new Date() } }, orderBy: { lastSeenAt: "desc" } });
   return (
     <div className="space-y-8">
       <h1 className="text-3xl">Team</h1>
@@ -43,22 +40,6 @@ export default async function TeamPage() {
         </ul>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">My sessions</h2>
-        <ul className="divide-y divide-border rounded-xl border border-border text-sm">
-          {sessions.map((x) => (
-            <li key={x.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-              <span>
-                {x.userAgent?.slice(0, 80) ?? "Unknown device"} · {x.ip ?? "—"}
-                <span className="block text-muted">Signed in {x.createdAt.toISOString().slice(0, 16).replace("T", " ")} · last active {x.lastSeenAt.toISOString().slice(0, 16).replace("T", " ")} UTC{x.id === s.sessionId ? " · this session" : ""}</span>
-              </span>
-              {x.id !== s.sessionId && <ActionButton action={revokeSessionAction.bind(null, x.id)}>Sign out</ActionButton>}
-            </li>
-          ))}
-        </ul>
-        <ActionButton action={signOutEverywhereAction}>Sign out my other sessions</ActionButton>
-      </section>
-
       {manage && (
         <>
           {invites.length > 0 && (
@@ -79,7 +60,7 @@ export default async function TeamPage() {
 
           <section className="max-w-md space-y-2">
             <h2 className="text-lg font-semibold">Invite a user</h2>
-            <div className="flex items-start gap-2 text-sm text-muted"><p>Invitations go to @{domain} addresses.</p><Help>People join only by invitation. You can allow an external user with another address (for example an AMLSync Expert reviewer); external users are labelled everywhere.</Help></div>
+            <div className="flex items-start gap-2 text-sm text-muted"><p>People join only by invitation, with any email address.</p><Help>Choose the External Reviewer role for someone outside your firm (for example an AMLSync Expert reviewer); external users are labelled everywhere.</Help></div>
             <ActionForm action={inviteAction}>
               <Field label="Name" name="name" required />
               <Field label="Email" name="email" type="email" required />
@@ -90,9 +71,6 @@ export default async function TeamPage() {
                   ))}
                 </select>
               </Field>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="allowExternal" /> Allow an email outside @{domain} (external user)
-              </label>
               <Submit>Send invitation</Submit>
               <StepUpLink />
             </ActionForm>

@@ -26,7 +26,7 @@ export function AppointmentsForm({ action, users, managerId, officerId }: {
         <input type="checkbox" role="switch" name="same" checked={same} onChange={(e) => setSame(e.target.checked)} className="h-4 w-4" />
         <span><strong>Same person</strong> holds both roles <span className="text-muted">(allowed for small firms)</span></span>
       </label>
-      {same ? select("manager", "Compliance Manager & Officer", managerId) : <>{select("manager", "Compliance Manager", managerId)}{select("officer", "Compliance Officer", officerId)}</>}
+      {same ? select("manager", "Compliance Manager & Compliance Officer", managerId) : <>{select("manager", "Compliance Manager", managerId)}{select("officer", "Compliance Officer", officerId)}</>}
       <label className="min-w-48 flex-1 space-y-1">
         <span className="block text-xs font-medium">Reason for the change</span>
         <input name="reason" autoComplete="off" className="w-full rounded border border-border bg-background px-2 py-1.5" />

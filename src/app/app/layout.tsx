@@ -82,7 +82,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/app/settings/transaction-monitoring", label: "Transaction Monitoring", icon: "transactions", show: can(r, "client.view") },
         { href: "/app/settings/screening-lists", label: "Screening Lists", icon: "screening", show: can(r, "countryProfile.view") },
         { href: "/app/billing", label: "Billing", icon: "billing", show: can(r, "approve.compliance") },
-        { href: "/app/security", label: "Security", icon: "security", show: can(r, "securityLog.view") },
+        { href: "/app/security", label: "Security", icon: "security" },
         { href: "/app/settings/email", label: "Email Settings", icon: "mail" },
         { href: "/app/settings/sample-data", label: "Sample Data", icon: "folder", show: can(r, "approve.compliance") },
         { href: "/app/records", label: "Records & Retention", icon: "records", show: can(r, "records.purge") },

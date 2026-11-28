@@ -45,7 +45,7 @@ export default async function GovernancePage() {
   const pendingNotice = (["compliance-manager", "compliance-officer"] as const).filter((fn) => current[fn]?.needsNotice && !current[fn]?.notifiedAt);
   const informed = (["compliance-manager", "compliance-officer"] as const).filter((fn) => current[fn]?.needsNotice && current[fn]?.notifiedAt);
   const history = data.appts.filter((a) => a.toDate);
-  const roleName = (fn: DutyRole) => (samePerson ? "Compliance Manager & Officer" : FN[fn]);
+  const roleName = (fn: DutyRole) => (samePerson ? "Compliance Manager & Compliance Officer" : FN[fn]);
 
   const table = (editable: boolean) => (
     <div className="overflow-x-auto rounded-2xl border border-border">
@@ -111,7 +111,7 @@ export default async function GovernancePage() {
         {samePerson ? (
           <p className="flex flex-wrap items-center gap-1.5" data-testid="appointment-same">
             <strong className="inline-flex items-center gap-1">Compliance Manager<Help label="What does the Compliance Manager do?">{ROLE_HELP["compliance-manager"]}</Help></strong>
-            <strong className="inline-flex items-center gap-1">&amp; Officer<Help label="What does the Compliance Officer do?">{ROLE_HELP["compliance-officer"]}</Help>:</strong>
+            <strong className="inline-flex items-center gap-1">&amp; Compliance Officer<Help label="What does the Compliance Officer do?">{ROLE_HELP["compliance-officer"]}</Help>:</strong>
             {appointeeName(cm!, data.allUsers)} since {day(cm!.fromDate > co!.fromDate ? cm!.fromDate : co!.fromDate)}
           </p>
         ) : (
@@ -167,7 +167,7 @@ export default async function GovernancePage() {
         )}
         {data.onePerson && !uncovered ? (
           <>
-            <p className="text-sm text-muted">They&apos;re all with you as Compliance Manager &amp; Officer. Nothing to do here.</p>
+            <p className="text-sm text-muted">They&apos;re all with you as Compliance Manager &amp; Compliance Officer. Nothing to do here.</p>
             <details className="text-sm"><summary className="cursor-pointer text-accent underline">See the list</summary><div className="mt-2">{table(false)}</div></details>
           </>
         ) : (

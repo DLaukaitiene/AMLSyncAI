@@ -42,7 +42,7 @@ export async function appointAction(fn: "compliance-manager" | "compliance-offic
  */
 export async function inviteAndAppointAction(fn: "compliance-manager" | "compliance-officer", _: ActionState, fd: FormData): Promise<ActionState> {
   const s = await requireUser("approve.management");
-  const parsed = inviteSchema.safeParse({ name: fd.get("name"), email: fd.get("email"), role: fn === "compliance-officer" ? "COMPLIANCE_OFFICER" : "OWNER", allowExternal: false });
+  const parsed = inviteSchema.safeParse({ name: fd.get("name"), email: fd.get("email"), role: fn === "compliance-officer" ? "COMPLIANCE_OFFICER" : "OWNER", allowExternal: true });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the name and email." };
   const reason = String(fd.get("reason") ?? "").trim();
   const existing = await adminDb.user.findUnique({ where: { email: parsed.data.email }, select: { firmId: true, deactivatedAt: true } });

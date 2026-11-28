@@ -16,7 +16,7 @@ export async function inviteAction(_: ActionState, fd: FormData): Promise<Action
   const s = await requireUser("team.invite");
   if (!hasRecentMfa(s)) return STEP_UP;
   const raw = formToObject(fd);
-  const parsed = inviteSchema.safeParse({ ...raw, allowExternal: raw.allowExternal === "on" });
+  const parsed = inviteSchema.safeParse({ ...raw, allowExternal: true });
   if (!parsed.success) return zodErrors(parsed.error);
   if (parsed.data.role === "OWNER" && !s.user.roles.includes("OWNER")) return { error: "Only an Owner can invite another Owner." };
   let r: Awaited<ReturnType<typeof createInvitation>>;
