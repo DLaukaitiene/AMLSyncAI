@@ -7,7 +7,6 @@ import { can } from "@/lib/auth/permissions";
 import { ActionForm, CountryField, Field, Submit } from "@/components/form";
 import { addOfficeAction, saveProfileAction } from "./actions";
 import Link from "next/link";
-import { Help } from "@/components/help";
 
 const NAMES = new Intl.DisplayNames(["en"], { type: "region" });
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -51,7 +50,10 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
           <Link className={office ? "text-accent underline" : "font-semibold"} href="/app/settings/country-profile">Home state</Link>
           {offices.map((o) => <Link key={o.id} className={office?.id === o.id ? "font-semibold" : "text-accent underline"} href={`/app/settings/country-profile?office=${o.id}`}>{o.name} ({o.memberState})</Link>)}
         </nav>
-        <div className="flex items-start gap-2 text-sm text-muted"><p>Your national details on top of the EU rules. Version <strong>{cur.version}</strong>.</p><Help>AMLSync App applies the general EU rules (EU Core {EU_CORE.version}). Values here can only fill in or tighten them, never relax them. Every change creates a new version, needs a Compliance Officer and is logged. Earlier decisions keep the version that applied at the time.</Help></div>
+        <div className="max-w-3xl space-y-1 text-muted" data-testid="country-intro">
+          <p>The anti-money-laundering rules are the same across the EU, but each country adds its own details: who your supervisor and FIU (the authority that receives suspicious activity reports) are and how to reach them, reporting deadlines and formats, cash limits, and extra cases that need enhanced checks. Fill them in for {NAMES.of(p.memberState)} so the app applies your national rules.</p>
+          <p>These details can only add to or tighten the EU rules, never relax them. Each change is saved as a new version and logged; earlier decisions keep the version that applied at the time. You&apos;re on <strong className="text-foreground">version {cur.version}</strong>, saved on {cur.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}{cur.source ? ` (${cur.source})` : ""}.</p>
+        </div>
       </div>
 
       {weaker.length > 0 && (
