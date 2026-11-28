@@ -14,7 +14,7 @@ export function ActionButton({
   variant?: "primary" | "secondary" | "danger";
 }) {
   return (
-    <ActionForm action={async (_s, fd) => action(fd)} className="inline-flex flex-col items-end gap-1">
+    <ActionForm action={async (_s, fd) => action(fd)} className="inline-flex max-w-full flex-col items-end gap-1 [&>[role=alert]]:min-w-56 [&>[role=status]]:min-w-56">
       <Submit variant={variant}>{children}</Submit>
       <StepUpLink />
     </ActionForm>

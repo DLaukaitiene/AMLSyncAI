@@ -17,7 +17,6 @@ import { ROLE_HELP } from "@/components/role-help";
 const FN = { "compliance-manager": "Compliance Manager", "compliance-officer": "Compliance Officer" } as const;
 const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const small = "rounded border border-border bg-background px-2 py-1 text-sm";
-const below = "[&>[role=alert]]:order-last [&>[role=alert]]:basis-full [&>[role=status]]:order-last [&>[role=status]]:basis-full";
 
 export default async function GovernancePage() {
   const s = await requireUser();
@@ -77,9 +76,9 @@ export default async function GovernancePage() {
                 <td className="px-3 py-2.5 text-right">
                   {r.locked ? (
                     mgmt && data.users.length > 1 ? (
-                      <details className="inline-block text-left">
+                      <details className="relative inline-block text-left">
                         <summary className="cursor-pointer list-none text-accent underline [&::-webkit-details-marker]:hidden">{r.deputies.length ? "Change deputy" : "Add deputy"}</summary>
-                        <ActionForm action={setDeputyAction.bind(null, r.key)} className={`mt-2 flex flex-wrap items-center gap-2 ${below}`}>
+                        <ActionForm action={setDeputyAction.bind(null, r.key)} className="absolute right-0 top-full z-20 mt-1 flex w-72 flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-3 shadow-[var(--shadow)]">
                           <select name="deputy" defaultValue={r.deputyIds[0] ?? ""} className={small} aria-label={`Deputy: ${withoutArticles(r.label)}`}>
                             <option value="">No deputy</option>
                             {data.users.filter((u) => u.id !== holder(r.role)?.userId).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -89,9 +88,9 @@ export default async function GovernancePage() {
                       </details>
                     ) : <span className="text-xs text-muted">Stays with the {FN[r.role]}</span>
                   ) : (
-                    <details className="inline-block text-left">
+                    <details className="relative inline-block text-left">
                       <summary className="cursor-pointer list-none text-accent underline [&::-webkit-details-marker]:hidden">Reassign</summary>
-                      <ActionForm action={reassignDutyAction.bind(null, r.key)} className={`mt-2 flex flex-wrap items-center gap-2 ${below}`}>
+                      <ActionForm action={reassignDutyAction.bind(null, r.key)} className="absolute right-0 top-full z-20 mt-1 flex w-72 flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-3 shadow-[var(--shadow)]">
                         <select name="to" defaultValue={r.source === "outsourced" ? "outsourced" : r.to[0] ?? "role"} className={small} aria-label={`Reassign: ${withoutArticles(r.label)}`}>
                           <option value="role">{FN[r.role]}{holder(r.role) ? ` (${holder(r.role)!.name})` : ""}</option>
                           {data.users.filter((u) => u.id !== holder(r.role)?.userId).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}

@@ -45,20 +45,21 @@ export function ActionForm({
         className={className ?? "space-y-4"}
         noValidate
       >
+        {children}
+        {render?.(state)}
+        {/* Messages always go below, on a line of their own, so nothing the person just clicked moves [28 Nov 2026]. */}
         {state?.error && (
-          <p role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          <p role="alert" className="col-span-full w-full basis-full rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
             {state.error}
           </p>
         )}
         {state?.message && (
-          <p role="status" className="rounded border border-border px-3 py-2 text-sm">
+          <p role="status" className="col-span-full w-full basis-full rounded border border-border px-3 py-2 text-sm">
             {state.message}
           </p>
         )}
-        {children}
-        {render?.(state)}
         {confirm && (
-          <div role="alertdialog" aria-label="Please confirm" className="basis-full space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100" data-testid="confirm-box">
+          <div role="alertdialog" aria-label="Please confirm" className="col-span-full w-full basis-full space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100" data-testid="confirm-box">
             <p>{confirm}</p>
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={pending} className="rounded-full bg-brand px-4 py-1.5 font-semibold text-brand-ink hover:brightness-105 disabled:opacity-60"
