@@ -61,7 +61,7 @@ const MARK: Record<ObligationState, { label: string; cls: string; icon: typeof C
   done: { label: "Done", cls: "text-green-700 dark:text-green-400", icon: CircleCheck },
   todo: { label: "To do", cls: "text-yellow-700 dark:text-yellow-300", icon: CircleDot },
   pending: { label: "Awaiting approval", cls: "text-orange-700 dark:text-orange-300", icon: Clock3 },
-  blocked: { label: "Pending on Other Tasks", cls: "text-red-700 dark:text-red-300", icon: Clock3 },
+  blocked: { label: "Pending on\nOther Tasks", cls: "text-red-700 dark:text-red-300", icon: Clock3 },
   overdue: { label: "Act now", cls: "text-red-700 dark:text-red-300", icon: CircleAlert },
   na: { label: "Not needed", cls: "text-slate-500 dark:text-slate-400", icon: CircleMinus },
 };
@@ -74,7 +74,7 @@ export function ObligationItem({ o, status, children }: { o: Obligation; status:
       <div className="flex items-start justify-between gap-3">
         {/* No (?) here: the link below leads to the page that explains and does it [28 Nov 2026]. */}
         <span className="min-w-0 font-semibold">{o.title}</span>
-        <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5" /><span>{m.label}</span></span>
+        <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-semibold ${m.cls}`}><m.icon aria-hidden className="h-5 w-5 shrink-0" /><span className="whitespace-pre-line leading-tight">{m.label}</span></span>
       </div>
       <p className={`mt-1 whitespace-pre-line text-sm ${status.state === "overdue" ? "text-red-800 dark:text-red-300" : "text-muted"}`}>{status.detail}</p>
       {children}
