@@ -66,7 +66,7 @@ export const OBLIGATIONS: Obligation[] = [
   },
   {
     id: "national-rules", group: "Set up your firm",
-    title: "Your Country & Supervisor Profile",
+    title: "Your country & supervisor profile",
     what: "The EU rules are built in. Add your country's details: who supervises your firm, your Financial Intelligence Unit (FIU) and how to send it reports, and any stricter national limits.",
     when: "At the start, and when your national rules change.",
     how: ["Settings → Country Profile: fill in the required items."],
@@ -104,8 +104,8 @@ export const OBLIGATIONS: Obligation[] = [
   },
   {
     id: "high-risk", group: "Every client",
-    title: "Enhanced checks for high-risk clients and PEPs",
-    what: "For high-risk clients and politically exposed persons, do more: find out where their money and wealth come from, get approval from senior management, and watch the relationship more closely.",
+    title: "Enhanced checks for high-risk clients",
+    what: "For high-risk clients, do more: find out where their money and wealth come from, get approval from senior management, and watch the relationship more closely. Politically exposed persons (PEPs), their family and close associates always count as high risk.",
     when: "Whenever a client is rated high risk or is a PEP, before you accept them, and at each review.",
     how: ["Risk Assessments: filter on High.", "On each client: complete the enhanced due diligence checklist and record senior management approval."],
     article: "AMLR Art. 34, 42",
