@@ -211,11 +211,11 @@ export default async function CountryProfilePage({ searchParams }: { searchParam
 
       {edit && !office && (
         <details className="rounded-xl border border-border p-4 text-sm">
-          <summary className="cursor-pointer font-semibold">Office in another EU country</summary>
-          <p className="mt-2 text-muted">If you have a branch or work in another EU country, add it: work there follows that country&apos;s details, with its own Country Profile.</p>
+          <summary className="cursor-pointer font-semibold">Office in another country</summary>
+          <p className="mt-2 text-muted">If you have a branch or work in another country, inside or outside the EU, add it: work there follows that country&apos;s details, with its own Country Profile.</p>
           <ActionForm action={addOfficeAction} className="mt-3 grid gap-3 sm:grid-cols-3">
             <Field label="Office name" name="name" required />
-            <CountryField label="Country of the office" name="memberState" required euOnly />
+            <CountryField label="Country of the office" name="memberState" required euFirst />
             <div className="flex items-end gap-2"><Submit variant="secondary">Add office</Submit></div>
           </ActionForm>
         </details>

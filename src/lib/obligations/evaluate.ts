@@ -56,7 +56,7 @@ export function evaluateObligations(i: ObligationInput): ObligationStatus[] {
     policies: !i.policyInForce ? (i.policyDraft ? s("policies", "pending", "Pending approval by management: a draft is ready.") : s("policies", "todo", i.riskAssessmentInForce ? "Generate it from your risk assessment and approve it." : "Do the risk assessment first; the AML Program is written from it."))
       : i.policyReviewOverdue ? s("policies", "overdue", "The yearly review is overdue.")
       : s("policies", "done", "Approved and in force."),
-    "national-rules": i.countryProfileMissing ? s("national-rules", "todo", `${n(i.countryProfileMissing, "required item")} missing, e.g. your FIU's reporting channel.`) : s("national-rules", "done", "Your supervisor and FIU are recorded."),
+    "national-rules": i.countryProfileMissing ? s("national-rules", "todo", `${n(i.countryProfileMissing, "required item")} ${i.countryProfileMissing === 1 ? "requires" : "require"} your attention.`) : s("national-rules", "done", "Your supervisor and FIU are recorded."),
     "client-checks": i.clientsStale ? s("client-checks", "overdue", `${n(i.clientsStale, "client")} in progress for more than 30 days.`)
       : i.clientsInProgress ? s("client-checks", "todo", `${n(i.clientsInProgress, "client")} not yet fully checked. Don't start work until they are.`)
       : i.clientsTotal ? s("client-checks", "done", `All ${n(i.clientsTotal, "client")} checked.`)

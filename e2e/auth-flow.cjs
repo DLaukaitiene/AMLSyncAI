@@ -61,7 +61,7 @@ const { submit } = require('./helpers.cjs');
   log('MFA on,', recovery.length, 'recovery codes');
   await p.getByRole('link',{name:/continue/}).click();
   await p.getByRole('heading',{name:'Dashboard'}).waitFor();
-  await p.getByTestId('obligation-national-rules').getByText(/required items? missing/).waitFor();
+  await p.getByTestId('obligation-national-rules').getByText(/required items? requires? your attention/).waitFor();
   log('dashboard shows country-profile checklist');
   
 
