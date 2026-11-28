@@ -8,7 +8,7 @@ import { ActionForm, Submit } from "@/components/form";
 import { ActionButton } from "@/components/action-button";
 import { DocView } from "@/components/doc-view";
 import { annualReportAction, approveAnnualReportAction } from "../records-actions";
-import { reassignDutyAction, saveAppointmentsAction, setDeputyAction } from "./actions";
+import { reassignDutyAction, saveAppointmentsAction } from "./actions";
 import { AppointmentsForm } from "@/components/appointments-form";
 import { resolveDuties, withoutArticles, type DutyRole, type Holder } from "@/lib/firm/responsibilities";
 import { Help, PageTitle } from "@/components/help";
@@ -48,7 +48,7 @@ export default async function GovernancePage() {
   // One table per role, side by side (Compliance Manager | Compliance Officer).
   const tables = (editable: boolean) => (
     <div className="grid items-start gap-4 lg:grid-cols-2">
-      {(["compliance-manager", "compliance-officer"] as const).map((fn) => (
+      {(["compliance-officer", "compliance-manager"] as const).map((fn) => (
         <div key={fn} className="space-y-2" data-testid={`duties-${fn}`}>
           <h3 className="flex flex-wrap items-center gap-1.5 font-semibold">{FN[fn]}<Help label={`What does the ${FN[fn]} do?`}>{ROLE_HELP[fn]}</Help><span className="font-normal text-muted">· {holder(fn)?.name ?? "not appointed"}</span></h3>
           {table(editable, rows.filter((r) => r.role === fn))}
@@ -70,23 +70,11 @@ export default async function GovernancePage() {
                 {r.source === "outsourced" ? <>Outside provider · <Link href="/app/firm/outsourcing" className="text-accent underline">Outsourcing</Link></>
                   : r.source === "none" ? <span className="text-amber-800 dark:text-amber-300">Nobody yet: appoint the {FN[r.role]}</span>
                   : <>{r.owners.join(", ")}<span className="block text-xs text-muted">{r.source === "role" ? roleName(r.role) : "Reassigned"}</span></>}
-                {r.deputies.length ? <span className="block text-xs text-muted">Deputy: {r.deputies.join(", ")}</span> : null}
               </td>
               {editable && (
                 <td className="px-3 py-2.5 text-right">
                   {r.locked ? (
-                    mgmt && data.users.length > 1 ? (
-                      <details className="relative inline-block text-left">
-                        <summary className="cursor-pointer list-none text-accent underline [&::-webkit-details-marker]:hidden">{r.deputies.length ? "Change deputy" : "Add deputy"}</summary>
-                        <ActionForm action={setDeputyAction.bind(null, r.key)} className="absolute right-0 top-full z-20 mt-1 flex w-72 flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-3 shadow-[var(--shadow)]">
-                          <select name="deputy" defaultValue={r.deputyIds[0] ?? ""} className={small} aria-label={`Deputy: ${withoutArticles(r.label)}`}>
-                            <option value="">No deputy</option>
-                            {data.users.filter((u) => u.id !== holder(r.role)?.userId).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                          </select>
-                          <Submit variant="secondary">Save</Submit>
-                        </ActionForm>
-                      </details>
-                    ) : <span className="text-xs text-muted">Stays with the {FN[r.role]}</span>
+                    <span className="text-xs text-muted">Stays with the {FN[r.role]}</span>
                   ) : (
                     <details className="relative inline-block text-left">
                       <summary className="cursor-pointer list-none text-accent underline [&::-webkit-details-marker]:hidden">Reassign</summary>
@@ -179,7 +167,7 @@ export default async function GovernancePage() {
           </>
         ) : (
           <>
-            <p className="text-sm text-muted">Each duty follows its role. Hand training or alert review to a colleague with Reassign; if a provider does it, choose &ldquo;An outside provider&rdquo; and record them on the <Link href="/app/firm/outsourcing" className="text-accent underline">Outsourcing</Link> page. Deciding on suspicious activity reports and approving high-risk clients stay with their role; you can add a deputy. Data protection is assigned on the <Link href="/app/firm/privacy" className="text-accent underline">Data Protection</Link> page.</p>
+            <p className="text-sm text-muted">Each duty follows its role. Hand training or alert review to a colleague with Reassign; if a provider does it, choose &ldquo;An outside provider&rdquo; and record them on the <Link href="/app/firm/outsourcing" className="text-accent underline">Outsourcing</Link> page. Deciding on suspicious activity reports and approving high-risk clients always stay with their role. Data protection is assigned on the <Link href="/app/firm/privacy" className="text-accent underline">Data Protection</Link> page.</p>
             {tables(manageDuties)}
           </>
         )}

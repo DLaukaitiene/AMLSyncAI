@@ -71,6 +71,7 @@ export default async function RiskAssessmentPage() {
                 {CONTROL_QUESTIONS.map((q) => (
                   <fieldset key={q.id} className="space-y-1 text-sm">
                     <legend className="font-medium">{q.text}</legend>
+                    {q.hint && <p className="text-xs text-muted">{q.hint}</p>}
                     <div className="flex flex-wrap gap-x-4">
                       {CONTROL_OPTIONS.map((o, i) => <label key={o} className="flex items-center gap-1"><input type="radio" name={q.id} value={i} defaultChecked={a[q.id] === i} /> {o}</label>)}
                     </div>
